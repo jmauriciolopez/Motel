@@ -77,25 +77,25 @@ export abstract class BaseService<T> {
     return { data, total };
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}): Promise<T> {
+  async obtenerUno(id: string, motelId: string, include?: any, extraWhere: any = {}): Promise<T> {
     return this.model.findFirst({
-      where: { id, ...extraWhere },
+      where: { id, motelId, ...extraWhere },
       include,
     });
   }
 
-  async actualizar(id: string, data: any): Promise<T> {
+  async actualizar(id: string, data: any,motelId: string): Promise<T> {
     return this.model.update({
-      where: { id },
+      where: { id,motelId },
       data,
     });
   }
 
-  async eliminar(id: string): Promise<T> {
+  async eliminar(id: string,motelId: string): Promise<T> {
     // Si el modelo tiene deletedAt, hacemos soft delete, si no, delete físico
     try {
       return await this.model.update({
-        where: { id },
+        where: { id,motelId },
         data: { deletedAt: new Date() },
       });
     } catch {
