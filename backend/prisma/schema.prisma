@@ -1,0 +1,675 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ENUMS
+//
+
+enum EstadoHabitacion {
+  DISPONIBLE
+  OCUPADA
+  LIMPIEZA
+  MANTENIMIENTO
+  BLOQUEADA
+}
+
+enum RolUsuario {
+  SUPERADMIN
+  ADMINISTRADOR
+  SUPERVISOR
+  RECEPCIONISTA
+}
+
+//
+// SAAS
+//
+
+model Propietario {
+  id                     String    @id @default(cuid())
+  Nombre                 String    @map("nombre")
+  Email                  String    @unique @map("email")
+  Telefono               String?   @map("telefono")
+  Cuit                   String?   @map("cuit")
+  Ciudad                 String?   @map("ciudad")
+  FormaPago              String    @map("formaPago")
+  Activo                 Boolean   @default(true) @map("activo")
+  FechaVencimientoPrueba DateTime? @map("fechaVencimientoPrueba")
+  PagoActivo             Boolean   @default(false) @map("pagoActivo")
+  OnboardingCompleto     Boolean   @default(false) @map("onboardingCompleto")
+
+  moteles  Motel[]
+  usuarios Usuario[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Usuario {
+  id                 String  @id @default(cuid())
+  Username           String  @map("username")
+  Email              String  @unique @map("email")
+  PasswordHash       String  @map("passwordHash")
+  Provider           String? @map("provider")
+  ResetPasswordToken String? @map("resetPasswordToken")
+  ConfirmationToken  String? @map("confirmationToken")
+  Confirmed          Boolean @default(false) @map("confirmed")
+  Blocked            Boolean @default(false) @map("blocked")
+
+  Rol                RolUsuario @default(RECEPCIONISTA) @map("rol")
+  propietarioId      String?
+  propietario        Propietario? @relation(fields: [propietarioId], references: [id])
+
+  moteles MotelUsuario[]
+  
+  compras        Compra[]
+  insumos        Insumo[]
+  transferencias Transferencia[]
+  limpiezas      Limpieza[]
+  mantenimientos Mantenimiento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MotelUsuario {
+  id        String @id @default(cuid())
+  usuarioId String
+  motelId   String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  motel   Motel   @relation(fields: [motelId], references: [id])
+
+  @@unique([usuarioId, motelId])
+}
+
+//
+// MOTEL
+//
+
+model Motel {
+  id               String    @id @default(cuid())
+  Nombre           String    @map("nombre")
+  Direccion        String?   @map("direccion")
+  Telefono         String?   @map("telefono")
+  HorarioUnico     Boolean   @map("horarioUnico")
+  InicioDia        DateTime? @map("inicioDia")
+  InicioNoche      DateTime? @map("inicioNoche")
+  CheckOutDia      DateTime? @map("checkOutDia")
+  Tolerancia       Int       @map("tolerancia")
+  DuracionDiaria   Int       @map("duracionDiaria")
+  DuracionNocturna Int       @map("duracionNocturna")
+  MaxHrAdicional   Int       @map("maxHrAdicional")
+  HoraCierreCaja   String?   @map("horaCierreCaja")
+  OnboardingCompleto Boolean @default(false) @map("onboardingCompleto")
+  deletedAt        DateTime?
+
+  propietarioId String
+  propietario   Propietario @relation(fields: [propietarioId], references: [id])
+
+  habitaciones   Habitacion[]
+  tarifas        Tarifa[]
+  clientes       Cliente[]
+  rubros         Rubro[]
+  productos      Producto[]
+  depositos      Deposito[]
+  compras        Compra[]
+  consumos       Consumo[]
+  pagos          Pago[]
+  gastos         Gasto[]
+  limpiezas      Limpieza[]
+  mantenimientos Mantenimiento[]
+  transferencias Transferencia[]
+  insumos        Insumo[]
+  cajas          Caja[]
+
+  usuarios              MotelUsuario[]
+  stocks                Stock[]
+  compraDetalles        CompraDetalle[]
+  insumoDetalles        InsumoDetalle[]
+  transferenciaDetalles TransferenciaDetalle[]
+  reservas              Reserva[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ... (existing code)
+
+model Caja {
+  id        String    @id @default(cuid())
+  Concepto  String    @map("concepto")
+  Importe   Decimal   @map("importe")
+  Saldo     Decimal   @map("saldo")
+  deletedAt DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cajas")
+}
+
+
+//
+// TARIFAS Y HABITACIONES
+//
+
+model Tarifa {
+  id                     String    @id @default(cuid())
+  Nombre                 String    @map("nombre")
+  PrecioTurno            Decimal   @map("precioTurno")
+  PrecioDiario           Decimal   @map("precioDiario")
+  PrecioTurnoPromocional Decimal?  @map("precioTurnoPromocional")
+  PrecioHrDiaExcede      Decimal   @map("precioHrDiaExcede")
+  PrecioHrNocheExcede    Decimal   @map("precioHrNocheExcede")
+  deletedAt              DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  habitaciones Habitacion[]
+  turnos       Turno[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Habitacion {
+  id            String           @id @default(cuid())
+  Identificador String           @map("identificador")
+  Nombre        String?          @map("nombre")
+  Activa        Boolean          @default(true) @map("activa")
+  Estado        EstadoHabitacion @map("estado")
+  deletedAt     DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  tarifaId String?
+  tarifa   Tarifa? @relation(fields: [tarifaId], references: [id])
+
+  turnos         Turno[]
+  limpiezas      Limpieza[]
+  mantenimientos Mantenimiento[]
+  reservas       Reserva[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// CLIENTE / MOVILIDAD
+//
+
+model Movilidad {
+  id        String    @id @default(cuid())
+  Tipo      String    @map("tipo")
+  deletedAt DateTime?
+
+  clientes Cliente[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cliente {
+  id        String    @id @default(cuid())
+  Patente   String    @map("patente")
+  Marca     String?   @map("marca")
+  Color     String?   @map("color")
+  deletedAt DateTime?
+
+  movilidadId String?
+  movilidad   Movilidad? @relation(fields: [movilidadId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  turnos Turno[]
+  reservas Reserva[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// TURNO
+//
+
+model Turno {
+  id        String    @id @default(cuid())
+  Ingreso   DateTime
+  Salida    DateTime?
+  Total     Decimal
+  Estado    String      @map("estado")
+  deletedAt DateTime?
+
+  Observacion           String?
+  ObservacionSecundaria String?
+  Precio                Int         @default(0)
+  PagoPendiente         Boolean     @default(true)
+  TipoEstadia           TipoEstadia @default(Standard) @map("tipoEstadia")
+
+  habitacionId String
+  habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+
+  tarifaId String
+  tarifa   Tarifa @relation(fields: [tarifaId], references: [id])
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  usuarioAperturaId String
+  usuarioCierreId   String?
+
+  consumos Consumo[]
+  pago     Pago?
+  limpieza Limpieza?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TipoEstadia {
+  Standard
+  Pernocte
+}
+
+//
+// CONSUMO / PAGO
+//
+
+model Consumo {
+  id        String    @id @default(cuid())
+  Cantidad  Int       @map("cantidad")
+  Importe   Decimal   @map("importe")
+  deletedAt DateTime?
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  turnoId String
+  turno   Turno  @relation(fields: [turnoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FormaPago {
+  id        String    @id @default(cuid())
+  Tipo      String    @map("tipo")
+  deletedAt DateTime?
+
+  pagos Pago[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Pago {
+  id         String    @id @default(cuid())
+  Importe    Decimal   @map("importe")
+  Referencia String?   @map("referencia")
+  deletedAt  DateTime?
+
+  turnoId String @unique
+  turno   Turno  @relation(fields: [turnoId], references: [id])
+
+  formaPagoId String
+  formaPago   FormaPago @relation(fields: [formaPagoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// INVENTARIO
+//
+
+model Rubro {
+  id         String    @id @default(cuid())
+  Nombre     String    @map("nombre")
+  Facturable Boolean   @map("facturable")
+  EsMaestro  Boolean   @map("esMaestro")
+  deletedAt  DateTime?
+
+  motelId String?
+  motel   Motel?  @relation(fields: [motelId], references: [id])
+
+  productos         Producto[]
+  catalogoProductos CatalogoProducto[]
+  proveedores       Proveedor[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CatalogoProducto {
+  id               String  @id @default(cuid())
+  Nombre           String  @map("nombre")
+  Precio           Decimal @map("precio")
+  Costo            Decimal @map("costo")
+  Facturable       Boolean @map("facturable")
+  StockMinimo      Int     @map("stockMinimo")
+  Descripcion      String? @map("descripcion")
+  CriterioBusqueda String? @map("criterioBusqueda")
+
+  rubroId String
+  rubro   Rubro  @relation(fields: [rubroId], references: [id])
+
+  productos Producto[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Producto {
+  id               String    @id @default(cuid())
+  Nombre           String    @map("nombre")
+  Precio           Decimal   @map("precio")
+  Costo            Decimal   @map("costo")
+  Facturable       Boolean   @map("facturable")
+  StockMinimo      Int       @map("stockMinimo")
+  EsComun          Boolean   @map("esComun")
+  CriterioBusqueda String?   @map("criterioBusqueda")
+  deletedAt        DateTime?
+
+  rubroId String
+  rubro   Rubro  @relation(fields: [rubroId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  catalogoProductoId String?
+  catalogoProducto   CatalogoProducto? @relation(fields: [catalogoProductoId], references: [id])
+
+  stocks                Stock[]
+  compraDetalles        CompraDetalle[]
+  insumoDetalles        InsumoDetalle[]
+  consumos              Consumo[]
+  transferenciaDetalles TransferenciaDetalle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Deposito {
+  id          String    @id @default(cuid())
+  Nombre      String    @map("nombre")
+  EsPrincipal Boolean   @map("esPrincipal")
+  deletedAt   DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  stocks                Stock[]
+  compras               Compra[]
+  insumos               Insumo[]
+  transferenciasOrigen  Transferencia[] @relation("Origen")
+  transferenciasDestino Transferencia[] @relation("Destino")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Stock {
+  id        String    @id @default(cuid())
+  Cantidad  Int       @map("cantidad")
+  deletedAt DateTime?
+
+  depositoId String
+  deposito   Deposito @relation(fields: [depositoId], references: [id])
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Compra {
+  id         String    @id @default(cuid())
+  Fecha      DateTime  @map("fecha")
+  Total      Decimal   @map("total")
+  Finalizada Boolean   @map("finalizada")
+  deletedAt  DateTime?
+
+  depositoId String
+  deposito   Deposito @relation(fields: [depositoId], references: [id])
+
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  detalles CompraDetalle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CompraDetalle {
+  id        String    @id @default(cuid())
+  Cantidad  Int       @map("cantidad")
+  Precio    Decimal   @map("precio")
+  Importe   Decimal   @map("importe")
+  deletedAt DateTime?
+
+  compraId String
+  compra   Compra @relation(fields: [compraId], references: [id])
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Insumo {
+  id          String    @id @default(cuid())
+  Fecha       DateTime  @map("fecha")
+  Observacion String?   @map("observacion")
+  Finalizada  Boolean   @map("finalizada")
+  deletedAt   DateTime?
+
+  depositoId String
+  deposito   Deposito @relation(fields: [depositoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  detalles InsumoDetalle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model InsumoDetalle {
+  id        String    @id @default(cuid())
+  Cantidad  Int       @map("cantidad")
+  deletedAt DateTime?
+
+  insumoId String
+  insumo   Insumo @relation(fields: [insumoId], references: [id])
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transferencia {
+  id          String    @id @default(cuid())
+  Fecha       DateTime  @map("fecha")
+  Observacion String?   @map("observacion")
+  Finalizada  Boolean   @map("finalizada")
+  deletedAt   DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  depositoOrigenId String
+  depositoOrigen   Deposito @relation("Origen", fields: [depositoOrigenId], references: [id])
+
+  depositoDestinoId String
+  depositoDestino   Deposito @relation("Destino", fields: [depositoDestinoId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  detalles TransferenciaDetalle[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TransferenciaDetalle {
+  id        String    @id @default(cuid())
+  Cantidad  Int       @map("cantidad")
+  deletedAt DateTime?
+
+  transferenciaId String
+  transferencia   Transferencia @relation(fields: [transferenciaId], references: [id])
+
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+//
+// LIMPIEZA / MANTENIMIENTO
+//
+
+model Limpieza {
+  id          String    @id @default(cuid())
+  Finalizado  Boolean   @map("finalizado")
+  Cuando      DateTime  @map("cuando")
+  Observacion String?   @map("observacion")
+  deletedAt   DateTime?
+
+  turnoId String @unique
+  turno   Turno  @relation(fields: [turnoId], references: [id])
+
+  habitacionId String
+  habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Mantenimiento {
+  id          String    @id @default(cuid())
+  Observacion String?   @map("observacion")
+  Cuando      DateTime  @map("cuando")
+  Finalizado  Boolean   @map("finalizado")
+  deletedAt   DateTime?
+
+  habitacionId String
+  habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id])
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reserva {
+  id           String    @id @default(cuid())
+  Ingreso      DateTime  @map("fechaIngreso")
+  Estado       String    @default("Pendiente") @map("estado")
+  Notas        String?   @map("notas")
+  deletedAt    DateTime?
+
+  habitacionId String
+  habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  usuarioId String?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Proveedor {
+  id             String  @id @default(cuid())
+  Nombre         String  @map("nombre")
+  NombreContacto String? @map("nombreContacto")
+  Telefono       String? @map("telefono")
+
+  rubroId String?
+  rubro   Rubro?  @relation(fields: [rubroId], references: [id])
+
+  compras        Compra[]
+  mantenimientos Mantenimiento[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model Gasto {
+  id        String    @id @default(cuid())
+  Concepto  String    @map("concepto")
+  Importe   Decimal   @map("importe")
+  deletedAt DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
