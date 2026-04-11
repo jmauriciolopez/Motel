@@ -51,9 +51,9 @@ export abstract class BaseController<T, CreateDto, UpdateDto> {
     @Query() otherQueries?: any,
   ) {
     // motelId viene del token, no del query
-    const motelId: string | undefined =
-      req.user?.motelId || (req.user?.moteles?.length ? req.user.moteles[0] : undefined);
-
+  //  const motelId: string | undefined =
+   //   req.user?.motelId || (req.user?.moteles?.length ? req.user.moteles[0] : undefined);
+const motelId = req.tenant.motelId;
     // Sanitizar otherQueries para que no incluya los parámetros de paginación
     const {
       _page,
