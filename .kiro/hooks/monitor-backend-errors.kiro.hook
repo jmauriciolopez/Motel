@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Monitor Backend Errors",
+  "description": "Cuando el usuario envía un mensaje, lee la salida del proceso del backend y reporta cualquier error nuevo de NestJS/Prisma",
+  "version": "1",
+  "when": {
+    "type": "promptSubmit"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "El usuario está navegando la app. Revisá si hay procesos de backend corriendo con listProcesses, leé su output con getProcessOutput buscando líneas con ERROR o PrismaClientValidationError desde el último mensaje, y reportá cualquier error nuevo encontrado de forma concisa antes de responder al usuario."
+  }
+}

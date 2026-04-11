@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  background-color: #f4f6f8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+@media print {
+  .MuiDrawer-root {
+    display: none;
+  }
+  .MuiTablePagination-root {
+    display: none; 
+  }
+  .MuiToolbar-root-RaListToolbar-root  {
+    display: none; 
+  }
+  .RaFilter-button {
+    display: none; 
+  }
+  .RaFilter-form{
+    display: none; 
+  }
+  .MuiTable-root  {
+    font-size: 20px;
+  }
+ .RaDatagrid-table
+ {
+  font-size: 20px;
+}
+}

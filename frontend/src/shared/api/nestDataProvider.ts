@@ -1,0 +1,340 @@
+import {
+    DataProvider,
+    GetListParams,
+    GetOneParams,
+    GetManyParams,
+    GetManyReferenceParams,
+    UpdateParams,
+    UpdateManyParams,
+    CreateParams,
+    DeleteParams,
+    DeleteManyParams
+} from 'react-admin';
+import { http } from './HttpClient';
+
+/**
+ * Data Provider for NestJS + Prisma backend.
+ */
+const resourceMap: Record<string, string> = {
+    // Corrección de pluralización incorrecta (legacy frontend)
+    'movilidads': 'movilidades',
+    'tarifas': 'tarifas',
+    'rubros': 'rubros',
+    'productos': 'productos',
+    'depositos': 'depositos',
+    'gastos': 'gastos',
+    'clientes': 'clientes',
+    'habitaciones': 'habitaciones',
+    'compras': 'compras',
+    'consumos': 'consumos',
+    'limpiezas': 'limpiezas',
+    'mantenimientos': 'mantenimientos',
+    'pagos': 'pagos',
+    'turnos': 'turnos',
+    'turnos-abrir': 'turnos/abrir',
+    'insumodetalles': 'insumos/detalles',
+    'propietarios': 'propietarios',
+    'usuarios': 'usuarios',
+    'reservas': 'reservas',
+    'cajas': 'cajas',
+    // Nombres especiales que difieren entre frontend y backend
+    'stocks': 'stock',
+    'formapagos': 'formas-pago',
+};
+
+// nestDataProvider.ts - motelId viene del JWT, no del cliente
+
+const flattenFilters = (filter: any) => {
+    const flattened: any = {};
+    for (const key in filter) {
+        if (filter[key] === undefined || filter[key] === null) continue;
+
+        // Saltar parámetros especiales que se manejan aparte
+        const lk = key.toLowerCase();
+        if (key === 'include' || key === 'filtro' || key === 'OR' || key === 'AND' || key === '$or' || key === '$and') continue;
+        // Saltar filtros fantasma de Strapi/RA
+        if (lk === 'exist' || lk === 'existe' || lk.endsWith('_exist') || lk.endsWith('_existe')) continue;
+        // motelId ya viene del token en el backend, no lo enviamos como query param
+        if (lk === 'motelid') continue;
+
+        // Evitar [object Object] en la URL para operadores complejos ($lt, etc)
+        if (typeof filter[key] === 'object') {
+            continue;
+        }
+
+        // Los booleans pierden su tipo en query params (false → "false"),
+        // se envían solo via el parámetro JSON 'filtro' que preserva el tipo
+        if (typeof filter[key] === 'boolean') {
+            continue;
+        }
+
+        // Mapeo de filtros anidados de RA/Strapi a IDs planos de NestJS
+        if (key === 'motel.id' || key === 'habitacion.motel.id' || key === 'deposito.motel.id' ||
+            key === 'turno.motel.id' || key === 'turno.habitacion.motel.id' ||
+            key === 'habitacion.motelId' || key === 'deposito.motelId') {
+            // ignorar — el backend filtra por token
+        } else if (key === 'habitacion.id') {
+            flattened['habitacionId'] = filter[key];
+        } else if (key === 'deposito.id') {
+            flattened['depositoId'] = filter[key];
+        } else {
+            flattened[key] = filter[key];
+        }
+    }
+    return flattened;
+};
+
+/**
+ * Convierte filtros especiales como 'existe' o booleanos en campos de fecha
+ * a operadores que el backend y Prisma entiendan.
+ */
+const sanitizeFilter = (filter: any): any => {
+    if (!filter || typeof filter !== 'object') return filter;
+    
+    if (Array.isArray(filter)) {
+        return filter.map(item => sanitizeFilter(item));
+    }
+
+    if (filter instanceof Date) return filter;
+
+    const sanitized: any = {};
+
+    const FORBIDDEN_KEYS = ['existe', 'exist', 'populate', 'documentId'];
+
+    for (const key in filter) {
+        if (filter[key] === undefined || filter[key] === null) continue;
+
+        const lowerKey = key.toLowerCase();
+
+        // 1. Omitir parámetros legacy de Strapi que rompen Prisma
+        if (FORBIDDEN_KEYS.includes(lowerKey)) {
+            continue;
+        }
+
+        let value = filter[key];
+
+        // 2. Manejar el sufijo _exist / _existe (mapear a nulidad)
+        if (lowerKey.endsWith('_exist') || lowerKey.endsWith('_existe')) {
+            const realKey = key.replace(/_exist$/i, '').replace(/_existe$/i, '');
+            sanitized[realKey] = value === true ? { "$ne": null } : null;
+            continue;
+        }
+
+        // 3. Si el valor es un objeto (y no es una fecha), sanitizar recursivamente
+        if (typeof value === 'object' && !(value instanceof Date)) {
+            // Caso especial: Operadores de Prisma ($or, $and)
+            if (key === '$or' || key === '$and') {
+                const prismaKey = key === '$or' ? 'OR' : 'AND';
+                sanitized[prismaKey] = sanitizeFilter(value);
+            } else {
+                sanitized[key] = sanitizeFilter(value);
+            }
+            continue;
+        }
+
+        // 4. Traducir booleanos planos a filtros de nulidad (comportamiento legacy esperado)
+        if (typeof value === 'boolean') {
+            sanitized[key] = value === true ? { "$ne": null } : null;
+            continue;
+        }
+
+        sanitized[key] = value;
+    }
+
+    return sanitized;
+};
+
+const stringifyFilter = (filter: any): string | undefined => {
+    if (!filter || typeof filter !== 'object') return undefined;
+    
+    // Aplicar sanitización antes de convertir a JSON
+    const cleanFilter = sanitizeFilter(filter);
+    
+    // Excluir del JSON los campos que flattenFilters ya mapeó como query params planos
+const FLATTENED_KEYS = new Set([
+        'motel.id', 'habitacion.motel.id', 'deposito.motel.id',
+        'turno.motel.id', 'turno.habitacion.motel.id',
+        'habitacion.motelId', 'deposito.motelId',
+        'habitacion.id', 'deposito.id',
+        'motelId',  // nunca va en el JSON filtro, el backend lo lee del token
+    ]);
+    const cleaned: any = {};
+    for (const key in cleanFilter) {
+        if (cleanFilter[key] === undefined || cleanFilter[key] === null) continue;
+        if (FLATTENED_KEYS.has(key)) continue; // ya va como motelId/habitacionId/etc
+        cleaned[key] = cleanFilter[key];
+    }
+    if (Object.keys(cleaned).length === 0) return undefined;
+    try {
+        return JSON.stringify(cleaned);
+    } catch {
+        return undefined;
+    }
+};
+
+const getMappedResource = (resource: string) => resourceMap[resource] || resource;
+
+const getChanges = (oldData: any, newData: any) => {
+    if (!oldData) return newData;
+    const changes: any = {};
+    Object.keys(newData).forEach(key => {
+        if (JSON.stringify(newData[key]) !== JSON.stringify(oldData[key])) {
+            changes[key] = newData[key];
+        }
+    });
+    return changes;
+};
+
+const sanitizePayload = (data: any) => {
+    if (!data || typeof data !== 'object') return data;
+    const sanitized = { ...data };
+    const systemFields = ['id', 'createdAt', 'updatedAt', 'deletedAt', '__v', 'propietario'];
+    systemFields.forEach(field => delete sanitized[field]);
+    Object.keys(sanitized).forEach(key => {
+        const val = sanitized[key];
+        if (val && typeof val === 'object' && !(val instanceof Date) && 'id' in val) {
+            // Objeto relacional: motel: { id: "x" } → motelId: "x", delete motel
+            sanitized[`${key}Id`] = val.id;
+            delete sanitized[key];
+        } else if (val && typeof val === 'object' && !(val instanceof Date)) {
+            delete sanitized[key];
+        }
+    });
+    return sanitized;
+};
+
+export const nestDataProvider: DataProvider = {
+    getList: async (resource, params: GetListParams) => {
+        const { page, perPage } = params.pagination;
+        const { field, order } = params.sort;
+        
+        // Sanitizar filtros antes de procesar
+        const sanitizedFilter = sanitizeFilter(params.filter || {});
+        const { include, ...filter } = sanitizedFilter;
+        
+        const metaInclude = params.meta?.include;
+
+        const finalInclude = metaInclude || include;
+        const mappedResource = getMappedResource(resource);
+
+        const query: any = {
+            _page: page,
+            _limit: perPage,
+            _sort: field,
+            _order: order,
+            ...flattenFilters(filter),
+            filtro: stringifyFilter(filter),
+        };
+
+        if (finalInclude) {
+            query.include = typeof finalInclude === 'object' ? JSON.stringify(finalInclude) : finalInclude;
+        }
+
+        const response = await http.get<{ data: any[], total: number }>(`/${mappedResource}`, { params: query });
+
+        return {
+            data: response.data || [],
+            total: response.total || 0,
+        };
+    },
+
+    getOne: async (resource, params: GetOneParams) => {
+        const mappedResource = getMappedResource(resource);
+        const { include, filtro } = params.meta || {};
+        
+        const query: any = {};
+        if (include) query.include = typeof include === 'object' ? JSON.stringify(include) : include;
+        if (filtro) query.filtro = typeof filtro === 'object' ? JSON.stringify(filtro) : filtro;
+
+        const response = await http.get<any>(`/${mappedResource}/${params.id}`, { params: query });
+        return { data: response };
+    },
+
+    getMany: async (resource, params: GetManyParams) => {
+        const mappedResource = getMappedResource(resource);
+        
+        // Para obtener múltiples registros por ID, usamos el operador $in
+        // Esto asegura que el backend/Prisma lo procese correctamente.
+        const query = {
+            id: { "$in": params.ids }
+        };
+
+        const response = await http.get<{ data: any[] }>(`/${mappedResource}`, { 
+            params: { filtro: JSON.stringify(query) } 
+        });
+
+        return { data: response.data || [] };
+    },
+
+    getManyReference: async (resource, params: GetManyReferenceParams) => {
+        const { page, perPage } = params.pagination;
+        const { field, order } = params.sort;
+        
+        // Sanitizar filtros antes de procesar
+        const sanitizedFilter = sanitizeFilter(params.filter || {});
+        const { include, ...filter } = sanitizedFilter;
+        
+        const metaInclude = params.meta?.include;
+
+        const finalInclude = metaInclude || include;
+        const mappedResource = getMappedResource(resource);
+
+        const query: any = {
+            [params.target]: params.id,
+            _page: page,
+            _limit: perPage,
+            _sort: field,
+            _order: order,
+            ...flattenFilters(filter),
+            filtro: stringifyFilter(filter),
+        };
+
+        if (finalInclude) {
+            query.include = typeof finalInclude === 'object' ? JSON.stringify(finalInclude) : finalInclude;
+        }
+
+        const response = await http.get<{ data: any[], total: number }>(`/${mappedResource}`, { params: query });
+        return {
+            data: response.data || [],
+            total: response.total || 0,
+        };
+    },
+
+    update: async (resource, params: UpdateParams) => {
+        const mappedResource = getMappedResource(resource);
+        const changes = getChanges(params.previousData, params.data);
+        const data = sanitizePayload(changes);
+        const response = await http.patch<any>(`/${mappedResource}/${params.id}`, data);
+        return { data: response };
+    },
+
+    updateMany: async (resource, params: UpdateManyParams) => {
+        const mappedResource = getMappedResource(resource);
+        const data = sanitizePayload(params.data);
+        const responses = await Promise.all(
+            params.ids.map(id => http.patch<any>(`/${mappedResource}/${id}`, data))
+        );
+        return { data: responses.map(r => r.id) };
+    },
+
+    create: async (resource, params: CreateParams) => {
+        const mappedResource = getMappedResource(resource);
+        const data = sanitizePayload(params.data);
+        const response = await http.post<any>(`/${mappedResource}`, data);
+        return { data: response };
+    },
+
+    delete: async (resource, params: DeleteParams) => {
+        const mappedResource = getMappedResource(resource);
+        const response = await http.delete<any>(`/${mappedResource}/${params.id}`);
+        return { data: response };
+    },
+
+    deleteMany: async (resource, params: DeleteManyParams) => {
+        const mappedResource = getMappedResource(resource);
+        const responses = await Promise.all(
+            params.ids.map(id => http.delete<any>(`/${mappedResource}/${id}`))
+        );
+        return { data: responses.map(r => r.id) };
+    },
+};
