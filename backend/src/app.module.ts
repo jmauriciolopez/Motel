@@ -28,6 +28,8 @@ import { GastosModule } from './modulos/gastos/gastos.module';
 import { LimpiezasModule } from './modulos/limpiezas/limpiezas.module';
 import { MantenimientosModule } from './modulos/mantenimientos/mantenimientos.module';
 import { CajasModule } from './modulos/cajas/cajas.module';
+import { ProveedoresModule } from './modulos/proveedores/proveedores.module';
+import { ReservasModule } from './modulos/reservas/reservas.module';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { CajasModule } from './modulos/cajas/cajas.module';
     LimpiezasModule,
     MantenimientosModule,
     CajasModule,
+    ProveedoresModule,
+    ReservasModule,
   ],
   controllers: [],
   providers: [

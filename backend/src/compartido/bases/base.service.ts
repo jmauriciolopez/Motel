@@ -21,8 +21,9 @@ export abstract class BaseService<T> {
     protected modelName: string,
     options: { hasMotelId?: boolean } = {},
   ) {
-    const dmmf = (prisma as any)._baseDmmf?.modelMap?.[modelName]
-      ?? (prisma as any)._dmmf?.modelMap?.[modelName];
+    const dmmf =
+      (prisma as any)._baseDmmf?.modelMap?.[modelName] ??
+      (prisma as any)._dmmf?.modelMap?.[modelName];
     const fields: string[] = dmmf?.fields?.map((f: any) => f.name) ?? [];
     this.hasSoftDelete = fields.includes('deletedAt');
     this.hasMotelId = options.hasMotelId ?? fields.includes('motelId');
@@ -40,7 +41,30 @@ export abstract class BaseService<T> {
     return this.model.create({ data });
   }
 
-  async obtenerTodos(options: PaginationOptions, extraWhere: any = {}): Promise<{ data: T[]; total: number }> {
+  private aplicarFiltrosVirtuales(where: any, filtrosNormalizados: any): void {
+    if (filtrosNormalizados.existe === true) {
+      if (this.hasSoftDelete) {
+        where.deletedAt = null;
+      }
+      delete filtrosNormalizados.existe;
+      return;
+    }
+
+    if (filtrosNormalizados.existe === false) {
+      if (this.hasSoftDelete) {
+        where.deletedAt = { not: null };
+      }
+      delete filtrosNormalizados.existe;
+      return;
+    }
+
+    delete filtrosNormalizados.existe;
+  }
+
+  async obtenerTodos(
+    options: PaginationOptions,
+    extraWhere: any = {},
+  ): Promise<{ data: T[]; total: number }> {
     const page = Number(options.page) || 1;
     const limit = Number(options.limit) || 10;
     const skip = (page - 1) * limit;
@@ -58,24 +82,42 @@ export abstract class BaseService<T> {
       where.motelId = options.motelId;
     }
 
-    const { page: _p, limit: _l, sort: _s, order: _o, motelId: _m, include, orderBy: _ob, ...filters } = options;
+    const {
+      page: _p,
+      limit: _l,
+      sort: _s,
+      order: _o,
+      motelId: _m,
+      include,
+      orderBy: _ob,
+      ...filters
+    } = options;
+
     const filtrosNormalizados = normalizarFiltroParaPrisma(filters);
+
+    this.aplicarFiltrosVirtuales(where, filtrosNormalizados);
     Object.assign(where, filtrosNormalizados);
 
-    const [data, total] = await Promise.all([
-      this.model.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { [sort]: order },
-        include,
-      }),
-      this.model.count({ where }),
-    ]);
+    try {
+      const [data, total] = await Promise.all([
+        this.model.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { [sort]: order },
+          include,
+        }),
+        this.model.count({ where }),
+      ]);
 
-    return { data, total };
+      return { data, total };
+    }
+    catch (error) {
+      console.error('PRISMA ERROR FULL:', error);
+      //   console.error('PRISMA ERROR META:', error?.meta?.target);
+      throw error;
+    }
   }
-
   /**
    * @param scopedMotelId string filtra por ese motel; null = superadmin global (sin filtro motel); undefined solo modelos sin hasMotelId
    */
