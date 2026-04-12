@@ -72,7 +72,8 @@ export abstract class BaseService<T> {
     const sort = options.sort || 'createdAt';
     const order = options.order?.toLowerCase() === 'desc' ? 'desc' : 'asc';
 
-    const where: any = { ...extraWhere };
+    const extraWhereNormalizado = normalizarFiltroParaPrisma(extraWhere ?? {});
+    const where: any = { ...extraWhereNormalizado };
 
     if (this.hasSoftDelete) {
       where.deletedAt = null;
