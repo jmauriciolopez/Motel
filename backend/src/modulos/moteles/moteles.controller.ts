@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Param, Request } from '@nestjs/common';
 import { MotelesService } from './moteles.service';
 import { BaseController } from '../../compartido/bases/base.controller';
 import { Motel } from '@prisma/client';
@@ -55,5 +55,11 @@ export class MotelesController extends BaseController<Motel, CrearMotelDto, Actu
       include: nestedInclude,
       ...nestedFiltro,
     }, extraWhere);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id')
+  override obtenerUno(@Request() req: any, @Param('id') id: string) {
+    return this.service.obtenerUno(id, { propietario: true });
   }
 }

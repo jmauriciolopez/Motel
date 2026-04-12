@@ -58,6 +58,12 @@ export class ProductosService extends BaseService<Producto> {
   // SYNC CATÁLOGO
   // ────────────────────────────────────────────────────────────────────────────
   async syncCatalogo(motelId: string, catalogoIds: string[]) {
+    // Verificar que el motel existe
+    const motelExiste = await this.prisma.motel.findUnique({ where: { id: motelId } });
+    if (!motelExiste) {
+      throw new Error(`Motel no encontrado: ${motelId}`);
+    }
+
     const catalogoItems = await this.prisma.catalogoProducto.findMany({
       where: { id: { in: catalogoIds } },
     });
@@ -71,6 +77,13 @@ export class ProductosService extends BaseService<Producto> {
       });
 
       if (existe) continue;
+
+      // Verificar que el rubro existe antes de crear
+      const rubroExiste = await this.prisma.rubro.findUnique({ where: { id: item.rubroId } });
+      if (!rubroExiste) {
+        console.error(`[syncCatalogo] Rubro no encontrado: ${item.rubroId} para producto ${item.Nombre}`);
+        continue;
+      }
 
       const nuevoProducto = await this.prisma.producto.create({
         data: {
