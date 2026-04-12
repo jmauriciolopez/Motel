@@ -61,13 +61,23 @@ export class PagosService extends BaseService<Pago> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string) {
-    return super.obtenerUno(id, {
-      formaPago: true,
-      turno: {
-        include: { habitacion: true, cliente: true },
+  async obtenerUno(
+    id: string,
+    _include?: unknown,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        formaPago: true,
+        turno: {
+          include: { habitacion: true, cliente: true },
+        },
       },
-    });
+      extraWhere,
+      scopedMotelId,
+    );
   }
 
   async obtenerDiscrepancias(desde?: string, hasta?: string, motelId?: string) {

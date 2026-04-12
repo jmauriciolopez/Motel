@@ -19,10 +19,20 @@ export class DepositosService extends BaseService<Deposito> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      motel: true,
-      ...(include || {}),
-    }, extraWhere);
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        motel: true,
+        ...(include || {}),
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

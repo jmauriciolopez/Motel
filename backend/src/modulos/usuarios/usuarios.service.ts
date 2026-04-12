@@ -62,19 +62,33 @@ export class UsuariosService extends BaseService<Usuario> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      propietario: true,
-      moteles: {
-        include: {
-          motel: true,
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        propietario: true,
+        moteles: {
+          include: {
+            motel: true,
+          },
         },
+        ...(include || {}),
       },
-      ...(include || {}),
-    }, extraWhere);
+      extraWhere,
+      scopedMotelId,
+    );
   }
 
-  async actualizar(id: string, actualizarUsuarioDto: ActualizarUsuarioDto) {
+  async actualizar(
+    id: string,
+    actualizarUsuarioDto: ActualizarUsuarioDto,
+    _scopedMotelId?: string | null,
+  ) {
     const { Password, Rol, ...datosRestantes } = actualizarUsuarioDto;
     
     const data: any = { ...datosRestantes };

@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './modulos/autenticacion/guards/jwt-auth.guard';
+import { TenantGuard } from './compartido/guards/tenant.guard';
+import { RolesGuard } from './compartido/guards/roles.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { PropietariosModule } from './modulos/propietarios/propietarios.module';
 import { UsuariosModule } from './modulos/usuarios/usuarios.module';
@@ -54,6 +58,10 @@ import { CajasModule } from './modulos/cajas/cajas.module';
     CajasModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: TenantGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}

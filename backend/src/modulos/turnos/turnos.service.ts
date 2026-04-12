@@ -6,6 +6,7 @@ import { CrearTurnoDto } from './dto/crear-turno.dto';
 import { ActualizarTurnoDto } from './dto/actualizar-turno.dto';
 import { CalculadoraTarifas } from '../../compartido/utilidades/calculadora-tarifas.util';
 import { CajasService } from '../cajas/cajas.service';
+import { TenantContext } from '../../compartido/interfaces/tenant-context.interface';
 
 @Injectable()
 export class TurnosService extends BaseService<Turno> {
@@ -16,24 +17,51 @@ export class TurnosService extends BaseService<Turno> {
     super(prisma, 'turno', { hasMotelId: true });
   }
 
-  async abrirTurno(crearTurnoDto: CrearTurnoDto) {
+  async abrirTurno(crearTurnoDto: CrearTurnoDto, tenant: TenantContext) {
+    const motelIdActivo =
+      tenant.scope === 'motel' ? tenant.motelId : null;
+    if (!motelIdActivo) {
+      throw new BadRequestException(
+        'Indique un motel activo (x-motel-id) para abrir un turno',
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Validar estado de la habitación y obtener su tarifa
-      const habitacion = await tx.habitacion.findUnique({
-        where: { id: crearTurnoDto.habitacionId },
+      const habitacion = await tx.habitacion.findFirst({
+        where: {
+          id: crearTurnoDto.habitacionId,
+          motelId: motelIdActivo,
+          deletedAt: null,
+        },
       });
 
       if (!habitacion || habitacion.Estado !== EstadoHabitacion.DISPONIBLE) {
         throw new BadRequestException('La habitación no está disponible para abrir un turno.');
       }
 
-      // 2. Resolver tarifaId si no viene en el DTO
+      const cliente = await tx.cliente.findFirst({
+        where: {
+          id: crearTurnoDto.clienteId,
+          motelId: motelIdActivo,
+          deletedAt: null,
+        },
+      });
+      if (!cliente) {
+        throw new BadRequestException('El cliente no pertenece al motel activo');
+      }
+
       const tarifaId = crearTurnoDto.tarifaId || habitacion.tarifaId;
       if (!tarifaId) {
         throw new BadRequestException('La habitación seleccionada no tiene una tarifa asignada.');
       }
 
-      // 3. Crear el turno
+      const tarifa = await tx.tarifa.findFirst({
+        where: { id: tarifaId, motelId: motelIdActivo, deletedAt: null },
+      });
+      if (!tarifa) {
+        throw new BadRequestException('La tarifa no pertenece al motel activo');
+      }
+
       const turno = await tx.turno.create({
         data: {
           ...crearTurnoDto,
@@ -54,11 +82,27 @@ export class TurnosService extends BaseService<Turno> {
     });
   }
 
-  async cerrarTurno(id: string, usuarioCierreId: string, formaPagoId?: string) {
+  async cerrarTurno(
+    id: string,
+    usuarioCierreId: string,
+    formaPagoId: string | undefined,
+    tenant: TenantContext,
+  ) {
+    const motelIdActivo =
+      tenant.scope === 'motel' ? tenant.motelId : null;
+    if (!motelIdActivo) {
+      throw new BadRequestException(
+        'Indique un motel activo (x-motel-id) para cerrar un turno',
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Obtener turno con relaciones necesarias
-      const turno = await tx.turno.findUnique({
-        where: { id },
+      const turno = await tx.turno.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+          habitacion: { motelId: motelIdActivo },
+        },
         include: {
           tarifa: true,
           habitacion: {
@@ -202,16 +246,26 @@ export class TurnosService extends BaseService<Turno> {
     }, where);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      habitacion: true,
-      cliente: true,
-      tarifa: true,
-      consumos: {
-        include: { producto: true },
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        habitacion: true,
+        cliente: true,
+        tarifa: true,
+        consumos: {
+          include: { producto: true },
+        },
+        pago: true,
+        ...(include || {}),
       },
-      pago: true,
-      ...(include || {}),
-    }, extraWhere);
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

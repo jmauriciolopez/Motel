@@ -6,7 +6,7 @@ import { Rubro } from '@prisma/client';
 @Injectable()
 export class RubrosService extends BaseService<Rubro> {
   constructor(prisma: PrismaService) {
-    super(prisma, 'rubro');
+    super(prisma, 'rubro', { hasMotelId: false });
   }
 
   async obtenerTodos(options: any) {
@@ -20,23 +20,32 @@ export class RubrosService extends BaseService<Rubro> {
     return super.obtenerTodos({ ...rest }, extraWhere);
   }
 
-  async obtenerUno(id: string) {
-    return super.obtenerUno(id, { motel: true });
+  async obtenerUno(
+    id: string,
+    _include?: unknown,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(id, { motel: true }, extraWhere, scopedMotelId);
   }
 
-  async actualizar(id: string, data: any): Promise<Rubro> {
+  async actualizar(
+    id: string,
+    data: any,
+    scopedMotelId?: string | null,
+  ): Promise<Rubro> {
     const rubro = await this.prisma.rubro.findUnique({ where: { id } });
     if (rubro?.EsMaestro) {
       throw new ForbiddenException('Los rubros maestros no pueden ser modificados');
     }
-    return super.actualizar(id, data);
+    return super.actualizar(id, data, scopedMotelId);
   }
 
-  async eliminar(id: string): Promise<Rubro> {
+  async eliminar(id: string, scopedMotelId?: string | null): Promise<Rubro> {
     const rubro = await this.prisma.rubro.findUnique({ where: { id } });
     if (rubro?.EsMaestro) {
       throw new ForbiddenException('Los rubros maestros no pueden ser eliminados');
     }
-    return super.eliminar(id);
+    return super.eliminar(id, scopedMotelId);
   }
 }

@@ -41,7 +41,11 @@ export class PropietariosService extends BaseService<Propietario> {
     });
   }
 
-  async actualizar(id: string, actualizarPropietarioDto: ActualizarPropietarioDto): Promise<Propietario> {
+  async actualizar(
+    id: string,
+    actualizarPropietarioDto: ActualizarPropietarioDto,
+    _scopedMotelId?: string | null,
+  ): Promise<Propietario> {
     const { userId, motelIds, ...datosRestantes } = actualizarPropietarioDto;
 
     return this.prisma.propietario.update({

@@ -35,16 +35,22 @@ export class ProductosService extends BaseService<Producto> {
     );
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
     return super.obtenerUno(
       id,
       {
-      rubro: true,
-      catalogoProducto: true,
-      motel: true,
-      ...(include || {}),
+        rubro: true,
+        catalogoProducto: true,
+        motel: true,
+        ...(include || {}),
       },
       extraWhere,
+      scopedMotelId,
     );
   }
 

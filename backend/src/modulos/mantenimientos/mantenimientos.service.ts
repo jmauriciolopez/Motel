@@ -76,13 +76,23 @@ export class MantenimientosService extends BaseService<Mantenimiento> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      habitacion: true,
-      usuario: {
-        select: { Username: true },
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        habitacion: true,
+        usuario: {
+          select: { Username: true },
+        },
+        ...(include || {}),
       },
-      ...(include || {}),
-    }, extraWhere);
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

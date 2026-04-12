@@ -14,12 +14,13 @@ export class JwtEstrategia extends PassportStrategy(Strategy) {
 
   async validate(payload: any) {
     return {
+      sub: payload.sub,
       id: payload.sub,
       email: payload.email,
       rol: payload.rol,
       propietarioId: payload.propietarioId,
-      moteles: payload.moteles,       // array de IDs de moteles autorizados
-      motelId: payload.motelId,       // motel activo (primero de la lista)
+      moteles: payload.moteles ?? [],
+      motelId: payload.motelId,
     };
   }
 }

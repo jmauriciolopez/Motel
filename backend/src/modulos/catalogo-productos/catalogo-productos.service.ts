@@ -21,9 +21,19 @@ export class CatalogoProductosService extends BaseService<CatalogoProducto> {
     });
   }
 
-  async obtenerUno(id: string) {
-    return super.obtenerUno(id, {
-      rubro: true,
-    });
+  async obtenerUno(
+    id: string,
+    _include?: unknown,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        rubro: true,
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

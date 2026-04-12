@@ -23,11 +23,21 @@ export class ConsumosService extends BaseService<Consumo> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      producto: true,
-      turno: true,
-      ...(include || {}),
-    }, extraWhere);
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        producto: true,
+        turno: true,
+        ...(include || {}),
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

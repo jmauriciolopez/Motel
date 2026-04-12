@@ -36,10 +36,20 @@ export class ClientesService extends BaseService<Cliente> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      movilidad: true,
-      ...(include || {}),
-    }, extraWhere);
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        movilidad: true,
+        ...(include || {}),
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

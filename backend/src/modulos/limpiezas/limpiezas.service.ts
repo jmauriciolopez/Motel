@@ -63,16 +63,26 @@ export class LimpiezasService extends BaseService<Limpieza> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      habitacion: true,
-      turno: true,
-      usuario: {
-        select: {
-          Username: true,
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        habitacion: true,
+        turno: true,
+        usuario: {
+          select: {
+            Username: true,
+          },
         },
+        ...(include || {}),
       },
-      ...(include || {}),
-    }, extraWhere);
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

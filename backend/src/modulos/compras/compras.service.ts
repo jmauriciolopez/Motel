@@ -77,16 +77,26 @@ export class ComprasService extends BaseService<Compra> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      deposito: true,
-      detalles: {
-        include: { producto: true },
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        deposito: true,
+        detalles: {
+          include: { producto: true },
+        },
+        usuario: {
+          select: { Username: true },
+        },
+        ...(include || {}),
       },
-      usuario: {
-        select: { Username: true },
-      },
-      ...(include || {}),
-    }, extraWhere);
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

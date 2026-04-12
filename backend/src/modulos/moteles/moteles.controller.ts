@@ -6,6 +6,7 @@ import { CrearMotelDto } from './dto/crear-motel.dto';
 import { ActualizarMotelDto } from './dto/actualizar-motel.dto';
 import { JwtAuthGuard } from '../autenticacion/guards/jwt-auth.guard';
 import { UsuarioActual } from '../autenticacion/decoradores/usuario-actual.decorador';
+import { AllowGlobal } from '../../compartido/decorators/allow-global.decorator';
 
 @Controller('moteles')
 export class MotelesController extends BaseController<Motel, CrearMotelDto, ActualizarMotelDto> {
@@ -13,6 +14,7 @@ export class MotelesController extends BaseController<Motel, CrearMotelDto, Actu
     super(motelesService);
   }
 
+  @AllowGlobal()
   @UseGuards(JwtAuthGuard)
   @Get()
   override obtenerTodos(

@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizarFiltroParaPrisma } from '../utilidades/filtro-prisma.util';
 
@@ -24,9 +25,9 @@ export abstract class BaseService<T> {
       ?? (prisma as any)._dmmf?.modelMap?.[modelName];
     const fields: string[] = dmmf?.fields?.map((f: any) => f.name) ?? [];
     this.hasSoftDelete = fields.includes('deletedAt');
-    // Preferir declaración explícita sobre introspección (DMMF no siempre disponible)
     this.hasMotelId = options.hasMotelId ?? fields.includes('motelId');
   }
+
   get model() {
     return this.prisma[this.modelName];
   }
@@ -34,7 +35,6 @@ export abstract class BaseService<T> {
   get modelHasMotelId(): boolean {
     return this.hasMotelId;
   }
-
 
   async crear(data: any): Promise<T> {
     return this.model.create({ data });
@@ -58,7 +58,6 @@ export abstract class BaseService<T> {
       where.motelId = options.motelId;
     }
 
-    // Filtros adicionales que vengan en options (excepto campos de sistema)
     const { page: _p, limit: _l, sort: _s, order: _o, motelId: _m, include, orderBy: _ob, ...filters } = options;
     const filtrosNormalizados = normalizarFiltroParaPrisma(filters);
     Object.assign(where, filtrosNormalizados);
@@ -77,30 +76,95 @@ export abstract class BaseService<T> {
     return { data, total };
   }
 
-  async obtenerUno(id: string, motelId: string, include?: any, extraWhere: any = {}): Promise<T> {
+  /**
+   * @param scopedMotelId string filtra por ese motel; null = superadmin global (sin filtro motel); undefined solo modelos sin hasMotelId
+   */
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ): Promise<T | null> {
+    const where: any = { id, ...extraWhere };
+
+    if (this.hasSoftDelete) {
+      where.deletedAt = null;
+    }
+
+    if (this.hasMotelId) {
+      if (scopedMotelId !== undefined && scopedMotelId !== null) {
+        where.motelId = scopedMotelId;
+      }
+    }
+
     return this.model.findFirst({
-      where: { id, motelId, ...extraWhere },
+      where,
       include,
     });
   }
 
-  async actualizar(id: string, data: any,motelId: string): Promise<T> {
+  async actualizar(id: string, data: any, scopedMotelId?: string | null): Promise<T> {
+    if (!this.hasMotelId) {
+      return this.model.update({
+        where: { id },
+        data,
+      });
+    }
+
+    const where: any = { id };
+    if (this.hasSoftDelete) {
+      where.deletedAt = null;
+    }
+    if (scopedMotelId !== undefined && scopedMotelId !== null) {
+      where.motelId = scopedMotelId;
+    }
+
+    const existing = await this.model.findFirst({ where });
+    if (!existing) {
+      throw new NotFoundException('Registro no encontrado');
+    }
+
     return this.model.update({
-      where: { id,motelId },
+      where: { id: existing.id },
       data,
     });
   }
 
-  async eliminar(id: string,motelId: string): Promise<T> {
-    // Si el modelo tiene deletedAt, hacemos soft delete, si no, delete físico
+  async eliminar(id: string, scopedMotelId?: string | null): Promise<T> {
+    if (!this.hasMotelId) {
+      try {
+        return await this.model.update({
+          where: { id },
+          data: { deletedAt: new Date() },
+        });
+      } catch {
+        return this.model.delete({
+          where: { id },
+        });
+      }
+    }
+
+    const where: any = { id };
+    if (this.hasSoftDelete) {
+      where.deletedAt = null;
+    }
+    if (scopedMotelId !== undefined && scopedMotelId !== null) {
+      where.motelId = scopedMotelId;
+    }
+
+    const existing = await this.model.findFirst({ where });
+    if (!existing) {
+      throw new NotFoundException('Registro no encontrado');
+    }
+
     try {
       return await this.model.update({
-        where: { id,motelId },
+        where: { id: existing.id },
         data: { deletedAt: new Date() },
       });
     } catch {
       return this.model.delete({
-        where: { id },
+        where: { id: existing.id },
       });
     }
   }

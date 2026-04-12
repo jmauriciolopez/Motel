@@ -87,7 +87,12 @@ export class TransferenciasService extends BaseService<Transferencia> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
     return super.obtenerUno(id, {
       depositoOrigen: true,
       depositoDestino: true,
@@ -98,6 +103,6 @@ export class TransferenciasService extends BaseService<Transferencia> {
         select: { Username: true },
       },
       ...(include || {}),
-    }, extraWhere);
+    }, extraWhere, scopedMotelId);
   }
 }

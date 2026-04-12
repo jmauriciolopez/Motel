@@ -5,6 +5,7 @@ import { AutenticacionService } from './autenticacion.service';
 import { AutenticacionController } from './autenticacion.controller';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { JwtEstrategia } from './estrategias/jwt.estrategia';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { JwtEstrategia } from './estrategias/jwt.estrategia';
     }),
   ],
   controllers: [AutenticacionController],
-  providers: [AutenticacionService, JwtEstrategia],
-  exports: [AutenticacionService],
+  providers: [AutenticacionService, JwtEstrategia, JwtAuthGuard],
+  exports: [AutenticacionService, JwtAuthGuard],
 })
 export class AutenticacionModule {}

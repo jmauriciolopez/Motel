@@ -19,10 +19,20 @@ export class ReservasService extends BaseService<Reserva> {
     });
   }
 
-  async obtenerUno(id: string) {
-    return super.obtenerUno(id, {
-      habitacion: true,
-      cliente: true,
-    });
+  async obtenerUno(
+    id: string,
+    _include?: unknown,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        habitacion: true,
+        cliente: true,
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

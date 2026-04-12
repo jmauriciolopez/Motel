@@ -37,11 +37,21 @@ export class HabitacionesService extends BaseService<Habitacion> {
     }, extraWhere);
   }
 
-  async obtenerUno(id: string, include?: any, extraWhere: any = {}) {
-    return super.obtenerUno(id, {
-      tarifa: true,
-      motel: true,
-      ...(include || {}),
-    }, extraWhere);
+  async obtenerUno(
+    id: string,
+    include?: any,
+    extraWhere: any = {},
+    scopedMotelId?: string | null,
+  ) {
+    return super.obtenerUno(
+      id,
+      {
+        tarifa: true,
+        motel: true,
+        ...(include || {}),
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }
