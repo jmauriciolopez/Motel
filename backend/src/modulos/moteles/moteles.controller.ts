@@ -9,12 +9,12 @@ import { UsuarioActual } from '../autenticacion/decoradores/usuario-actual.decor
 import { AllowGlobal } from '../../compartido/decorators/allow-global.decorator';
 
 @Controller('moteles')
+@AllowGlobal()
 export class MotelesController extends BaseController<Motel, CrearMotelDto, ActualizarMotelDto> {
   constructor(private readonly motelesService: MotelesService) {
     super(motelesService);
   }
 
-  @AllowGlobal()
   @UseGuards(JwtAuthGuard)
   @Get()
   override obtenerTodos(

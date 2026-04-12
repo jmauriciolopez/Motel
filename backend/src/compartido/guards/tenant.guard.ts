@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RolUsuario } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ALLOW_GLOBAL_KEY } from '../decorators/allow-global.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import {
@@ -15,9 +16,12 @@ import {
 
 @Injectable()
 export class TenantGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -42,17 +46,32 @@ export class TenantGuard implements CanActivate {
     const queryTenant = this.normalizeTenantId(request.query?.motelId);
     const requestedMotelId = headerTenant || queryTenant || null;
 
-    const tenant = this.resolveTenant(user, requestedMotelId, !!allowGlobal);
+    const tenant = await this.resolveTenant(
+      user,
+      requestedMotelId,
+      !!allowGlobal,
+    );
 
     request.tenant = tenant;
     return true;
   }
 
-  private resolveTenant(
+  private async usuarioTieneAccesoAMotel(
+    userId: string,
+    motelId: string,
+  ): Promise<boolean> {
+    const link = await this.prisma.motelUsuario.findFirst({
+      where: { usuarioId: userId, motelId },
+      select: { id: true },
+    });
+    return !!link;
+  }
+
+  private async resolveTenant(
     user: JwtUser,
     requestedMotelId: string | null,
     allowGlobal: boolean,
-  ): TenantContext {
+  ): Promise<TenantContext> {
     const userId = user.sub ?? user.id;
 
     if (user.rol === RolUsuario.SUPERADMIN) {
@@ -86,14 +105,43 @@ export class TenantGuard implements CanActivate {
       const motelId =
         requestedMotelId || user.motelId || allowedMotels[0] || null;
 
+      if (motelId && !allowedMotels.includes(motelId)) {
+        // Token desactualizado: el motel recién se vinculó en DB (onboarding) pero el JWT sigue con moteles: []
+        if (await this.usuarioTieneAccesoAMotel(userId, motelId)) {
+          return {
+            motelId,
+            scope: 'motel',
+            rol: user.rol,
+            userId,
+            propietarioId: user.propietarioId ?? null,
+          };
+        }
+        // x-motel-id obsoleto y aún sin moteles en token — @AllowGlobal (crear propietario/motel)
+        if (allowGlobal && allowedMotels.length === 0) {
+          return {
+            motelId: null,
+            scope: 'global',
+            rol: user.rol,
+            userId,
+            propietarioId: user.propietarioId ?? null,
+          };
+        }
+        throw new ForbiddenException('No tienes acceso a este motel');
+      }
+
       if (!motelId) {
+        if (allowGlobal && allowedMotels.length === 0) {
+          return {
+            motelId: null,
+            scope: 'global',
+            rol: user.rol,
+            userId,
+            propietarioId: user.propietarioId ?? null,
+          };
+        }
         throw new ForbiddenException(
           'No hay motel activo para este administrador',
         );
-      }
-
-      if (!allowedMotels.includes(motelId)) {
-        throw new ForbiddenException('No tienes acceso a este motel');
       }
 
       return {
