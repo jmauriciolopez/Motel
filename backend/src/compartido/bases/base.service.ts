@@ -41,24 +41,52 @@ export abstract class BaseService<T> {
     return this.model.create({ data });
   }
 
+  /** Filtro virtual (react-admin / front): no es columna Prisma */
   private aplicarFiltrosVirtuales(where: any, filtrosNormalizados: any): void {
-    if (filtrosNormalizados.existe === true) {
+    const raw = filtrosNormalizados?.existe;
+    const truthy =
+      raw === true ||
+      raw === 'true' ||
+      raw === 1 ||
+      raw === '1';
+    const falsy =
+      raw === false ||
+      raw === 'false' ||
+      raw === 0 ||
+      raw === '0';
+
+    if (truthy) {
       if (this.hasSoftDelete) {
         where.deletedAt = null;
       }
-      delete filtrosNormalizados.existe;
-      return;
-    }
-
-    if (filtrosNormalizados.existe === false) {
+    } else if (falsy) {
       if (this.hasSoftDelete) {
         where.deletedAt = { not: null };
       }
-      delete filtrosNormalizados.existe;
+    }
+    delete filtrosNormalizados.existe;
+  }
+
+  /** Evita que claves de filtro virtual lleguen a Prisma (p. ej. existe, populate) */
+  private sanitizarWhereParaPrisma(where: any): void {
+    if (!where || typeof where !== 'object') {
       return;
     }
-
-    delete filtrosNormalizados.existe;
+    const strip = (o: any) => {
+      if (!o || typeof o !== 'object' || Array.isArray(o)) {
+        return;
+      }
+      delete o.existe;
+      delete o.exist;
+      delete o.populate;
+      delete o.documentId;
+      for (const v of Object.values(o)) {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          strip(v);
+        }
+      }
+    };
+    strip(where);
   }
 
   async obtenerTodos(
@@ -98,6 +126,7 @@ export abstract class BaseService<T> {
 
     this.aplicarFiltrosVirtuales(where, filtrosNormalizados);
     Object.assign(where, filtrosNormalizados);
+    this.sanitizarWhereParaPrisma(where);
 
     try {
       const [data, total] = await Promise.all([
@@ -114,8 +143,6 @@ export abstract class BaseService<T> {
       return { data, total };
     }
     catch (error) {
-      console.error('PRISMA ERROR FULL:', error);
-      //   console.error('PRISMA ERROR META:', error?.meta?.target);
       throw error;
     }
   }
