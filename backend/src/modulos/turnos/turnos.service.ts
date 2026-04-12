@@ -15,6 +15,19 @@ function motelIdRequerido(tenant: TenantContext): string {
   return tenant.motelId;
 }
 
+/** Estado calculado — no persiste en DB */
+function calcularEstado(turno: { Salida?: Date | null; PagoPendiente?: boolean | null; limpieza?: { Finalizado?: boolean } | null }): string {
+  if (!turno.Salida) return 'ABIERTO';
+  if (turno.PagoPendiente) return 'CERRADO';
+  if (turno.limpieza) return 'LIBRE';
+  return 'COBRADO';
+}
+
+/** Inyecta el estado calculado en el turno o lista de turnos */
+function conEstado<T extends { Salida?: Date | null; PagoPendiente?: boolean | null; limpieza?: { Finalizado?: boolean } | null }>(turno: T): T & { Estado: string } {
+  return { ...turno, Estado: calcularEstado(turno) };
+}
+
 @Injectable()
 export class TurnosService extends BaseService<Turno> {
   constructor(
@@ -69,12 +82,18 @@ export class TurnosService extends BaseService<Turno> {
 
       const turno = await tx.turno.create({
         data: {
-          ...crearTurnoDto,
+          habitacionId: crearTurnoDto.habitacionId,
+          clienteId: crearTurnoDto.clienteId,
           tarifaId,
-          Estado: crearTurnoDto.Estado || 'ABIERTO',
+          usuarioAperturaId: crearTurnoDto.usuarioAperturaId,
           Ingreso: crearTurnoDto.Ingreso ? new Date(crearTurnoDto.Ingreso) : new Date(),
           Total: crearTurnoDto.Total ?? 0,
-        },
+          Precio: crearTurnoDto.Precio ?? 0,
+          PagoPendiente: true,
+          TipoEstadia: crearTurnoDto.TipoEstadia,
+          Observacion: crearTurnoDto.Observacion,
+          ObservacionSecundaria: crearTurnoDto.ObservacionSecundaria,
+        } as any,
       });
 
       await tx.habitacion.update({
@@ -89,7 +108,6 @@ export class TurnosService extends BaseService<Turno> {
   async cerrarTurno(
     id: string,
     usuarioCierreId: string,
-    formaPagoId: string | undefined,
     tenant: TenantContext,
   ) {
     const motelIdActivo = motelIdRequerido(tenant);
@@ -112,9 +130,6 @@ export class TurnosService extends BaseService<Turno> {
 
       if (!turno) throw new NotFoundException('Turno no encontrado');
       if (turno.Salida) {
-        throw new BadRequestException('El turno ya fue cerrado');
-      }
-      if (turno.Estado === 'CERRADO' || turno.Estado === 'COBRADO') {
         throw new BadRequestException('El turno ya fue cerrado');
       }
 
@@ -149,78 +164,14 @@ export class TurnosService extends BaseService<Turno> {
         data: {
           Salida,
           Total,
-          Estado: 'CERRADO',
           usuarioCierreId,
-          PagoPendiente: Number(Total) > 0,
+          PagoPendiente: true,
         },
       });
-
-      if (Number(Total) > 0) {
-        let finalFormaPagoId = formaPagoId;
-
-        if (!finalFormaPagoId) {
-          const fpEfectivo = await tx.formaPago.findFirst({
-            where: { Tipo: { contains: 'efectivo', mode: 'insensitive' } },
-          });
-          finalFormaPagoId = fpEfectivo?.id;
-        }
-
-        if (!finalFormaPagoId) {
-          throw new BadRequestException(
-            'Definí una forma de pago o configurá una forma de pago en efectivo por defecto',
-          );
-        }
-
-        await tx.pago.create({
-          data: {
-            Importe: Total,
-            turnoId: id,
-            formaPagoId: finalFormaPagoId,
-            motelId: turno.habitacion.motelId,
-          },
-        });
-
-        const ultimoMovimiento = await tx.caja.findFirst({
-          where: { motelId: turno.habitacion.motelId, deletedAt: null },
-          orderBy: { createdAt: 'desc' },
-        });
-
-        const saldoAnterior = ultimoMovimiento
-          ? Number(ultimoMovimiento.Saldo)
-          : 0;
-        const nuevoSaldo = saldoAnterior + Number(Total);
-
-        await tx.caja.create({
-          data: {
-            Concepto: `Cobro turno hab. ${turno.habitacion.Identificador}`,
-            Importe: Total,
-            Saldo: nuevoSaldo,
-            motelId: turno.habitacion.motelId,
-          },
-        });
-
-        turnoResult = await tx.turno.update({
-          where: { id },
-          data: { PagoPendiente: false },
-        });
-      }
 
       await tx.habitacion.update({
         where: { id: turno.habitacionId },
         data: { Estado: EstadoHabitacion.LIMPIEZA },
-      });
-
-      await tx.limpieza.upsert({
-        where: { turnoId: turno.id },
-        create: {
-          turnoId: turno.id,
-          habitacionId: turno.habitacionId,
-          usuarioId: usuarioCierreId,
-          motelId: turno.habitacion.motelId,
-          Cuando: new Date(),
-          Finalizado: false,
-        },
-        update: {},
       });
 
       return turnoResult;
@@ -233,30 +184,60 @@ export class TurnosService extends BaseService<Turno> {
       mostrar_cerrados: mostrarCerrados,
       r_Salida_desde: salidaDesde,
       r_Salida_hasta: salidaHasta,
+      Estado: estadoFiltro,
       ...reportFilters
     } = extraWhere || {};
+
+    // También extraer de options (llegan como query params sueltos)
+    const {
+      es_reporte: _esReporteOpt,
+      mostrar_cerrados: mostrarCerradosOpt,
+      r_Salida_desde: salidaDesdeOpt,
+      r_Salida_hasta: salidaHastaOpt,
+      hora_cierre: _horaCierre,
+      Estado: _estadoOpt,
+      include,
+      motelId,
+      ...restOptions
+    } = options;
+
+    const finalMostrarCerrados = mostrarCerrados ?? mostrarCerradosOpt;
+    const finalSalidaDesde = salidaDesde ?? salidaDesdeOpt;
+    const finalSalidaHasta = salidaHasta ?? salidaHastaOpt;
 
     const where: any = {
       ...reportFilters,
     };
 
-    if (mostrarCerrados !== true && mostrarCerrados !== 'true') {
-      where.Estado = where.Estado || 'ABIERTO';
-    }
-
-    if (salidaDesde || salidaHasta) {
-      where.Salida = {
-        ...(where.Salida || {}),
-        ...(salidaDesde
-          ? { gte: new Date(`${salidaDesde}T00:00:00.000Z`) }
-          : {}),
-        ...(salidaHasta
-          ? { lte: new Date(`${salidaHasta}T23:59:59.999Z`) }
-          : {}),
+    if (finalMostrarCerrados !== true && finalMostrarCerrados !== 'true') {
+      // Vista operativa: excluye solo los LIBRE (limpieza registrada)
+      where.NOT = {
+        AND: [
+          { Salida: { not: null } },
+          { PagoPendiente: false },
+          { limpieza: { isNot: null } },
+        ],
       };
     }
 
-    const { include, motelId, ...restOptions } = options;
+    // Si el front filtra por Estado calculado, traducirlo a condición real
+    if (estadoFiltro) {
+      if (estadoFiltro === 'ABIERTO') where.Salida = null;
+      else if (estadoFiltro === 'CERRADO') { where.Salida = { not: null }; where.PagoPendiente = true; }
+      else if (estadoFiltro === 'COBRADO') { where.Salida = { not: null }; where.PagoPendiente = false; }
+    }
+
+    if (finalSalidaDesde || finalSalidaHasta) {
+      where.Salida = {
+        ...(where.Salida || {}),
+        ...(finalSalidaDesde
+          ? { gte: new Date(`${finalSalidaDesde}T00:00:00.000Z`) }
+          : {}),
+        ...(finalSalidaHasta
+          ? { lte: new Date(`${finalSalidaHasta}T23:59:59.999Z`) }
+          : {}),
+      };
+    }
 
     if (motelId) {
       where.habitacion = { ...(where.habitacion || {}), motelId };
@@ -280,12 +261,16 @@ export class TurnosService extends BaseService<Turno> {
           pago: {
             include: { formaPago: true },
           },
+          limpieza: true,
           ...(include || {}),
         },
         orderBy: options.sort ? undefined : { Ingreso: 'desc' },
       },
       where,
-    );
+    ).then(result => ({
+      ...result,
+      data: result.data.map(conEstado),
+    }));
   }
 
   async obtenerUno(
@@ -294,7 +279,7 @@ export class TurnosService extends BaseService<Turno> {
     extraWhere: any = {},
     scopedMotelId?: string | null,
   ) {
-    return super.obtenerUno(
+    const turno = await super.obtenerUno(
       id,
       {
         habitacion: true,
@@ -309,5 +294,6 @@ export class TurnosService extends BaseService<Turno> {
       extraWhere,
       scopedMotelId,
     );
+    return turno ? conEstado(turno as any) : null;
   }
 }

@@ -197,6 +197,11 @@ const getCompraDetalleUrl = (compraId: string, detalleId?: string) => {
     return detalleId ? `${base}/${detalleId}` : base;
 };
 
+const getInsumoDetalleUrl = (insumoId: string, detalleId?: string) => {
+    const base = `/insumos/${insumoId}/detalles`;
+    return detalleId ? `${base}/${detalleId}` : base;
+};
+
 const getChanges = (oldData: any, newData: any) => {
     if (!oldData) return newData;
     const changes: any = {};
@@ -235,19 +240,23 @@ export const nestDataProvider: DataProvider = {
         const sanitizedFilter = sanitizeFilter(params.filter || {});
         const { include, ...filter } = sanitizedFilter;
 
-        // compradetalles: GET /compras/:compraId/detalles no existe como lista independiente,
-        // se obtienen embebidos en la compra. Usamos el endpoint base de compras con filtro.
+        // compradetalles / insumodetalles: se obtienen embebidos en el padre
         if (resource === 'compradetalles') {
             const compraId = filter.compraId;
             const response = await http.get<{ data: any[], total: number }>('/compras', {
-                params: {
-                    _page: page,
-                    _limit: 1,
-                    filtro: compraId ? JSON.stringify({ id: compraId }) : undefined,
-                },
+                params: { _page: page, _limit: 1, filtro: compraId ? JSON.stringify({ id: compraId }) : undefined },
             });
             const compra = response.data?.[0];
             const detalles = compra?.detalles ?? [];
+            return { data: detalles, total: detalles.length };
+        }
+        if (resource === 'insumodetalles') {
+            const insumoId = filter.insumoId;
+            const response = await http.get<{ data: any[], total: number }>('/insumos', {
+                params: { _page: page, _limit: 1, filtro: insumoId ? JSON.stringify({ id: insumoId }) : undefined },
+            });
+            const insumo = response.data?.[0];
+            const detalles = insumo?.detalles ?? [];
             return { data: detalles, total: detalles.length };
         }
         
@@ -350,6 +359,12 @@ export const nestDataProvider: DataProvider = {
             const response = await http.patch<any>(getCompraDetalleUrl(compraId, params.id as string), data);
             return { data: { ...response, compraId } };
         }
+        if (resource === 'insumodetalles') {
+            const insumoId = params.data.insumoId ?? params.previousData?.insumoId;
+            if (!insumoId) throw new Error('insumoId requerido para actualizar un detalle de insumo');
+            const response = await http.patch<any>(getInsumoDetalleUrl(insumoId, params.id as string), data);
+            return { data: { ...response, insumoId } };
+        }
 
         const response = await http.patch<any>(`/${mappedResource}/${params.id}`, data);
         return { data: response };
@@ -374,6 +389,12 @@ export const nestDataProvider: DataProvider = {
             const response = await http.post<any>(getCompraDetalleUrl(compraId), data);
             return { data: { ...response, compraId } };
         }
+        if (resource === 'insumodetalles') {
+            const insumoId = params.data.insumoId;
+            if (!insumoId) throw new Error('insumoId requerido para crear un detalle de insumo');
+            const response = await http.post<any>(getInsumoDetalleUrl(insumoId), data);
+            return { data: { ...response, insumoId } };
+        }
 
         const response = await http.post<any>(`/${mappedResource}`, data);
         return { data: response };
@@ -386,6 +407,12 @@ export const nestDataProvider: DataProvider = {
             const compraId = (params as any).previousData?.compraId ?? (params.meta as any)?.compraId;
             if (!compraId) throw new Error('compraId requerido para eliminar un detalle de compra');
             const response = await http.delete<any>(getCompraDetalleUrl(compraId, params.id as string));
+            return { data: response };
+        }
+        if (resource === 'insumodetalles') {
+            const insumoId = (params as any).previousData?.insumoId ?? (params.meta as any)?.insumoId;
+            if (!insumoId) throw new Error('insumoId requerido para eliminar un detalle de insumo');
+            const response = await http.delete<any>(getInsumoDetalleUrl(insumoId, params.id as string));
             return { data: response };
         }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Datagrid, List, TextField, Edit, EditButton, NumberField, NumberInput, AutocompleteInput, SimpleForm, ReferenceInput, Create,
     required, TopToolbar, useRecordContext
@@ -8,6 +8,7 @@ import CustomToolbar from '../layout/CustomToolbar';
 import { Button } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useMotel } from '../context/MotelContext';
+import { Cookies, getApiUrl } from '../helpers/Utils';
 
 const InsumoDetalleListActions = () => {
     const location = useLocation();
@@ -71,12 +72,17 @@ export const InsumoDetalleCreate = () => {
     const insumoId = params.get('insumo');
     const { currentMotelId: motelId } = useMotel();
 
-    const productoFilter = React.useMemo(() => ({
-        Facturable: false,
-        'stocks.deposito.EsPrincipal': false,
-        ...(motelId ? { motelId: motelId } : {}),
-        'stocks.Cantidad': { '[$gt]': 0 },
-    }), [motelId]);
+    const [productos, setProductos] = useState([]);
+    useEffect(() => {
+        if (!motelId) return;
+        const token = Cookies.getCookie('token');
+        fetch(getApiUrl('/productos/con-stock-secundario?facturable=false'), {
+            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
+        })
+            .then(r => r.json())
+            .then(d => setProductos(d.data || []))
+            .catch(() => {});
+    }, [motelId]);
 
     return (
         <Create redirect="/insumos">
@@ -87,13 +93,14 @@ export const InsumoDetalleCreate = () => {
                 <ReferenceInput source="insumoId" reference="insumos">
                    <AutocompleteInput sx={{ display: 'none' }} />
                 </ReferenceInput>
-                <ReferenceInput
+                <AutocompleteInput
                     source="productoId"
-                    reference="productos"
-                    filter={productoFilter}
-                >
-                    <AutocompleteInput label="Producto" optionText="Nombre" validate={required()} />
-                </ReferenceInput>
+                    label="Producto"
+                    choices={productos}
+                    optionText="Nombre"
+                    optionValue="id"
+                    validate={required()}
+                />
                 <NumberInput source="Cantidad" validate={required()} min={1} />
             </SimpleForm>
         </Create>

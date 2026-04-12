@@ -32,6 +32,28 @@ export class ProductosController extends BaseController<Producto, CrearProductoD
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('con-stock-secundario')
+  conStockSecundario(
+    @Headers('x-motel-id') motelIdHeader?: string,
+    @Query('motelId') motelIdQuery?: string,
+    @Query('facturable') facturable?: string,
+  ) {
+    const motelId = motelIdQuery || motelIdHeader;
+    const facturableFilter = facturable === 'true' ? true : facturable === 'false' ? false : undefined;
+    return this.productosService.conStockSecundario(motelId, facturableFilter);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('con-stock-primario')
+  conStockPrimario(
+    @Headers('x-motel-id') motelIdHeader?: string,
+    @Query('motelId') motelIdQuery?: string,
+  ) {
+    const motelId = motelIdQuery || motelIdHeader;
+    return this.productosService.conStockPrimario(motelId);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('auditoria-stock')
   auditoriaStock(
     @Query('desde') desde: string,

@@ -54,6 +54,47 @@ export class ProductosService extends BaseService<Producto> {
     );
   }
 
+  async conStockSecundario(motelId?: string, facturable?: boolean) {
+    if (!motelId) return { data: [], total: 0 };
+    const data = await this.prisma.producto.findMany({
+      where: {
+        motelId,
+        deletedAt: null,
+        ...(facturable !== undefined ? { Facturable: facturable } : {}),
+        stocks: {
+          some: {
+            deletedAt: null,
+            Cantidad: { gt: 0 },
+            deposito: { EsPrincipal: false },
+          },
+        },
+      },
+      include: { rubro: true, catalogoProducto: true },
+      orderBy: { Nombre: 'asc' },
+    });
+    return { data, total: data.length };
+  }
+
+  async conStockPrimario(motelId?: string) {
+    if (!motelId) return { data: [], total: 0 };
+    const data = await this.prisma.producto.findMany({
+      where: {
+        motelId,
+        deletedAt: null,
+        stocks: {
+          some: {
+            deletedAt: null,
+            Cantidad: { gt: 0 },
+            deposito: { EsPrincipal: true },
+          },
+        },
+      },
+      include: { rubro: true, catalogoProducto: true },
+      orderBy: { Nombre: 'asc' },
+    });
+    return { data, total: data.length };
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // SYNC CATÁLOGO
   // ────────────────────────────────────────────────────────────────────────────

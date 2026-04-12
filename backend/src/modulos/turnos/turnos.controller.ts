@@ -40,7 +40,6 @@ export class TurnosController extends BaseController<
   @Post(':id/cerrar')
   cerrar(
     @Param('id') id: string,
-    @Body() body: { formaPagoId?: string },
     @Request() req: { user?: { id?: string; sub?: string } },
     @Tenant() tenant: TenantContext,
   ) {
@@ -50,11 +49,6 @@ export class TurnosController extends BaseController<
         'Usuario no identificado para cerrar turno',
       );
     }
-    return this.turnosService.cerrarTurno(
-      id,
-      usuarioCierreId,
-      body?.formaPagoId,
-      tenant,
-    );
+    return this.turnosService.cerrarTurno(id, usuarioCierreId, tenant);
   }
 }

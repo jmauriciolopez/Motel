@@ -46,12 +46,6 @@ export class ConsumosService extends BaseService<Consumo> {
         );
       }
 
-      if (turno.Estado === 'CERRADO' || turno.Estado === 'COBRADO') {
-        throw new BadRequestException(
-          'No se pueden agregar consumos a un turno cerrado',
-        );
-      }
-
       const producto = await tx.producto.findFirst({
         where: { id: productoId, motelId, deletedAt: null },
       });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Datagrid, List, TextField, TextInput, Edit, EditButton, NumberField, NumberInput, AutocompleteInput, SimpleForm, ReferenceInput, Create,
     required, TopToolbar, useRecordContext, useGetOne, useGetList, FormDataConsumer, Toolbar, Button as RaButton, useRedirect
@@ -7,6 +7,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import CustomToolbar from '../layout/CustomToolbar';
 import { Button, Typography } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { Cookies, getApiUrl } from '../helpers/Utils';
+import { useMotel } from '../context/MotelContext';
 
 const StockDisponibleEnOrigen = ({ transferenciaId, productoId }) => {
     const { data: tr, isPending: loadingT } = useGetOne(
@@ -129,6 +131,19 @@ export const TransferenciaDetalleCreate = () => {
     const location = useLocation();
     const params = new URLSearchParams(location.search);
     const transferenciaId = params.get('transferenciaId') || params.get('transferencia');
+    const { currentMotelId: motelId } = useMotel();
+
+    const [productos, setProductos] = useState([]);
+    useEffect(() => {
+        if (!motelId) return;
+        const token = Cookies.getCookie('token');
+        fetch(getApiUrl('/productos/con-stock-primario'), {
+            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
+        })
+            .then(r => r.json())
+            .then(d => setProductos(d.data || []))
+            .catch(() => {});
+    }, [motelId]);
 
     return (
         <Create
@@ -149,9 +164,14 @@ export const TransferenciaDetalleCreate = () => {
                 <ReferenceInput source="transferenciaId" reference="transferencias">
                     <AutocompleteInput sx={{ display: 'none' }} />
                 </ReferenceInput>
-                <ReferenceInput source="productoId" reference="productos">
-                    <AutocompleteInput label="Producto" optionText="Nombre" validate={required()} />
-                </ReferenceInput>
+                <AutocompleteInput
+                    source="productoId"
+                    label="Producto"
+                    choices={productos}
+                    optionText="Nombre"
+                    optionValue="id"
+                    validate={required()}
+                />
                 <NumberInput source="Cantidad" validate={required()} min={1} />
                 <FormDataConsumer>
                     {({ formData }) => (

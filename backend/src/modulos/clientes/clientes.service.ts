@@ -6,7 +6,7 @@ import { Cliente } from '@prisma/client';
 @Injectable()
 export class ClientesService extends BaseService<Cliente> {
   constructor(prisma: PrismaService) {
-    super(prisma, 'cliente');
+    super(prisma, 'cliente', { hasMotelId: true });
   }
 
   async buscarPorPatente(patente: string, motelId: string) {

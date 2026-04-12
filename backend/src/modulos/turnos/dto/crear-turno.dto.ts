@@ -16,10 +16,6 @@ export class CrearTurnoDto {
 
   @IsString()
   @IsOptional()
-  Estado?: string;
-
-  @IsString()
-  @IsOptional()
   Observacion?: string;
 
   @IsString()

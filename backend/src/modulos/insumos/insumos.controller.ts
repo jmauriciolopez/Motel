@@ -4,7 +4,10 @@ import {
   Headers,
   Query,
   Post,
+  Patch,
+  Delete,
   Body,
+  Param,
   Request,
   UseGuards,
   BadRequestException,
@@ -73,5 +76,38 @@ export class InsumosController extends BaseController<Insumo, CrearInsumoDto, Ac
       sort,
       order,
     }, extraWhere);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/detalles')
+  agregarDetalle(@Request() req: any, @Param('id') insumoId: string, @Body() body: any) {
+    const tenant = req.tenant as TenantContext;
+    if (!tenant?.motelId) throw new BadRequestException('Indicá un motel activo');
+    return this.insumosService.agregarDetalle(insumoId, body, tenant.motelId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/detalles/:detalleId')
+  actualizarDetalle(
+    @Request() req: any,
+    @Param('id') insumoId: string,
+    @Param('detalleId') detalleId: string,
+    @Body() body: any,
+  ) {
+    const tenant = req.tenant as TenantContext;
+    if (!tenant?.motelId) throw new BadRequestException('Indicá un motel activo');
+    return this.insumosService.actualizarDetalle(insumoId, detalleId, body, tenant.motelId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/detalles/:detalleId')
+  eliminarDetalle(
+    @Request() req: any,
+    @Param('id') insumoId: string,
+    @Param('detalleId') detalleId: string,
+  ) {
+    const tenant = req.tenant as TenantContext;
+    if (!tenant?.motelId) throw new BadRequestException('Indicá un motel activo');
+    return this.insumosService.eliminarDetalle(insumoId, detalleId, tenant.motelId);
   }
 }

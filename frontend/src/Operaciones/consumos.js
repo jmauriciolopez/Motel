@@ -4,6 +4,8 @@ import CustomToolbar from '../layout/CustomToolbar';
 import { Button } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Cookies, getApiUrl } from '../helpers/Utils';
 
 const Requerido = [required()];
 
@@ -59,6 +61,20 @@ const ConsumoList = () => {
 const inputText = choice => choice?.habitacion?.Identificador || '';
 
 export const ConsumoCreate = () => {
+    const { currentMotelId: motelId } = useMotel();
+    const [productos, setProductos] = useState([]);
+
+    useEffect(() => {
+        if (!motelId) return;
+        const token = Cookies.getCookie('token');
+        fetch(getApiUrl('/productos/con-stock-secundario?facturable=true'), {
+            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
+        })
+            .then(r => r.json())
+            .then(d => setProductos(d.data || []))
+            .catch(() => {});
+    }, [motelId]);
+
     const transform = async (data) => {
         const { habitacion, ...rest } = data;
         return rest;
@@ -75,13 +91,14 @@ export const ConsumoCreate = () => {
                         validate={Requerido}
                     />
                 </ReferenceInput>
-                <ReferenceInput
+                <AutocompleteInput
                     source="productoId"
-                    reference="productos"
-                    filter={{ Facturable: true }}
-                >
-                    <AutocompleteInput label='Producto' optionText='Nombre' validate={Requerido} />
-                </ReferenceInput>
+                    label="Producto"
+                    choices={productos}
+                    optionText="Nombre"
+                    optionValue="id"
+                    validate={Requerido}
+                />
                 <NumberInput source="Cantidad" defaultValue={1} />
             </SimpleForm>
         </Create>

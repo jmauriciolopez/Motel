@@ -155,7 +155,7 @@ const QuickConsumoPopover = ({ anchorEl, onClose, open, turnoId }) => {
         if (!motelId) return;
         setIsLoadingProducts(true);
         const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/productos/con-stock'), {
+        fetch(getApiUrl('/productos/con-stock-secundario?facturable=true'), {
             headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
         })
             .then(r => r.json())
@@ -372,7 +372,7 @@ const LimpiezaButton = ({ label }) => {
     const translate = useTranslate();
 
     const habitacionEstado = record.habitacion?.Estado?.toLowerCase() || '';
-    const isDirty = ['sucio', 'sucia', 'por limpiar', 'porlimpiar'].some(s => habitacionEstado.includes(s));
+    const isDirty = habitacionEstado === 'limpieza';
     const isClosed = !!record.Salida;
 
     // Solo habilitamos si es el turno más nuevo de esta habitación en la lista actual
@@ -430,7 +430,7 @@ const PagoButton = ({ label }) => {
                 startIcon={<PaymentIcon />}
                 component={Link}
                 to={{ pathname: '/pagos/create' }}
-                state={{ record: { turnoId: record.id || record.id, importe: record.Total } }}
+                state={{ record: { turnoId: record.id, turno: record, Importe: Number(record.Total) } }}
             >
                 {label ? translate(label) : 'Pago'}
             </Button>
@@ -483,13 +483,13 @@ const CerrarTurnoButton = ({ showLabel = true }) => {
                     textTransform: 'none'
                 }}
             >
-                {showLabel ? 'Cerrar y cobrar' : null}
+                {showLabel ? 'Cerrar turno' : null}
             </Button>
             <Confirm
                 isOpen={open}
                 loading={isLoading}
-                title="Cerrar y cobrar"
-                content="Se calculará el total (tarifa + consumos), se registrará el pago y el movimiento de caja, y la habitación pasará a limpieza. ¿Continuar?"
+                title="Cerrar turno"
+                content="Se calculará el total (tarifa + consumos) y la habitación pasará a limpieza. El pago se registra por separado. ¿Continuar?"
                 onConfirm={handleConfirm}
                 onClose={(e) => { e.stopPropagation(); setOpen(false); }}
                 confirmColor="warning"
@@ -506,16 +506,15 @@ const CerrarTurnoButton = ({ showLabel = true }) => {
 const StatusField = () => {
     const record = useRecordContext();
     if (!record) return null;
-    const isCerrado = !!record.Salida;
-    return (
-        <Chip
-            label={isCerrado ? "CERRADO" : "ACTIVO"}
-            color={isCerrado ? "default" : "success"}
-            variant={isCerrado ? "outlined" : "filled"}
-            size="small"
-            sx={{ fontWeight: 'bold' }}
-        />
-    );
+    const estado = record.Estado || (record.Salida ? (record.PagoPendiente ? 'CERRADO' : 'COBRADO') : 'ABIERTO');
+    const config = {
+        ABIERTO:  { label: 'ACTIVO',   color: 'success' },
+        CERRADO:  { label: 'CERRADO',  color: 'warning' },
+        COBRADO:  { label: 'COBRADO',  color: 'info' },
+        LIBRE:    { label: 'LIBRE',    color: 'default' },
+    };
+    const { label, color } = config[estado] || { label: estado, color: 'default' };
+    return <Chip label={label} color={color} variant={estado === 'ABIERTO' ? 'filled' : 'outlined'} size="small" sx={{ fontWeight: 'bold' }} />;
 };
 
 const TurnoFilter = (props) => (
@@ -534,7 +533,7 @@ const TurnoCard = ({ record }) => {
     const isCerrado = !isReserva && !!record.Salida;
     const isPaid = !isReserva && record.PagoPendiente === false;
     const habitacionEstado = record.habitacion?.Estado?.toLowerCase() || '';
-    const isDirty = !isReserva && ['sucio', 'sucia', 'por limpiar', 'porlimpiar'].some(s => habitacionEstado.includes(s));
+    const isDirty = !isReserva && habitacionEstado === 'limpieza';
 
     // Colores del sistema Azure Hospitality
     const deepBlue = '#213894';

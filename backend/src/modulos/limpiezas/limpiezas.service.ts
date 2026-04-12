@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BaseService } from '../../compartido/bases/base.service';
 import { Limpieza, EstadoHabitacion } from '@prisma/client';
@@ -11,36 +11,40 @@ export class LimpiezasService extends BaseService<Limpieza> {
   }
 
   async crear(crearLimpiezaDto: CrearLimpiezaDto) {
-    return this.prisma.limpieza.create({
-      data: {
+    // Si no viene habitacionId, lo resolvemos desde el turno
+    let habitacionId = crearLimpiezaDto.habitacionId;
+    if (!habitacionId && crearLimpiezaDto.turnoId) {
+      const turno = await this.prisma.turno.findUnique({
+        where: { id: crearLimpiezaDto.turnoId },
+        select: { habitacionId: true },
+      });
+      habitacionId = turno?.habitacionId ?? '';
+    }
+
+    const limpieza = await this.prisma.limpieza.upsert({
+      where: { turnoId: crearLimpiezaDto.turnoId },
+      create: {
         ...crearLimpiezaDto,
+        habitacionId,
         Cuando: new Date(crearLimpiezaDto.Cuando),
+        Finalizado: crearLimpiezaDto.Finalizado === true,
+      },
+      update: {
+        Cuando: new Date(crearLimpiezaDto.Cuando),
+        Observacion: crearLimpiezaDto.Observacion,
+        usuarioId: crearLimpiezaDto.usuarioId,
       },
     });
-  }
 
-  async finalizar(id: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const limpieza = await tx.limpieza.findUnique({
-        where: { id },
-      });
-
-      if (!limpieza) throw new NotFoundException('Limpieza no encontrada');
-
-      // 1. Finalizar limpieza
-      const limpiezaActualizada = await tx.limpieza.update({
-        where: { id },
-        data: { Finalizado: true },
-      });
-
-      // 2. Liberar habitación
-      await tx.habitacion.update({
-        where: { id: limpieza.habitacionId },
+    // Liberar habitación al crear la limpieza
+    if (habitacionId) {
+      await this.prisma.habitacion.update({
+        where: { id: habitacionId },
         data: { Estado: EstadoHabitacion.DISPONIBLE },
       });
+    }
 
-      return limpiezaActualizada;
-    });
+    return limpieza;
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {

@@ -186,6 +186,48 @@ export class InsumosService extends BaseService<Insumo> {
     });
   }
 
+  async agregarDetalle(insumoId: string, body: any, motelId: string) {
+    const insumo = await this.prisma.insumo.findFirst({
+      where: { id: insumoId, motelId, deletedAt: null },
+    });
+    if (!insumo) throw new NotFoundException('Insumo no encontrado');
+
+    const cantidad = Number(body.Cantidad ?? body.cantidad);
+    const productoId = body.productoId;
+
+    return this.prisma.insumoDetalle.create({
+      data: { Cantidad: cantidad, productoId, insumoId, motelId },
+      include: { producto: true },
+    });
+  }
+
+  async actualizarDetalle(insumoId: string, detalleId: string, body: any, motelId: string) {
+    const detalle = await this.prisma.insumoDetalle.findFirst({
+      where: { id: detalleId, insumoId, motelId, deletedAt: null },
+    });
+    if (!detalle) throw new NotFoundException('Detalle no encontrado');
+
+    const cantidad = body.Cantidad !== undefined ? Number(body.Cantidad) : Number(detalle.Cantidad);
+
+    return this.prisma.insumoDetalle.update({
+      where: { id: detalleId },
+      data: { Cantidad: cantidad, ...(body.productoId ? { productoId: body.productoId } : {}) },
+      include: { producto: true },
+    });
+  }
+
+  async eliminarDetalle(insumoId: string, detalleId: string, motelId: string) {
+    const detalle = await this.prisma.insumoDetalle.findFirst({
+      where: { id: detalleId, insumoId, motelId, deletedAt: null },
+    });
+    if (!detalle) throw new NotFoundException('Detalle no encontrado');
+
+    return this.prisma.insumoDetalle.update({
+      where: { id: detalleId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
   async obtenerTodos(options: any, extraWhere: any = {}) {
     const { include, ...rest } = options;
     return super.obtenerTodos(

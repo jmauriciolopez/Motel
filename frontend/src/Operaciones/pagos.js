@@ -183,7 +183,7 @@ const PagoCreate = () => {
     const location = useLocation();
     const initialRecord = location.state?.record || {};
     const initialImporte = initialRecord.Importe;
-    const initialTurno = initialRecord.turno;
+    const initialTurnoId = initialRecord.turnoId;
 
     const validateCreation = (values) => {
         const errors = {};
@@ -195,7 +195,7 @@ const PagoCreate = () => {
 
     return (
         <Create redirect="/turnos" transform={transform} sx={{ mt: 2 }}>
-            <SimpleForm validate={validateCreation} defaultValues={{ Importe: initialImporte, turnoId: initialTurno }} toolbar={<CustomToolbar backTo="/turnos" />}>
+            <SimpleForm validate={validateCreation} defaultValues={{ Importe: initialImporte, turnoId: initialTurnoId }} toolbar={<CustomToolbar backTo="/turnos" />}>
                 <DefaultValueSetter source="formaPagoId" value={defaultFormaPago} />
 
                 <SectionHeader icon={PaymentsIcon} title="Nuevo Comprobante de Pago" />

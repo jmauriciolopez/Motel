@@ -20,8 +20,9 @@ export class PagosService extends BaseService<Pago> {
     });
 
     if (!turno) throw new NotFoundException('Turno no encontrado');
-    if (turno.Estado !== 'CERRADO') {
-      throw new BadRequestException('Debe cerrar el turno antes de registrar el pago.');
+    // Estado calculado: CERRADO = tiene Salida y PagoPendiente true
+    if (!turno.Salida || !turno.PagoPendiente) {
+      throw new BadRequestException('El turno debe estar cerrado y con pago pendiente para registrar el pago.');
     }
 
     // Verificar si ya existe un pago para este turno
@@ -35,6 +36,12 @@ export class PagosService extends BaseService<Pago> {
 
     const pago = await this.prisma.pago.create({
       data: crearPagoDto,
+    });
+
+    // Marcar turno como pagado
+    await this.prisma.turno.update({
+      where: { id: crearPagoDto.turnoId },
+      data: { PagoPendiente: false },
     });
 
     // Registro automático en Caja

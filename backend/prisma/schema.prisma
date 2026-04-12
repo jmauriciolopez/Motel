@@ -245,37 +245,42 @@ model Cliente {
 //
 
 model Turno {
-  id        String    @id @default(cuid())
-  Ingreso   DateTime
-  Salida    DateTime?
-  Total     Decimal
-  Estado    String      @map("estado")
-  deletedAt DateTime?
-
-  Observacion           String?
-  ObservacionSecundaria String?
-  Precio                Int         @default(0)
-  PagoPendiente         Boolean     @default(true)
-  TipoEstadia           TipoEstadia @default(Standard) @map("tipoEstadia")
-
+  // Identificación
+  id           String    @id @default(cuid())
   habitacionId String
   habitacion   Habitacion @relation(fields: [habitacionId], references: [id])
+  clienteId    String
+  cliente      Cliente    @relation(fields: [clienteId], references: [id])
+  tarifaId     String
+  tarifa       Tarifa     @relation(fields: [tarifaId], references: [id])
 
-  tarifaId String
-  tarifa   Tarifa @relation(fields: [tarifaId], references: [id])
+  // Tiempo
+  Ingreso     DateTime
+  Salida      DateTime?
+  TipoEstadia TipoEstadia @default(Standard) @map("tipoEstadia")
 
-  clienteId String
-  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  // Financiero
+  Total         Decimal
+  Precio        Int     @default(0)
+  PagoPendiente Boolean @default(true)
 
+  // Personal
   usuarioAperturaId String
   usuarioCierreId   String?
 
+  // Notas
+  Observacion           String?
+  ObservacionSecundaria String?
+
+  // Sistema
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relaciones
   consumos Consumo[]
   pago     Pago?
   limpieza Limpieza?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 enum TipoEstadia {
