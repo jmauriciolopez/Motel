@@ -6,7 +6,7 @@ import {
     useRecordContext, required, useDataProvider, useNotify, ReferenceField, DateTimeInput, BooleanField, BooleanInput, useGetList, DateInput,
     CreateButton, TopToolbar, usePermissions, useRefresh
 } from 'react-admin';
-import { useMotel } from '../context/MotelContext';
+import { canManageCompras } from '../helpers/roles';
 import { Link } from 'react-router-dom';
 import { Grid, Button } from '@mui/material';
 import CustomToolbar from '../layout/CustomToolbar';
@@ -20,10 +20,13 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 const Requerido = [required()];
 const validateUserCreation = (values) => {
     const errors = {};
-    if (!values.deposito) {
-        errors.Deposito = 'Completar Deposito';
+    if (!values.depositoId) {
+        errors.depositoId = 'Completar Depósito';
     }
-    return errors
+    if (!values.Fecha) {
+        errors.Fecha = 'Completar Fecha';
+    }
+    return errors;
 };
 
 
@@ -63,7 +66,7 @@ const DetailsButton = () => {
 
 const AddDetailButton = () => {
     const { permissions } = usePermissions();
-    const isSupervisor = permissions === 'Supervisor' || permissions === 'Administrador' || permissions === 'SuperAdmin';
+    const isSupervisor = canManageCompras(permissions);
     const record = useRecordContext();
     if (!record || record.Finalizada || !isSupervisor) return null;
     return (
@@ -77,7 +80,7 @@ const AddDetailButton = () => {
             component={Link}
             to={{
                 pathname: '/compradetalles/create',
-                search: `compraId=${record.id}`
+                search: `?compraId=${record.id}`
             }}
         >
             Cargar
@@ -124,7 +127,7 @@ const FinalizarButton = () => {
 
 const CompraListActions = () => {
     const { permissions } = usePermissions();
-    const isSupervisor = permissions === 'Supervisor' || permissions === 'Administrador' || permissions === 'SuperAdmin';
+    const isSupervisor = canManageCompras(permissions);
     return (
         <TopToolbar>
             {isSupervisor && <CreateButton />}
@@ -158,9 +161,6 @@ const CompraList = () => {
     );
 };
 export const CompraEdit = () => {
-    const { permissions } = usePermissions();
-    const isSupervisor = permissions === 'Supervisor' || permissions === 'Administrador' || permissions === 'SuperAdmin';
-
     return (
         <Edit mutationMode="pessimistic">
             <SimpleForm toolbar={<CustomToolbar backTo="/compras" />}>
@@ -199,7 +199,20 @@ export const CompraCreate = () => {
     }, [depositos]);
 
     return (
-        <Create redirect="list" sx={{ mt: 2 }}>
+        <Create
+            redirect={(resource, id) => `/compradetalles/create?compraId=${id}`}
+            sx={{ mt: 2 }}
+            transform={(data) => {
+                const { deposito, proveedor, usuario, detalles, depositoInfo, ...clean } = data;
+                return {
+                    fecha: clean.Fecha,
+                    total: clean.Total ?? 0,
+                    finalizada: clean.Finalizada ?? false,
+                    depositoId: clean.depositoId,
+                    proveedorId: clean.proveedorId,
+                };
+            }}
+        >
             <SimpleForm
                 toolbar={<CustomToolbar backTo="/compras" />}
                 validate={validateUserCreation}
@@ -213,13 +226,14 @@ export const CompraCreate = () => {
                         </ReferenceInput>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <ReferenceInput
-                            source="depositoId"
-                            reference="depositos"
-                            filter={{ EsPrincipal: true }}
-                        >
-                            <AutocompleteInput label='Depósito' optionText='Nombre' validate={Requerido} fullWidth />
-                        </ReferenceInput>
+                        <TextInput
+                            source="depositoInfo"
+                            label="Depósito de ingreso"
+                            defaultValue="Se ingresará automáticamente al depósito principal del motel"
+                            fullWidth
+                            disabled
+                        />
+                        <TextInput source="depositoId" sx={{ display: 'none' }} />
                         <BooleanInput source="Finalizada" label="Finalizada" />
                     </Grid>
                 </Grid>

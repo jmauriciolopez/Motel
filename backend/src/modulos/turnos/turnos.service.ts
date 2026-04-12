@@ -3,28 +3,29 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BaseService } from '../../compartido/bases/base.service';
 import { Turno, EstadoHabitacion } from '@prisma/client';
 import { CrearTurnoDto } from './dto/crear-turno.dto';
-import { ActualizarTurnoDto } from './dto/actualizar-turno.dto';
-import { CalculadoraTarifas } from '../../compartido/utilidades/calculadora-tarifas.util';
-import { CajasService } from '../cajas/cajas.service';
 import { TenantContext } from '../../compartido/interfaces/tenant-context.interface';
+import { MotorTarifarioService } from '../tarifas/motor-tarifario.service';
+
+function motelIdRequerido(tenant: TenantContext): string {
+  if (!tenant?.motelId) {
+    throw new BadRequestException(
+      'Indicá un motel activo (x-motel-id) para operar con turnos',
+    );
+  }
+  return tenant.motelId;
+}
 
 @Injectable()
 export class TurnosService extends BaseService<Turno> {
   constructor(
     prisma: PrismaService,
-    private cajasService: CajasService,
+    private motorTarifario: MotorTarifarioService,
   ) {
     super(prisma, 'turno', { hasMotelId: true });
   }
 
   async abrirTurno(crearTurnoDto: CrearTurnoDto, tenant: TenantContext) {
-    const motelIdActivo =
-      tenant.scope === 'motel' ? tenant.motelId : null;
-    if (!motelIdActivo) {
-      throw new BadRequestException(
-        'Indique un motel activo (x-motel-id) para abrir un turno',
-      );
-    }
+    const motelIdActivo = motelIdRequerido(tenant);
 
     return this.prisma.$transaction(async (tx) => {
       const habitacion = await tx.habitacion.findFirst({
@@ -36,7 +37,9 @@ export class TurnosService extends BaseService<Turno> {
       });
 
       if (!habitacion || habitacion.Estado !== EstadoHabitacion.DISPONIBLE) {
-        throw new BadRequestException('La habitación no está disponible para abrir un turno.');
+        throw new BadRequestException(
+          'La habitación no está disponible para abrir un turno.',
+        );
       }
 
       const cliente = await tx.cliente.findFirst({
@@ -52,7 +55,9 @@ export class TurnosService extends BaseService<Turno> {
 
       const tarifaId = crearTurnoDto.tarifaId || habitacion.tarifaId;
       if (!tarifaId) {
-        throw new BadRequestException('La habitación seleccionada no tiene una tarifa asignada.');
+        throw new BadRequestException(
+          'La habitación seleccionada no tiene una tarifa asignada.',
+        );
       }
 
       const tarifa = await tx.tarifa.findFirst({
@@ -72,7 +77,6 @@ export class TurnosService extends BaseService<Turno> {
         },
       });
 
-      // 3. Cambiar estado de la habitación a OCUPADA
       await tx.habitacion.update({
         where: { id: crearTurnoDto.habitacionId },
         data: { Estado: EstadoHabitacion.OCUPADA },
@@ -88,13 +92,7 @@ export class TurnosService extends BaseService<Turno> {
     formaPagoId: string | undefined,
     tenant: TenantContext,
   ) {
-    const motelIdActivo =
-      tenant.scope === 'motel' ? tenant.motelId : null;
-    if (!motelIdActivo) {
-      throw new BadRequestException(
-        'Indique un motel activo (x-motel-id) para cerrar un turno',
-      );
-    }
+    const motelIdActivo = motelIdRequerido(tenant);
 
     return this.prisma.$transaction(async (tx) => {
       const turno = await tx.turno.findFirst({
@@ -105,6 +103,7 @@ export class TurnosService extends BaseService<Turno> {
         },
         include: {
           tarifa: true,
+          consumos: true,
           habitacion: {
             include: { motel: true },
           },
@@ -112,85 +111,123 @@ export class TurnosService extends BaseService<Turno> {
       });
 
       if (!turno) throw new NotFoundException('Turno no encontrado');
-      if (turno.Estado === 'CERRADO') throw new BadRequestException('El turno ya está cerrado');
+      if (turno.Salida) {
+        throw new BadRequestException('El turno ya fue cerrado');
+      }
+      if (turno.Estado === 'CERRADO' || turno.Estado === 'COBRADO') {
+        throw new BadRequestException('El turno ya fue cerrado');
+      }
 
       const Salida = new Date();
 
-      // 2. Calcular total
-      const Total = CalculadoraTarifas.calcularTotal(
-        turno.Ingreso,
-        Salida,
-        turno.tarifa,
-        turno.habitacion.motel,
-      );
+      const consumosCalc = turno.consumos.map((c) => {
+        const imp = Number(c.Importe);
+        const qty = c.Cantidad;
+        return {
+          productoId: c.productoId,
+          cantidad: qty,
+          precioUnitario: qty > 0 ? imp / qty : 0,
+          importe: imp,
+        };
+      });
 
-      // 3. Actualizar turno
-      const turnoActualizado = await tx.turno.update({
+      const calculo = this.motorTarifario.calcularTurno({
+        motelId: motelIdActivo,
+        habitacionId: turno.habitacionId,
+        tarifaId: turno.tarifaId,
+        fechaInicio: turno.Ingreso,
+        fechaFin: Salida,
+        tarifa: turno.tarifa,
+        motel: turno.habitacion.motel,
+        consumos: consumosCalc,
+      });
+
+      const Total = calculo.total;
+
+      let turnoResult = await tx.turno.update({
         where: { id },
         data: {
           Salida,
           Total,
           Estado: 'CERRADO',
           usuarioCierreId,
+          PagoPendiente: Number(Total) > 0,
         },
       });
 
-      // 4. Registrar Pago y Movimiento de Caja (Automático)
       if (Number(Total) > 0) {
         let finalFormaPagoId = formaPagoId;
 
-        // Si no se provee formaPagoId, buscar la de tipo 'Efectivo' por defecto
         if (!finalFormaPagoId) {
           const fpEfectivo = await tx.formaPago.findFirst({
-            where: { Tipo: { contains: 'efectivo', mode: 'insensitive' } }
+            where: { Tipo: { contains: 'efectivo', mode: 'insensitive' } },
           });
           finalFormaPagoId = fpEfectivo?.id;
         }
 
-        if (finalFormaPagoId) {
-          // Crear el Pago
-          await tx.pago.create({
-            data: {
-              Importe: Total,
-              turnoId: id,
-              formaPagoId: finalFormaPagoId,
-              motelId: turno.habitacion.motelId,
-            }
-          });
-
-          // Registrar en Caja
-          const ultimoMovimiento = await tx.caja.findFirst({
-            where: { motelId: turno.habitacion.motelId, deletedAt: null },
-            orderBy: { createdAt: 'desc' },
-          });
-
-          const saldoAnterior = ultimoMovimiento ? Number(ultimoMovimiento.Saldo) : 0;
-          const nuevoSaldo = saldoAnterior + Number(Total);
-
-          await tx.caja.create({
-            data: {
-              Concepto: `Pago Turno Hab. ${turno.habitacion.Identificador}`,
-              Importe: Total,
-              Saldo: nuevoSaldo,
-              motelId: turno.habitacion.motelId,
-            }
-          });
+        if (!finalFormaPagoId) {
+          throw new BadRequestException(
+            'Definí una forma de pago o configurá una forma de pago en efectivo por defecto',
+          );
         }
+
+        await tx.pago.create({
+          data: {
+            Importe: Total,
+            turnoId: id,
+            formaPagoId: finalFormaPagoId,
+            motelId: turno.habitacion.motelId,
+          },
+        });
+
+        const ultimoMovimiento = await tx.caja.findFirst({
+          where: { motelId: turno.habitacion.motelId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        const saldoAnterior = ultimoMovimiento
+          ? Number(ultimoMovimiento.Saldo)
+          : 0;
+        const nuevoSaldo = saldoAnterior + Number(Total);
+
+        await tx.caja.create({
+          data: {
+            Concepto: `Cobro turno hab. ${turno.habitacion.Identificador}`,
+            Importe: Total,
+            Saldo: nuevoSaldo,
+            motelId: turno.habitacion.motelId,
+          },
+        });
+
+        turnoResult = await tx.turno.update({
+          where: { id },
+          data: { PagoPendiente: false },
+        });
       }
 
-      // 5. Pasar habitación a LIMPIEZA
       await tx.habitacion.update({
         where: { id: turno.habitacionId },
         data: { Estado: EstadoHabitacion.LIMPIEZA },
       });
 
-      return turnoActualizado;
+      await tx.limpieza.upsert({
+        where: { turnoId: turno.id },
+        create: {
+          turnoId: turno.id,
+          habitacionId: turno.habitacionId,
+          usuarioId: usuarioCierreId,
+          motelId: turno.habitacion.motelId,
+          Cuando: new Date(),
+          Finalizado: false,
+        },
+        update: {},
+      });
+
+      return turnoResult;
     });
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {
-
-
     const {
       es_reporte: _esReporte,
       mostrar_cerrados: mostrarCerrados,
@@ -210,40 +247,45 @@ export class TurnosService extends BaseService<Turno> {
     if (salidaDesde || salidaHasta) {
       where.Salida = {
         ...(where.Salida || {}),
-        ...(salidaDesde ? { gte: new Date(`${salidaDesde}T00:00:00.000Z`) } : {}),
-        ...(salidaHasta ? { lte: new Date(`${salidaHasta}T23:59:59.999Z`) } : {}),
+        ...(salidaDesde
+          ? { gte: new Date(`${salidaDesde}T00:00:00.000Z`) }
+          : {}),
+        ...(salidaHasta
+          ? { lte: new Date(`${salidaHasta}T23:59:59.999Z`) }
+          : {}),
       };
     }
 
     const { include, motelId, ...restOptions } = options;
 
-    // Turno no tiene motelId directo — filtrar via habitacion
     if (motelId) {
       where.habitacion = { ...(where.habitacion || {}), motelId };
     }
 
-    return super.obtenerTodos({
-      ...restOptions,
-      include: {
-        habitacion: {
-          include: {
-            tarifa: true,
-            motel: true,
+    return super.obtenerTodos(
+      {
+        ...restOptions,
+        include: {
+          habitacion: {
+            include: {
+              tarifa: true,
+              motel: true,
+            },
           },
+          cliente: true,
+          tarifa: true,
+          consumos: {
+            include: { producto: true },
+          },
+          pago: {
+            include: { formaPago: true },
+          },
+          ...(include || {}),
         },
-        cliente: true,
-        tarifa: true,
-        consumos: {
-          include: { producto: true },
-        },
-        pago: {
-          include: { formaPago: true },
-        },
-        ...(include || {}),
+        orderBy: options.sort ? undefined : { Ingreso: 'desc' },
       },
-      // Si no hay sort, por defecto Ingreso desc
-      orderBy: options.sort ? undefined : { Ingreso: 'desc' },
-    }, where);
+      where,
+    );
   }
 
   async obtenerUno(

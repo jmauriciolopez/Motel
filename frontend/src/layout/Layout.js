@@ -20,6 +20,12 @@ export const ModernLayout = (props) => {
     const [wizardDismissed, setWizardDismissed] = React.useState(false);
     const [wizardMode, setWizardMode] = React.useState('full'); // 'full' | 'tarifa-only'
 
+    React.useEffect(() => {
+        const handler = () => refresh();
+        window.addEventListener('motel-changed', handler);
+        return () => window.removeEventListener('motel-changed', handler);
+    }, [refresh]);
+
     // Bypassing layout for signup
     const isSignup = window.location.hash.startsWith('#/signup');
     

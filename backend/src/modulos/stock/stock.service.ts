@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BaseService } from '../../compartido/bases/base.service';
 import { Stock } from '@prisma/client';
@@ -42,13 +42,15 @@ export class StockService extends BaseService<Stock> {
     cantidad: number
   ) {
     const stockExistente = await tx.stock.findFirst({
-      where: { motelId, productoId, depositoId },
+      where: { motelId, productoId, depositoId, deletedAt: null },
     });
 
     if (stockExistente) {
       return tx.stock.update({
         where: { id: stockExistente.id },
-        data: { cantidad: stockExistente.cantidad + cantidad },
+        data: {
+          Cantidad: Number(stockExistente.Cantidad) + cantidad,
+        },
       });
     } else {
       return tx.stock.create({
@@ -56,7 +58,72 @@ export class StockService extends BaseService<Stock> {
           motelId,
           productoId,
           depositoId,
-          cantidad,
+          Cantidad: cantidad,
+        },
+      });
+    }
+  }
+
+  /**
+   * Descuenta en origen y suma en destino. No permite stock negativo en origen.
+   */
+  async transferirStock(
+    tx: any,
+    motelId: string,
+    productoId: string,
+    depositoOrigenId: string,
+    depositoDestinoId: string,
+    cantidad: number,
+  ) {
+    const cantidadNumero = Number(cantidad);
+    if (!Number.isFinite(cantidadNumero) || cantidadNumero <= 0) {
+      throw new BadRequestException('La cantidad debe ser mayor a cero');
+    }
+
+    const stockOrigen = await tx.stock.findFirst({
+      where: {
+        motelId,
+        productoId,
+        depositoId: depositoOrigenId,
+        deletedAt: null,
+      },
+    });
+
+    const cantidadOrigen = stockOrigen ? Number(stockOrigen.Cantidad) : 0;
+    if (!stockOrigen || cantidadOrigen < cantidadNumero) {
+      throw new BadRequestException(
+        'Stock insuficiente en depósito origen para completar la transferencia',
+      );
+    }
+
+    const stockDestino = await tx.stock.findFirst({
+      where: {
+        motelId,
+        productoId,
+        depositoId: depositoDestinoId,
+        deletedAt: null,
+      },
+    });
+
+    await tx.stock.update({
+      where: { id: stockOrigen.id },
+      data: { Cantidad: cantidadOrigen - cantidadNumero },
+    });
+
+    if (stockDestino) {
+      await tx.stock.update({
+        where: { id: stockDestino.id },
+        data: {
+          Cantidad: Number(stockDestino.Cantidad) + cantidadNumero,
+        },
+      });
+    } else {
+      await tx.stock.create({
+        data: {
+          motelId,
+          productoId,
+          depositoId: depositoDestinoId,
+          Cantidad: cantidadNumero,
         },
       });
     }

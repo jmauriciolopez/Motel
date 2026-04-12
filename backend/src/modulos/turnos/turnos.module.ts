@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TurnosService } from './turnos.service';
 import { TurnosController } from './turnos.controller';
-import { CajasModule } from '../cajas/cajas.module';
+import { TarifasModule } from '../tarifas/tarifas.module';
 
 @Module({
-  imports: [CajasModule],
+  imports: [TarifasModule],
   controllers: [TurnosController],
   providers: [TurnosService],
   exports: [TurnosService],

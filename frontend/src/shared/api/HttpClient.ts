@@ -62,7 +62,6 @@ class HttpClient {
         };
 
         // 3. Execution
-        console.log(url.toString());
         const response = await fetch(url.toString(), config);
 
         // 4. Response Interceptor

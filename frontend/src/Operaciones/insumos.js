@@ -12,6 +12,17 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
+const validateInsumoCreate = (values) => {
+    const errors = {};
+    if (!values.depositoId) {
+        errors.depositoId = 'Se requiere depósito de registro';
+    }
+    if (!values.Fecha) {
+        errors.Fecha = 'Completar fecha';
+    }
+    return errors;
+};
+
 const DetailsButton = () => {
     const record = useRecordContext();
     if (!record) return null;
@@ -48,7 +59,7 @@ const AddDetailButton = () => {
             component={Link}
             to={{
                 pathname: '/insumodetalles/create',
-                search: `insumo=${record.id}`
+                search: `?insumo=${record.id}`
             }}
         >
             Cargar
@@ -134,7 +145,7 @@ export const InsumoEdit = () => (
                     <ReferenceInput 
                         source="depositoId" 
                         reference="depositos"
-                        filter={useMotel().currentMotelId ? { motelId: useMotel().currentMotelId, EsPrincipal: false } : { EsPrincipal: false }}
+                        filter={{ EsPrincipal: false }}
                     >
                         <AutocompleteInput label='Depósito' optionText='Nombre' validate={required()} />
                     </ReferenceInput>
@@ -149,39 +160,54 @@ export const InsumoEdit = () => (
 );
 
 export const InsumoCreate = () => {
-    const { currentMotelId: motelId } = useMotel();
-    
-    // Buscar el primer depósito disponible para precargar
-    const { data: depositos, isPending } = useGetList('depositos', {
+    const { data: depositos } = useGetList('depositos', {
         pagination: { page: 1, perPage: 1 },
-        filter: motelId ? { motelId: motelId, EsPrincipal: false } : { EsPrincipal: false }
-    }, { enabled: !!motelId });
+        filter: { EsPrincipal: false },
+        sort: { field: 'Nombre', order: 'ASC' },
+    });
 
     const defaultValues = React.useMemo(() => {
-        const base = { Fecha: new Date() };
+        const base = { Fecha: new Date(), Finalizada: false };
         if (depositos && depositos.length > 0) {
-            // Se usa el campo directo depositoId
             base.depositoId = depositos[0].id;
         }
         return base;
     }, [depositos]);
 
     return (
-        <Create redirect="list" sx={{ mt: 2 }}>
+        <Create
+            redirect={(resource, id) => `/insumodetalles/create?insumo=${id}`}
+            sx={{ mt: 2 }}
+            transform={(data) => {
+                const { deposito, usuario, motel, depositoInfo, detalles, ...clean } = data;
+                const f = clean.Fecha;
+                const fecha =
+                    f instanceof Date ? f.toISOString() : typeof f === 'string' ? f : new Date(f).toISOString();
+                return {
+                    fecha,
+                    observacion: clean.Observacion,
+                    finalizada: clean.Finalizada ?? false,
+                    depositoId: clean.depositoId,
+                    detalles: [],
+                };
+            }}
+        >
             <SimpleForm 
                 defaultValues={defaultValues} 
                 toolbar={<CustomToolbar backTo="/insumos" />}
+                validate={validateInsumoCreate}
             >
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                         <DateTimeInput source="Fecha" label="Fecha" validate={required()} fullWidth />
-                        <ReferenceInput 
-                            source="depositoId" 
-                            reference="depositos" 
-                            filter={motelId ? { motelId: motelId, EsPrincipal: false } : { EsPrincipal: false }}
-                        >
-                            <AutocompleteInput label='Depósito' optionText='Nombre' validate={required()} fullWidth />
-                        </ReferenceInput>
+                        <TextInput
+                            source="depositoInfo"
+                            label="Depósito / registro"
+                            defaultValue="Al finalizar, el stock se descuenta del depósito secundario del motel (no del principal)"
+                            fullWidth
+                            disabled
+                        />
+                        <TextInput source="depositoId" sx={{ display: 'none' }} />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextInput source="Observacion" label="Observación" multiline fullWidth />

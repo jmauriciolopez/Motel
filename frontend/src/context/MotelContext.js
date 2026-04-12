@@ -61,7 +61,8 @@ export const MotelProvider = ({ children }) => {
         setCurrentMotelId(id);
         localStorage.setItem('motelId', id);
         // Forzar recarga para que el dataProvider y HttpClient usen el nuevo x-motel-id
-        window.location.reload();
+       // window.location.reload();
+       window.dispatchEvent(new CustomEvent('motel-changed', { detail: { motelId: id } }));
     };
 
     const contextValue = React.useMemo(() => ({

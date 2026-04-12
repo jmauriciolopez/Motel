@@ -42,7 +42,8 @@ const resourceMap: Record<string, string> = {
     'formapagos': 'formas-pago',
 };
 
-// nestDataProvider.ts - motelId viene del JWT, no del cliente
+// nestDataProvider.ts - el tenant activo viaja en x-motel-id desde HttpClient.
+// No enviar motelId como query param ni como payload operativo.
 
 const flattenFilters = (filter: any) => {
     const flattened: any = {};
@@ -56,6 +57,8 @@ const flattenFilters = (filter: any) => {
         if (lk === 'exist' || lk === 'existe' || lk.endsWith('_exist') || lk.endsWith('_existe')) continue;
         // motelId ya viene del token en el backend, no lo enviamos como query param
         if (lk === 'motelid') continue;
+        // q es búsqueda de texto libre, se maneja via filtro JSON como OR en el backend
+        if (key === 'q') continue;
 
         // Evitar [object Object] en la URL para operadores complejos ($lt, etc)
         if (typeof filter[key] === 'object') {
@@ -132,9 +135,9 @@ const sanitizeFilter = (filter: any): any => {
             continue;
         }
 
-        // 4. Traducir booleanos planos a filtros de nulidad (comportamiento legacy esperado)
+        // 4. Booleanos reales (p. ej. EsPrincipal, Finalizada en JSON filtro)
         if (typeof value === 'boolean') {
-            sanitized[key] = value === true ? { "$ne": null } : null;
+            sanitized[key] = value;
             continue;
         }
 
@@ -164,6 +167,17 @@ const FLATTENED_KEYS = new Set([
         if (FLATTENED_KEYS.has(key)) continue; // ya va como motelId/habitacionId/etc
         cleaned[key] = cleanFilter[key];
     }
+
+    // Convertir `q` (búsqueda de texto libre de react-admin) en OR de Prisma
+    if (cleaned.q && typeof cleaned.q === 'string' && cleaned.q.trim()) {
+        const term = cleaned.q.trim();
+        cleaned.OR = [
+            { Nombre: { contains: term, mode: 'insensitive' } },
+            { CriterioBusqueda: { contains: term, mode: 'insensitive' } },
+        ];
+        delete cleaned.q;
+    }
+
     if (Object.keys(cleaned).length === 0) return undefined;
     try {
         return JSON.stringify(cleaned);
@@ -173,6 +187,15 @@ const FLATTENED_KEYS = new Set([
 };
 
 const getMappedResource = (resource: string) => resourceMap[resource] || resource;
+
+/**
+ * Para compradetalles, las operaciones van a /compras/:compraId/detalles/:id
+ * El compraId viene en el filter (getList) o en el record (create/update/delete).
+ */
+const getCompraDetalleUrl = (compraId: string, detalleId?: string) => {
+    const base = `/compras/${compraId}/detalles`;
+    return detalleId ? `${base}/${detalleId}` : base;
+};
 
 const getChanges = (oldData: any, newData: any) => {
     if (!oldData) return newData;
@@ -211,6 +234,22 @@ export const nestDataProvider: DataProvider = {
         // Sanitizar filtros antes de procesar
         const sanitizedFilter = sanitizeFilter(params.filter || {});
         const { include, ...filter } = sanitizedFilter;
+
+        // compradetalles: GET /compras/:compraId/detalles no existe como lista independiente,
+        // se obtienen embebidos en la compra. Usamos el endpoint base de compras con filtro.
+        if (resource === 'compradetalles') {
+            const compraId = filter.compraId;
+            const response = await http.get<{ data: any[], total: number }>('/compras', {
+                params: {
+                    _page: page,
+                    _limit: 1,
+                    filtro: compraId ? JSON.stringify({ id: compraId }) : undefined,
+                },
+            });
+            const compra = response.data?.[0];
+            const detalles = compra?.detalles ?? [];
+            return { data: detalles, total: detalles.length };
+        }
         
         const metaInclude = params.meta?.include;
 
@@ -304,6 +343,14 @@ export const nestDataProvider: DataProvider = {
         const mappedResource = getMappedResource(resource);
         const changes = getChanges(params.previousData, params.data);
         const data = sanitizePayload(changes);
+
+        if (resource === 'compradetalles') {
+            const compraId = params.data.compraId ?? params.previousData?.compraId;
+            if (!compraId) throw new Error('compraId requerido para actualizar un detalle de compra');
+            const response = await http.patch<any>(getCompraDetalleUrl(compraId, params.id as string), data);
+            return { data: { ...response, compraId } };
+        }
+
         const response = await http.patch<any>(`/${mappedResource}/${params.id}`, data);
         return { data: response };
     },
@@ -320,12 +367,28 @@ export const nestDataProvider: DataProvider = {
     create: async (resource, params: CreateParams) => {
         const mappedResource = getMappedResource(resource);
         const data = sanitizePayload(params.data);
+
+        if (resource === 'compradetalles') {
+            const compraId = params.data.compraId;
+            if (!compraId) throw new Error('compraId requerido para crear un detalle de compra');
+            const response = await http.post<any>(getCompraDetalleUrl(compraId), data);
+            return { data: { ...response, compraId } };
+        }
+
         const response = await http.post<any>(`/${mappedResource}`, data);
         return { data: response };
     },
 
     delete: async (resource, params: DeleteParams) => {
         const mappedResource = getMappedResource(resource);
+
+        if (resource === 'compradetalles') {
+            const compraId = (params as any).previousData?.compraId ?? (params.meta as any)?.compraId;
+            if (!compraId) throw new Error('compraId requerido para eliminar un detalle de compra');
+            const response = await http.delete<any>(getCompraDetalleUrl(compraId, params.id as string));
+            return { data: response };
+        }
+
         const response = await http.delete<any>(`/${mappedResource}/${params.id}`);
         return { data: response };
     },

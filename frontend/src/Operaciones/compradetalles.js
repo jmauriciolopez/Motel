@@ -2,10 +2,10 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     Datagrid, List, TextField, Edit, EditButton, NumberField, NumberInput, AutocompleteInput, SimpleForm, TextInput, ReferenceInput, Create, DateField,
-    useRecordContext, required, useDataProvider, useNotify, ReferenceField, TopToolbar
+    useRecordContext, required, TopToolbar, FormDataConsumer
 } from 'react-admin';
 import CustomToolbar from '../layout/CustomToolbar';
-import { Grid, Button } from '@mui/material';
+import { Grid, Button, Typography } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 
 const Requerido = [required()];
@@ -82,6 +82,18 @@ export const CompraDetalleEdit = () => {
                 </ReferenceInput>
                 <NumberInput source="Cantidad" fullWidth={true} />
                 <NumberInput source="Precio" fullWidth={true} />
+                <FormDataConsumer>
+                    {({ formData }) => {
+                        const cantidad = Number(formData.Cantidad ?? formData.cantidad ?? 0);
+                        const precio = Number(formData.Precio ?? formData.precio ?? 0);
+                        const importe = cantidad * precio;
+                        return (
+                            <Typography variant="body2" color="text.secondary">
+                                Importe estimado: ${importe.toFixed(2)}
+                            </Typography>
+                        );
+                    }}
+                </FormDataConsumer>
             </SimpleForm>
         );
     };
@@ -124,6 +136,20 @@ export const CompraDetalleCreate = () => {
                     </Grid>
                     <Grid item xs={4}>
                         <NumberInput source="Precio" label="Precio" />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <FormDataConsumer>
+                            {({ formData }) => {
+                                const cantidad = Number(formData.Cantidad ?? formData.cantidad ?? 0);
+                                const precio = Number(formData.Precio ?? formData.precio ?? 0);
+                                const importe = cantidad * precio;
+                                return (
+                                    <Typography variant="body2" color="text.secondary">
+                                        Importe estimado: ${importe.toFixed(2)}
+                                    </Typography>
+                                );
+                            }}
+                        </FormDataConsumer>
                     </Grid>
                 </Grid>
             </SimpleForm>

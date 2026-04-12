@@ -1,11 +1,12 @@
-import { IsString, IsNumber, IsInt } from 'class-validator';
+import { IsString, IsNumber, IsInt, IsOptional } from 'class-validator';
 
 export class CrearConsumoDto {
   @IsInt()
   cantidad: number;
 
   @IsNumber()
-  importe: number;
+  @IsOptional()
+  importe?: number;
 
   @IsString()
   productoId: string;

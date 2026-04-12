@@ -19,8 +19,13 @@ export class CrearInsumoDto {
   @IsString()
   motelId: string;
 
+  @IsString()
+  @IsOptional()
+  usuarioId?: string;
+
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CrearInsumoDetalleDto)
-  detalles: CrearInsumoDetalleDto[];
+  detalles?: CrearInsumoDetalleDto[];
 }

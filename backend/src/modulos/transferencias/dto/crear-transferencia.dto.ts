@@ -11,7 +11,8 @@ export class CrearTransferenciaDto {
   observacion?: string;
 
   @IsBoolean()
-  finalizada: boolean;
+  @IsOptional()
+  finalizada?: boolean;
 
   @IsString()
   motelId: string;
@@ -22,8 +23,13 @@ export class CrearTransferenciaDto {
   @IsString()
   depositoDestinoId: string;
 
+  @IsString()
+  @IsOptional()
+  usuarioId?: string;
+
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CrearTransferenciaDetalleDto)
-  detalles: CrearTransferenciaDetalleDto[];
+  detalles?: CrearTransferenciaDetalleDto[];
 }

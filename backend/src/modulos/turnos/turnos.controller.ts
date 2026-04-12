@@ -1,4 +1,11 @@
-import { Controller, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
 import { RolUsuario } from '@prisma/client';
 import { TurnosService } from './turnos.service';
 import { BaseController } from '../../compartido/bases/base.controller';
@@ -33,10 +40,21 @@ export class TurnosController extends BaseController<
   @Post(':id/cerrar')
   cerrar(
     @Param('id') id: string,
-    @Body('usuarioCierreId') usuarioCierreId: string,
-    @Body('formaPagoId') formaPagoId: string | undefined,
+    @Body() body: { formaPagoId?: string },
+    @Request() req: { user?: { id?: string; sub?: string } },
     @Tenant() tenant: TenantContext,
   ) {
-    return this.turnosService.cerrarTurno(id, usuarioCierreId, formaPagoId, tenant);
+    const usuarioCierreId = req.user?.id ?? req.user?.sub ?? '';
+    if (!usuarioCierreId) {
+      throw new BadRequestException(
+        'Usuario no identificado para cerrar turno',
+      );
+    }
+    return this.turnosService.cerrarTurno(
+      id,
+      usuarioCierreId,
+      body?.formaPagoId,
+      tenant,
+    );
   }
 }

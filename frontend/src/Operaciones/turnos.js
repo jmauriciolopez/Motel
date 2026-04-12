@@ -55,6 +55,7 @@ import QuickCreateCliente from './QuickCreateCliente';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useGetOne, FormDataConsumer } from 'react-admin';
 import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const AZURE_BLUE = '#213894';
 const TONAL_SURFACE = 'rgba(33, 56, 148, 0.04)';
@@ -440,27 +441,24 @@ const PagoButton = ({ label }) => {
 const CerrarTurnoButton = ({ showLabel = true }) => {
     const record = useRecordContext();
     const notify = useNotify();
-    const [update, { isLoading }] = useUpdate();
+    const refresh = useRefresh();
     const [open, setOpen] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
 
-    const handleConfirm = () => {
-        update(
-            'turnos',
-            {
-                id: record.id,
-                data: { Salida: new Date().toISOString() }
-            },
-            {
-                onSuccess: () => {
-                    notify('Turno cerrado correctamente', { type: 'success' });
-                    setOpen(false);
-                },
-                onError: (error) => {
-                    notify(`Error al cerrar: ${error.message}`, { type: 'warning' });
-                    setOpen(false);
-                },
-            }
-        );
+    const handleConfirm = async () => {
+        if (!record?.id) return;
+        setIsLoading(true);
+        try {
+            await http.post(`/turnos/${record.id}/cerrar`, {});
+            notify('Turno cerrado y cobrado correctamente', { type: 'success' });
+            setOpen(false);
+            refresh();
+        } catch (error) {
+            notify(error?.message || 'Error al cerrar el turno', { type: 'warning' });
+            setOpen(false);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (!record || record.Salida) return null;
@@ -485,13 +483,13 @@ const CerrarTurnoButton = ({ showLabel = true }) => {
                     textTransform: 'none'
                 }}
             >
-                {showLabel ? 'Cerrar' : null}
+                {showLabel ? 'Cerrar y cobrar' : null}
             </Button>
             <Confirm
                 isOpen={open}
                 loading={isLoading}
-                title="Confirmar Cierre"
-                content="¿Cerrar este turno ahora?"
+                title="Cerrar y cobrar"
+                content="Se calculará el total (tarifa + consumos), se registrará el pago y el movimiento de caja, y la habitación pasará a limpieza. ¿Continuar?"
                 onConfirm={handleConfirm}
                 onClose={(e) => { e.stopPropagation(); setOpen(false); }}
                 confirmColor="warning"
