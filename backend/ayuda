@@ -1,0 +1,33 @@
+PRISMA ERROR FULL: PrismaClientKnownRequestError: 
+Invalid `this.model.findMany()` invocation in
+D:\Code\Moteles - copia\backend\src\compartido\bases\base.service.ts:104:20
+
+  101
+  102 try {
+  103   const [data, total] = await Promise.all([
+→ 104     this.model.findMany(
+The column `existe` does not exist in the current database.
+    at $n.handleRequestError (D:\Code\Moteles - copia\backend\node_modules\@prisma\client\runtime\librar
+
+    curl 'http://localhost:3000/api/compras?_page=1&_limit=10&_sort=Fecha&_order=DESC' \
+  -H 'Accept: */*' \
+  -H 'Accept-Language: es-419,es;q=0.9,pt-BR;q=0.8,pt;q=0.7,en;q=0.6' \
+  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbW50bXozdGMwMDAwd2xlajZoZWQ4Nml0IiwiZW1haWwiOiJqbWF1cmljaW9fbG9wZXpAaG90bWFpbC5jb20iLCJyb2wiOiJBRE1JTklTVFJBRE9SIiwicHJvcGlldGFyaW9JZCI6ImNtbnRuMW50MDAwMDN3bGVqdTJyeHdxanciLCJtb3RlbGVzIjpbImNtbnRuMXJraTAwMDV3bGVqazN1M3I4aXciXSwibW90ZWxJZCI6ImNtbnRuMXJraTAwMDV3bGVqazN1M3I4aXciLCJpYXQiOjE3NzU5MzIyOTUsImV4cCI6MTc3NjAxODY5NX0.fWMHDKF9MJLQA9PRfc-jI6KSX8iU5wUW-DZ0x2gA8uY' \
+  -H 'Connection: keep-alive' \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3002' \
+  -H 'Referer: http://localhost:3002/' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-site' \
+  -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'x-motel-id: cmntn1rki0005wlejk3u3r8iw'
+
+
+
+
+
+
