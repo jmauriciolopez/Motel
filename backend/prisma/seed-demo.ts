@@ -326,7 +326,21 @@ async function main() {
               motelId: MOTEL_ID,
             },
           },
+          limpieza: {
+            create: {
+              Cuando: new Date(salida.getTime() + 15 * 60000), // 15 min después de salida
+              Finalizado: true,
+              habitacionId: habitacion.id,
+              usuarioId: recep.id,
+              motelId: MOTEL_ID,
+            },
+          },
         },
+      });
+      // Turno histórico completo: habitación queda DISPONIBLE
+      await prisma.habitacion.update({
+        where: { id: habitacion.id },
+        data: { Estado: EstadoHabitacion.DISPONIBLE },
       });
     }
 
