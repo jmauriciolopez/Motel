@@ -61,7 +61,7 @@ export const normalizarFiltroParaPrisma = (value: any): any => {
     return value.map(normalizarFiltroParaPrisma);
   }
 
-  if (!value || typeof value !== 'object') {
+  if (!value || typeof value !== 'object' || value instanceof Date) {
     return value;
   }
 

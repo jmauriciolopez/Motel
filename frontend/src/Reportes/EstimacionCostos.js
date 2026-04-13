@@ -35,12 +35,12 @@ import {
     AreaChart,
     Area
 } from 'recharts';
-import { 
-    Calculator, 
-    Zap, 
-    Trash2, 
-    Activity, 
-    DollarSign, 
+import {
+    Calculator,
+    Zap,
+    Trash2,
+    Activity,
+    DollarSign,
     PieChart as PieIcon,
     ArrowUpRight,
     TrendingDown,
@@ -52,8 +52,8 @@ import { useMotel } from '../context/MotelContext';
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
-    <Card sx={{ 
-        height: '100%', 
+    <Card sx={{
+        height: '100%',
         position: 'relative',
         overflow: 'hidden',
         border: 'none',
@@ -61,13 +61,13 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
         boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)',
         background: '#fff'
     }}>
-        <Box sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            width: '100%', 
-            height: '4px', 
-            backgroundColor: color 
+        <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '4px',
+            backgroundColor: color
         }} />
         <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -79,9 +79,9 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
                         {value}
                     </Typography>
                 </Box>
-                <Box sx={{ 
-                    p: 1.5, 
-                    borderRadius: 3, 
+                <Box sx={{
+                    p: 1.5,
+                    borderRadius: 3,
                     backgroundColor: `${color}15`,
                     color: color
                 }}>
@@ -127,9 +127,11 @@ const EstimacionCostos = () => {
     const habPagination = { page: 1, perPage: 200 };
 
     const turnosFilter = useMemo(() => ({
-        r_Salida_desde: desde,
-        r_Salida_hasta: hasta,
-    }), [desde, hasta]);
+        Salida_desde: desde,
+        Salida_hasta: hasta,
+        mostrar_cerrados: true,
+        motelId: motelId,
+    }), [desde, hasta, motelId]);
 
     const { data: turnos, isLoading: loadingTurnos, error: errorTurnos } = useGetList('turnos', {
         filter: turnosFilter,
@@ -139,6 +141,7 @@ const EstimacionCostos = () => {
 
     const { data: habitaciones, isLoading: loadingHab } = useGetList('habitaciones', {
         pagination: habPagination,
+        filter: { motelId: motelId }
     });
 
     // 4. Cálculos Matemáticos
@@ -182,13 +185,13 @@ const EstimacionCostos = () => {
         const costoVariableOperativo = totalTurnos * costoPorTurno;
         const costoFijoHabitaciones = totalHabs * costoMantenimientoHab;
         const costoTotalEstimado = costoVariableOperativo + costoFijoHabitaciones + totalCMV + otrosCostosFijos;
-        
+
         const margenNeto = totalIngreso - costoTotalEstimado;
         const porcentajeMargen = totalIngreso > 0 ? (margenNeto / totalIngreso * 100).toFixed(1) : 0;
 
         // Preparar datos para gráficos
         const chartData = Object.values(dailyStats).sort((a, b) => a.date.localeCompare(b.date));
-        
+
         const compositionData = [
             { name: 'Variable (Limpieza)', value: costoVariableOperativo },
             { name: 'Mercadería (CMV)', value: totalCMV },
@@ -234,7 +237,7 @@ const EstimacionCostos = () => {
                         Combinamos datos reales de actividad con tus parámetros de costo
                     </Typography>
                 </Box>
-                
+
                 <Paper sx={{ p: 2, display: 'flex', gap: 3, borderRadius: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                     <TextField
                         type="date"
@@ -265,7 +268,7 @@ const EstimacionCostos = () => {
                             <Calculator size={20} color="#6366f1" />
                             <Typography variant="h6" fontWeight={700}>Parámetros</Typography>
                         </Box>
-                        
+
                         <Box sx={{ mb: 4 }}>
                             <Typography variant="body2" fontWeight={600} gutterBottom sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span>Costo Insumos / Turno</span>
@@ -315,7 +318,7 @@ const EstimacionCostos = () => {
                         </Box>
 
                         <Divider sx={{ my: 3 }} />
-                        
+
                         <Box sx={{ p: 2, bgcolor: '#f1f5f9', borderRadius: 3 }}>
                             <Typography variant="caption" fontWeight={700} color="textSecondary" uppercase>Fórmula Aplicada</Typography>
                             <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace' }}>
@@ -369,15 +372,15 @@ const EstimacionCostos = () => {
                                             <AreaChart data={stats?.chartData}>
                                                 <defs>
                                                     <linearGradient id="colorIng" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                                     </linearGradient>
                                                 </defs>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                                 <XAxis dataKey="date" hide />
                                                 <YAxis hide />
-                                                <Tooltip 
-                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                     formatter={(v) => formatter.format(v)}
                                                 />
                                                 <Area type="monotone" dataKey="ingresos" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIng)" name="Ingresos" />

@@ -35,29 +35,29 @@ import {
     ResponsiveContainer,
     Cell
 } from 'recharts';
-import { 
-    Users, 
-    Car, 
-    Calendar, 
-    Award, 
-    TrendingUp, 
-    Search 
+import {
+    Users,
+    Car,
+    Calendar,
+    Award,
+    TrendingUp,
+    Search
 } from 'lucide-react';
 import { useMotel } from '../context/MotelContext';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
-    <Card sx={{ 
-        height: '100%', 
-        borderRadius: 4, 
+    <Card sx={{
+        height: '100%',
+        borderRadius: 4,
         boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
         borderLeft: `6px solid ${color}`
     }}>
         <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ 
-                p: 1.5, 
-                borderRadius: '50%', 
+            <Box sx={{
+                p: 1.5,
+                borderRadius: '50%',
                 backgroundColor: `${color}15`,
                 color: color
             }}>
@@ -76,6 +76,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 );
 
 const HistorialClientes = () => {
+    const { currentMotelId } = useMotel();
     const defaultDesde = new Date();
     defaultDesde.setDate(defaultDesde.getDate() - 90);
     const [desde, setDesde] = useState(defaultDesde.toISOString().split('T')[0]);
@@ -83,9 +84,11 @@ const HistorialClientes = () => {
     const [topX, setTopX] = useState(10);
 
     const turnosFilter = useMemo(() => ({
-        r_Salida_desde: desde,
-        r_Salida_hasta: hasta,
-    }), [desde, hasta]);
+        Salida_desde: desde,
+        Salida_hasta: hasta,
+        mostrar_cerrados: true,
+        motelId: currentMotelId,
+    }), [desde, hasta, currentMotelId]);
 
     const { data, isLoading, error } = useGetList('turnos', {
         filter: turnosFilter,
@@ -105,10 +108,10 @@ const HistorialClientes = () => {
             if (patente === 'S/N') return;
 
             if (!customerMap[patente]) {
-                customerMap[patente] = { 
-                    patente: patente, 
-                    visits: 0, 
-                    revenue: 0, 
+                customerMap[patente] = {
+                    patente: patente,
+                    visits: 0,
+                    revenue: 0,
                     lastVisit: null,
                     marca: turno.cliente?.Marca || '---'
                 };
@@ -232,7 +235,7 @@ const HistorialClientes = () => {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                         <XAxis dataKey="patente" axisLine={false} tickLine={false} />
                                         <YAxis axisLine={false} tickLine={false} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                             cursor={{ fill: '#f3f4f6' }}
                                         />

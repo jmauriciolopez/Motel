@@ -36,7 +36,7 @@ export class TurnosService extends BaseService<Turno> {
     private motorTarifario: MotorTarifarioService,
     private turnoCalculator: TurnoCalculator,
   ) {
-    super(prisma, 'turno', { hasMotelId: true });
+    super(prisma, 'turno', { hasMotelId: false });
   }
 
   async abrirTurno(crearTurnoDto: CrearTurnoDto, tenant: TenantContext) {
@@ -175,8 +175,10 @@ export class TurnosService extends BaseService<Turno> {
     const {
       es_reporte: _esReporte,
       mostrar_cerrados: mostrarCerrados,
-      r_Salida_desde: salidaDesde,
-      r_Salida_hasta: salidaHasta,
+      r_Salida_desde: _r_salidaDesde, // Ignorar legacy
+      r_Salida_hasta: _r_salidaHasta, // Ignorar legacy
+      Salida_desde: salidaDesde,
+      Salida_hasta: salidaHasta,
       Estado: estadoFiltro,
       hora_cierre: _horaCierreExtra,
       ...reportFilters
@@ -186,8 +188,8 @@ export class TurnosService extends BaseService<Turno> {
     const {
       es_reporte: _esReporteOpt,
       mostrar_cerrados: mostrarCerradosOpt,
-      r_Salida_desde: salidaDesdeOpt,
-      r_Salida_hasta: salidaHastaOpt,
+      Salida_desde: salidaDesdeOpt,
+      Salida_hasta: salidaHastaOpt,
       hora_cierre: _horaCierre,
       Estado: _estadoOpt,
       include,
@@ -201,8 +203,8 @@ export class TurnosService extends BaseService<Turno> {
 
     // Extraer también r_Salida_desde/hasta de reportFilters para evitar conflictos
     const {
-      r_Salida_desde: _salidaDesdeReport,
-      r_Salida_hasta: _salidaHastaReport,
+      Salida_desde: _salidaDesdeReport,
+      Salida_hasta: _salidaHastaReport,
       ...cleanReportFilters
     } = reportFilters;
 
@@ -236,7 +238,7 @@ export class TurnosService extends BaseService<Turno> {
       if (finalSalidaHasta) {
         dateFilter.lte = new Date(`${finalSalidaHasta}T23:59:59.999Z`);
       }
-      
+
       // Merge with existing Salida filter if present
       if (where.Salida && typeof where.Salida === 'object') {
         where.Salida = { ...where.Salida, ...dateFilter };

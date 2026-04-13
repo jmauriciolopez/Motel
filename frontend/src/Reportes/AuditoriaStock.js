@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Title } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const fmtN = (n) => Number(n || 0).toLocaleString('es-AR');
 const fmtM = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n ?? 0);
@@ -24,6 +24,8 @@ const AuditoriaStock = () => {
     const [order, setOrder]       = useState('asc');
     const [rubroFiltro, setRubroFiltro] = useState('');
 
+    const { currentMotelId } = useMotel();
+
     // Rubros únicos derivados de los datos
     const rubros = useMemo(() => {
         const set = new Set(data.map(r => r.Rubro).filter(Boolean));
@@ -33,12 +35,9 @@ const AuditoriaStock = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const token = Cookies.getCookie('token');
-            const res = await fetch(
-                getApiUrl(`/productos/auditoria-stock?desde=${desde}&hasta=${hasta}`),
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const json = await res.json();
+            const json = await http.get('/productos/auditoria-stock', {
+                params: { desde, hasta }
+            });
             setData(json.data || []);
             setDepositos(json.depositos || {});
         } catch {
@@ -48,7 +47,7 @@ const AuditoriaStock = () => {
         }
     };
 
-    useEffect(() => { fetchData(); }, [desde, hasta]);
+    useEffect(() => { fetchData(); }, [desde, hasta, currentMotelId]);
 
     // Columnas de depósito dinámicas
     const depositoCols = useMemo(() => Object.entries(depositos).map(([id, nombre]) => ({ id, nombre })), [depositos]);

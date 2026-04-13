@@ -36,6 +36,7 @@ const FiltroStocks = (props) => {
 };
 
 const StockReporte = (props) => {
+    const { currentMotelId } = useMotel();
     return (
         <List
             {...props}
@@ -43,6 +44,7 @@ const StockReporte = (props) => {
             hasCreate={false}
             exporter={false}
             filters={<FiltroStocks />}
+            filter={{ motelId: currentMotelId }}
             sort={{ field: 'id', order: 'DESC' }}
             title="Reporte de Stocks"
             queryOptions={{ 

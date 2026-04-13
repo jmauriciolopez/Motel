@@ -58,7 +58,7 @@ const flattenFilters = (filter: any) => {
         // motelId ya viene del token en el backend, no lo enviamos como query param
         if (lk === 'motelid') continue;
         // q es búsqueda de texto libre, se maneja via filtro JSON como OR en el backend
-        if (key === 'q') continue;
+        if (key === 'q' || lk.startsWith('salida_')) continue;
 
         // Evitar [object Object] en la URL para operadores complejos ($lt, etc)
         if (typeof filter[key] === 'object') {

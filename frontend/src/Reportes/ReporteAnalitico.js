@@ -20,24 +20,24 @@ const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); r
 const addWeeks = (d, n) => addDays(d, n * 7);
 const addMonths = (d, n) => { const r = new Date(d); r.setMonth(r.getMonth() + n); return r; };
 const startOfYear = (d) => new Date(d.getFullYear(), 0, 1);
-const startOfWeekMon = (d) => { const r = new Date(d); const day = r.getDay(); const diff = (day === 0 ? -6 : 1 - day); r.setDate(r.getDate() + diff); r.setHours(0,0,0,0); return r; };
+const startOfWeekMon = (d) => { const r = new Date(d); const day = r.getDay(); const diff = (day === 0 ? -6 : 1 - day); r.setDate(r.getDate() + diff); r.setHours(0, 0, 0, 0); return r; };
 const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
-const startOfDay = (d) => { const r = new Date(d); r.setHours(0,0,0,0); return r; };
-const startOfHour = (d) => { const r = new Date(d); r.setMinutes(0,0,0); return r; };
+const startOfDay = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
+const startOfHour = (d) => { const r = new Date(d); r.setMinutes(0, 0, 0); return r; };
 
-const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 const fmtLabel = {
-    hour:  (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}h`; },
-    day:   (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}`; },
-    week:  (iso) => { const d = new Date(iso); return `S ${pad(d.getDate())}/${pad(d.getMonth()+1)}`; },
+    hour: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}h`; },
+    day: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
+    week: (iso) => { const d = new Date(iso); return `S ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
     month: (iso) => { const d = new Date(iso); return `${MONTHS_ES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; },
 };
 
 const bucketKey = {
-    hour:  (iso) => startOfHour(new Date(iso)).toISOString(),
-    day:   (iso) => startOfDay(new Date(iso)).toISOString(),
-    week:  (iso) => startOfWeekMon(new Date(iso)).toISOString(),
+    hour: (iso) => startOfHour(new Date(iso)).toISOString(),
+    day: (iso) => startOfDay(new Date(iso)).toISOString(),
+    week: (iso) => startOfWeekMon(new Date(iso)).toISOString(),
     month: (iso) => startOfMonth(new Date(iso)).toISOString(),
 };
 
@@ -46,34 +46,35 @@ const fmtMoney = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`;
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const METRICS = [
-    { key: 'turnos',    label: 'Turnos',         color: '#6366f1' },
-    { key: 'limpiezas', label: 'Limpiezas',       color: '#10b981' },
-    { key: 'facturado', label: 'Facturado',       color: '#f59e0b' },
-    { key: 'consumos',  label: 'Consumos',        color: '#ef4444' },
+    { key: 'turnos', label: 'Turnos', color: '#6366f1' },
+    { key: 'limpiezas', label: 'Limpiezas', color: '#10b981' },
+    { key: 'facturado', label: 'Facturado', color: '#f59e0b' },
+    { key: 'consumos', label: 'Consumos', color: '#ef4444' },
 ];
 
 const RANGES = [
-    { key: '1D',     label: '1D' },
-    { key: '1W',     label: '1S' },
-    { key: '1M',     label: '1M' },
-    { key: 'YTD',    label: 'YTD' },
+    { key: '1D', label: '1D' },
+    { key: '1W', label: '1S' },
+    { key: '1M', label: '1M' },
+    { key: 'YTD', label: 'YTD' },
     { key: 'custom', label: 'Custom' },
 ];
 
 const GRANULARITIES = [
-    { key: 'hour',  label: 'Hora' },
-    { key: 'day',   label: 'Día' },
-    { key: 'week',  label: 'Semana' },
+    { key: 'hour', label: 'Hora' },
+    { key: 'day', label: 'Día' },
+    { key: 'week', label: 'Semana' },
     { key: 'month', label: 'Mes' },
 ];
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
 const ReporteAnalitico = () => {
+    const { currentMotelId } = useMotel();
 
-    const [range, setRange]             = useState('1W');
+    const [range, setRange] = useState('1W');
     const [granularity, setGranularity] = useState('day');
-    const [metrics, setMetrics]         = useState(['turnos', 'facturado']);
+    const [metrics, setMetrics] = useState(['turnos', 'facturado']);
     const [customDesde, setCustomDesde] = useState('');
     const [customHasta, setCustomHasta] = useState('');
 
@@ -81,10 +82,10 @@ const ReporteAnalitico = () => {
     const { desde, hasta } = useMemo(() => {
         const now = new Date();
         const hoy = toYMD(now);
-        if (range === '1D')     return { desde: hoy, hasta: hoy };
-        if (range === '1W')     return { desde: toYMD(addWeeks(now, -1)), hasta: hoy };
-        if (range === '1M')     return { desde: toYMD(addMonths(now, -1)), hasta: hoy };
-        if (range === 'YTD')    return { desde: toYMD(startOfYear(now)), hasta: hoy };
+        if (range === '1D') return { desde: hoy, hasta: hoy };
+        if (range === '1W') return { desde: toYMD(addWeeks(now, -1)), hasta: hoy };
+        if (range === '1M') return { desde: toYMD(addMonths(now, -1)), hasta: hoy };
+        if (range === 'YTD') return { desde: toYMD(startOfYear(now)), hasta: hoy };
         if (range === 'custom') return { desde: customDesde || hoy, hasta: customHasta || hoy };
         return { desde: hoy, hasta: hoy };
     }, [range, customDesde, customHasta]);
@@ -92,8 +93,10 @@ const ReporteAnalitico = () => {
     // ── Queries ───────────────────────────────────────────────────────────────
     const { data: turnos = [], isLoading: loadingTurnos } = useGetList('turnos', {
         filter: {
-            r_Salida_desde: desde,
-            r_Salida_hasta: hasta,
+            Salida_desde: desde,
+            Salida_hasta: hasta,
+            mostrar_cerrados: true,
+            motelId: currentMotelId,
         },
         pagination: { page: 1, perPage: 2000 },
         sort: { field: 'Salida', order: 'ASC' },
@@ -106,6 +109,7 @@ const ReporteAnalitico = () => {
                 $lte: `${hasta}T23:59:59.999Z`
             },
             Finalizado: true,
+            motelId: currentMotelId,
         },
         pagination: { page: 1, perPage: 2000 },
         sort: { field: 'Cuando', order: 'ASC' },
@@ -117,6 +121,7 @@ const ReporteAnalitico = () => {
                 $gte: `${desde}T00:00:00.000Z`,
                 $lte: `${hasta}T23:59:59.999Z`
             },
+            motelId: currentMotelId,
         },
         pagination: { page: 1, perPage: 5000 },
         sort: { field: 'createdAt', order: 'ASC' },
@@ -135,7 +140,7 @@ const ReporteAnalitico = () => {
             if (!t.Salida) return;
             const key = bucketKey[granularity](t.Salida);
             ensure(key);
-            buckets[key].turnos    += 1;
+            buckets[key].turnos += 1;
             buckets[key].facturado += Number(t.Total || 0);
         });
 
@@ -161,10 +166,10 @@ const ReporteAnalitico = () => {
 
     // ── Totales ───────────────────────────────────────────────────────────────
     const totals = useMemo(() => ({
-        turnos:    turnos.length,
+        turnos: turnos.length,
         limpiezas: limpiezas.length,
         facturado: turnos.reduce((s, t) => s + Number(t.Total || 0), 0),
-        consumos:  consumos.reduce((s, c) => s + Number(c.Importe || c.Monto || 0), 0),
+        consumos: consumos.reduce((s, c) => s + Number(c.Importe || c.Monto || 0), 0),
     }), [turnos, limpiezas, consumos]);
 
     const toggleMetric = useCallback((key) => {
@@ -263,7 +268,7 @@ const ReporteAnalitico = () => {
                                 label={{ value: 'Cantidad', angle: -90, position: 'insideLeft', offset: 15, style: { fontSize: 11 } }}
                             />
                             <YAxis yAxisId="money" orientation="right"
-                                tickFormatter={v => `$${(v/1000).toFixed(0)}k`}
+                                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}
                                 tick={{ fontSize: 11 }}
                                 label={{ value: '$', angle: 90, position: 'insideRight', offset: 15, style: { fontSize: 11 } }}
                             />
@@ -281,10 +286,10 @@ const ReporteAnalitico = () => {
                             <Brush dataKey="label" height={22} stroke="#e2e8f0" travellerWidth={8} />
 
                             {metrics.includes('turnos') && (
-                                <Bar yAxisId="count" dataKey="turnos" fill="#6366f1" radius={[4,4,0,0]} maxBarSize={36} />
+                                <Bar yAxisId="count" dataKey="turnos" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={36} />
                             )}
                             {metrics.includes('limpiezas') && (
-                                <Bar yAxisId="count" dataKey="limpiezas" fill="#10b981" radius={[4,4,0,0]} maxBarSize={36} />
+                                <Bar yAxisId="count" dataKey="limpiezas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={36} />
                             )}
                             {metrics.includes('facturado') && (
                                 <Area yAxisId="money" type="monotone" dataKey="facturado"

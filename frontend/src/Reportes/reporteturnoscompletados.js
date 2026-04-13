@@ -10,7 +10,7 @@ const FiltroReporte = (props) => (
 );
 
 const ReporteTurnosCompletados = () => {
-    const { availableMoteles } = useMotel();
+    const { availableMoteles, currentMotelId } = useMotel();
     const horaCierre = availableMoteles?.[0]?.HoraCierreCaja || '06:00';
 
     const container = useRef(null);
@@ -24,7 +24,7 @@ const ReporteTurnosCompletados = () => {
             resource='turnos/reporte-completados' 
             hasCreate={false} 
             filters={<FiltroReporte />} 
-            filter={{ horaCierre }}
+            filter={{ horaCierre, motelId: currentMotelId }}
             filterDefaultValues={{ fechaDesde: hoy, fechaHasta: hoy }}
             sort={{ field: 'Salida', order: 'DESC' }}
             style={{ minWidth: maxWidth * 0.8 }}

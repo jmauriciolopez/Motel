@@ -51,14 +51,15 @@ const StatCard = ({ title, value, icon, color }) => (
 const ReporteIngresos = () => {
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
 
-    const { availableMoteles } = useMotel();
+    const { availableMoteles, currentMotelId } = useMotel();
     const horaCierre = availableMoteles?.[0]?.HoraCierreCaja || '06:00';
 
     const turnosFilter = useMemo(() => ({
         fechaDesde: filterDate,
         fechaHasta: filterDate,
         horaCierre: horaCierre,
-    }), [filterDate, horaCierre]);
+        motelId: currentMotelId,
+    }), [filterDate, horaCierre, currentMotelId]);
 
     const { data, isLoading, error } = useGetList('turnos/reporte-completados', {
         pagination: { page: 1, perPage: 1000 },
@@ -71,7 +72,8 @@ const ReporteIngresos = () => {
             $gte: `${filterDate}T00:00:00.000Z`,
             $lte: `${filterDate}T23:59:59.999Z`
         },
-    }), [filterDate]);
+        motelId: currentMotelId,
+    }), [filterDate, currentMotelId]);
 
     // Nueva consulta para insumos consumidos (amenidades internas)
     const { data: insumosConsumidosData, isLoading: isLoadingInsumos } = useGetList('insumodetalles', {

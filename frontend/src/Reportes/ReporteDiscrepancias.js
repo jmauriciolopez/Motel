@@ -6,7 +6,7 @@ import {
 import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Title } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const fmt = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val ?? 0);
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
@@ -19,15 +19,14 @@ const ReporteDiscrepancias = () => {
     const [data, setData]   = useState([]);
     const [loading, setLoading] = useState(false);
 
+    const { currentMotelId } = useMotel();
+
     const fetchData = async () => {
         setLoading(true);
         try {
-            const token = Cookies.getCookie('token');
-            const res = await fetch(
-                getApiUrl(`/pagos/discrepancias?desde=${desde}&hasta=${hasta}`),
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const json = await res.json();
+            const json = await http.get('/pagos/discrepancias', {
+                params: { desde, hasta }
+            });
             setData(json.data || []);
         } catch {
             setData([]);
@@ -36,7 +35,7 @@ const ReporteDiscrepancias = () => {
         }
     };
 
-    useEffect(() => { fetchData(); }, [desde, hasta]);
+    useEffect(() => { fetchData(); }, [desde, hasta, currentMotelId]);
 
     const totalDiff = data.reduce((acc, p) => acc + (Number(p.turno?.Total ?? 0) - Number(p.Importe ?? 0)), 0);
 

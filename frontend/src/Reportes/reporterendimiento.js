@@ -37,23 +37,23 @@ import {
     Pie,
     Cell
 } from 'recharts';
-import { 
-    Activity, 
-    DollarSign, 
-    Calendar, 
-    Zap, 
-    MapPin, 
-    TrendingUp, 
-    Clock, 
-    Tag 
+import {
+    Activity,
+    DollarSign,
+    Calendar,
+    Zap,
+    MapPin,
+    TrendingUp,
+    Clock,
+    Tag
 } from 'lucide-react';
 import { useMotel } from '../context/MotelContext';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
-    <Card sx={{ 
-        height: '100%', 
+    <Card sx={{
+        height: '100%',
         position: 'relative',
         overflow: 'hidden',
         border: 'none',
@@ -61,13 +61,13 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
         boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)',
         background: '#fff'
     }}>
-        <Box sx={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            width: '100%', 
-            height: '4px', 
-            backgroundColor: color 
+        <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '4px',
+            backgroundColor: color
         }} />
         <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -79,9 +79,9 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
                         {value}
                     </Typography>
                 </Box>
-                <Box sx={{ 
-                    p: 1.5, 
-                    borderRadius: 3, 
+                <Box sx={{
+                    p: 1.5,
+                    borderRadius: 3,
                     backgroundColor: `${color}15`,
                     color: color
                 }}>
@@ -98,15 +98,18 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
 );
 
 const ReporteRendimiento = () => {
+    const { currentMotelId } = useMotel();
     const defaultDesde = new Date();
     defaultDesde.setDate(defaultDesde.getDate() - 30);
     const [desde, setDesde] = useState(defaultDesde.toISOString().split('T')[0]);
     const [hasta, setHasta] = useState(new Date().toISOString().split('T')[0]);
 
     const turnosFilter = useMemo(() => ({
-        r_Salida_desde: desde,
-        r_Salida_hasta: hasta,
-    }), [desde, hasta]);
+        Salida_desde: desde,
+        Salida_hasta: hasta,
+        mostrar_cerrados: true,
+        motelId: currentMotelId,
+    }), [desde, hasta, currentMotelId]);
 
     const { data, isLoading, error } = useGetList('turnos', {
         filter: turnosFilter,
@@ -128,7 +131,7 @@ const ReporteRendimiento = () => {
             { name: 'Vie', total: 0, count: 0 },
             { name: 'Sáb', total: 0, count: 0 }
         ];
-        
+
         const promoDataMap = {
             'Plena': { name: 'Tarifa Plena', value: 0, count: 0 },
             'Promoción': { name: 'Promocionales', value: 0, count: 0 },
@@ -152,10 +155,10 @@ const ReporteRendimiento = () => {
                 const date = new Date(turno.Ingreso);
                 const hour = date.getHours();
                 const day = date.getDay(); // 0-6 (Sun-Sat)
-                
+
                 hourlyYield[hour].total += monto;
                 hourlyYield[hour].count += 1;
-                
+
                 dailyYield[day].total += monto;
                 dailyYield[day].count += 1;
             }
@@ -163,7 +166,7 @@ const ReporteRendimiento = () => {
             // 3. Promotion Logic
             const tarifa = turno.habitacion?.tarifa;
             const tNombre = (tarifa?.Nombre || '').toUpperCase();
-            
+
             if (tNombre.includes('PERNOCTE')) {
                 promoDataMap['Pernocte'].value += monto;
                 promoDataMap['Pernocte'].count += 1;
@@ -295,9 +298,9 @@ const ReporteRendimiento = () => {
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                                         <XAxis dataKey="hour" axisLine={false} tickLine={false} />
                                         <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `$${val / 1000}k`} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                            formatter={(value) => formatter.format(value)} 
+                                            formatter={(value) => formatter.format(value)}
                                         />
                                         <Area type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorY)" name="Recaudación" />
                                     </AreaChart>
@@ -359,9 +362,9 @@ const ReporteRendimiento = () => {
                                                             {formatter.format(row.revenue)}
                                                         </Typography>
                                                         <Box sx={{ width: '100px' }}>
-                                                            <LinearProgress 
-                                                                variant="determinate" 
-                                                                value={(row.revenue / stats.roomData[0].revenue) * 100} 
+                                                            <LinearProgress
+                                                                variant="determinate"
+                                                                value={(row.revenue / stats.roomData[0].revenue) * 100}
                                                                 sx={{ height: 6, borderRadius: 3, bgcolor: '#f1f5f9', '& .MuiLinearProgress-bar': { bgcolor: '#f59e0b' } }}
                                                             />
                                                         </Box>
@@ -400,7 +403,7 @@ const ReporteRendimiento = () => {
                                             ))}
                                         </Pie>
                                         <Tooltip formatter={(value) => formatter.format(value)} />
-                                        <Legend verticalAlign="bottom" height={36}/>
+                                        <Legend verticalAlign="bottom" height={36} />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </Box>
