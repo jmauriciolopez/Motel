@@ -9,25 +9,34 @@ Sistema SaaS multi-tenant para la gestión operativa de moteles. Permite adminis
 | Frontend | React 19 + React-Admin 5 + MUI 6 + Vite |
 | Backend | NestJS 10 + Prisma 5 |
 | Base de datos | PostgreSQL |
-| Auth | JWT (Passport) + bcrypt |
+| Auth | JWT en cookie HttpOnly + bcrypt |
 | Gráficos | Recharts |
+| Infra frontend | AWS S3 + CloudFront (Terraform) |
+| Infra backend | Render (Blueprint) |
 
 ## Estructura del proyecto
 
 ```
 /
-├── backend/          # API NestJS
-│   ├── prisma/       # Schema, migraciones y seed
+├── .github/workflows/          # CI/CD (GitHub Actions)
+│   ├── backend-deploy.yml      # Trigger deploy en Render al pushear backend/
+│   ├── frontend-deploy.yml     # Build + sync S3 + invalidar CloudFront
+│   └── frontend-build.yml      # Build check en PRs
+├── backend/                    # API NestJS
+│   ├── prisma/                 # Schema, migraciones y seed
 │   └── src/
 │       ├── compartido/bases/   # BaseController y BaseService genéricos
-│       ├── modulos/            # Un módulo por recurso (cajas, turnos, compras, etc.)
+│       ├── modulos/            # Un módulo por recurso
 │       └── main.ts
-└── frontend/         # SPA React-Admin
-    └── src/
-        ├── Operaciones/        # CRUD de recursos operativos
-        ├── Reportes/           # Reportes y dashboards
-        ├── shared/api/         # HttpClient + nestDataProvider (react-admin)
-        └── context/            # MotelContext (selector de motel activo)
+├── frontend/                   # SPA React-Admin
+│   ├── terraform/              # Infraestructura AWS (S3 + CloudFront)
+│   └── src/
+│       ├── Operaciones/        # CRUD de recursos operativos
+│       ├── Reportes/           # Reportes y dashboards
+│       ├── shared/api/         # HttpClient centralizado
+│       └── context/            # MotelContext (selector de motel activo)
+├── render.yaml                 # Blueprint de Render (backend + DB)
+└── README.md
 ```
 
 ## Modelo de datos principal
@@ -51,8 +60,17 @@ Sistema SaaS multi-tenant para la gestión operativa de moteles. Permite adminis
 
 El `motelId` viaja en el JWT — el backend lo extrae del token en cada request. El frontend no envía `motelId` en queries ni en el body de mutaciones.
 
-- `BaseService` detecta si el modelo tiene `motelId` (declarado con `{ hasMotelId: true }` en el constructor) y aplica el filtro automáticamente en `getList`.
+- `BaseService` detecta si el modelo tiene `motelId` y aplica el filtro automáticamente en `getList`.
 - `BaseController` inyecta `motelId` del token en `create` y `update`.
+
+## Seguridad
+
+- JWT almacenado en **cookie HttpOnly** (no accesible desde JS).
+- `Helmet` activo con CSP configurada para Google Fonts.
+- CORS restringido al origen del frontend (`FRONTEND_URL`).
+- `ValidationPipe` con `whitelist: true` en todos los endpoints.
+
+---
 
 ## Setup local
 
@@ -65,12 +83,20 @@ El `motelId` viaja en el JWT — el backend lo extrae del token en cada request.
 
 ```bash
 cd backend
-cp .env.example .env   # configurar DATABASE_URL y JWT_SECRET
+cp .env.example .env   # configurar DATABASE_URL, JWT_SECRET y FRONTEND_URL
 npm install
-npx prisma generate    # generar el cliente Prisma
-npx prisma migrate dev # aplicar migraciones en desarrollo
-npx prisma db seed     # datos iniciales
+npx prisma generate
+npx prisma migrate dev
+npx prisma db seed
 npm run start:dev
+```
+
+Variables mínimas en `backend/.env`:
+```env
+DATABASE_URL=postgresql://user:pass@localhost:5432/motel
+JWT_SECRET=una_clave_larga_y_aleatoria
+FRONTEND_URL=http://localhost:3002
+PORT=3000
 ```
 
 ### Frontend
@@ -81,84 +107,118 @@ npm install
 npm run dev
 ```
 
-Variable de entorno (`.env`):
+Variable en `frontend/.env`:
 ```env
 VITE_API_URL=http://localhost:3000
+VITE_PORT=3002
 ```
 
 ---
 
 ## Despliegue a Producción
 
-### 1. Preparación de la Base de Datos
-En el entorno de producción, las migraciones deben aplicarse usando el comando `deploy` para evitar el borrado accidental de datos:
-```bash
-npx prisma migrate deploy
+### Arquitectura
+
+```
+GitHub push → main
+  ├── backend/** → GitHub Action → Render Deploy Hook → Render Web Service
+  └── frontend/** → GitHub Action → npm build → S3 sync → CloudFront invalidation
 ```
 
-### 2. Backend (NestJS)
-El backend está diseñado para correr como un proceso Node.js. Se recomienda usar un gestor de procesos como **PM2**.
+---
 
-**Pasos de despliegue:**
-1.  Configurar variables de entorno (ver tabla abajo).
-2.  `npm install --production`
-3.  `npm run build`
-4.  `pm2 start dist/main.js --name motel-backend`
+### Backend — Render
 
-**Variables de Entorno (Backend):**
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `DATABASE_URL` | String de conexión a Postgres | `postgresql://user:pass@host:5432/db` |
-| `JWT_SECRET` | Clave para firmar tokens (CRÍTICO) | *Usar una clave larga y aleatoria* |
-| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `1h` (default) o `24h` |
-| `API_PREFIX` | Prefijo global de rutas | `/api/v1` (default) |
+El backend se despliega en **Render** usando el Blueprint definido en `render.yaml`.
+
+#### Opción A: Blueprint (recomendado)
+
+1. Ir a [Render Blueprints](https://dashboard.render.com/blueprints).
+2. Conectar este repositorio.
+3. Render crea automáticamente el Web Service `motel-backend` y la base de datos `motel-db`.
+4. Configurar manualmente `FRONTEND_URL` con la URL de CloudFront (ver abajo).
+
+#### Opción B: Manual
+
+| Campo | Valor |
+|-------|-------|
+| Root Directory | `backend` |
+| Build Command | `./render-build.sh` |
+| Start Command | `npm run start:prod` |
+| Health Check | `/api/health` |
+
+#### Variables de entorno en Render
+
+| Variable | Descripción | Cómo configurar |
+|----------|-------------|-----------------|
+| `DATABASE_URL` | Conexión a PostgreSQL | Auto-vinculada por Blueprint |
+| `JWT_SECRET` | Clave de firma JWT | Auto-generada por Blueprint |
+| `JWT_EXPIRES_IN` | Expiración del token | `1d` |
+| `FRONTEND_URL` | URL del frontend (CORS) | `https://xxxx.cloudfront.net` |
 | `PORT` | Puerto de escucha | `3000` |
 
-### 3. Frontend (React)
-El frontend se despliega como contenido estático en **AWS S3** y se sirve a través de **CloudFront**.
+#### CI/CD
 
-**Infraestructura (Terraform):**
-Ubicada en `frontend/terraform/`. Define el bucket S3, la distribución CloudFront y el certificado SSL (ACM).
+El workflow `.github/workflows/backend-deploy.yml` llama al **Render Deploy Hook** (`RENDER_DEPLOY_HOOK_URL`) en cada push a `main` que modifique archivos en `backend/`.
+
+Agregar el secret en GitHub: **Settings → Secrets → `RENDER_DEPLOY_HOOK_URL`** (se obtiene en Render → Web Service → Settings → Deploy Hook).
+
+---
+
+### Frontend — AWS S3 + CloudFront
+
+#### 1. Infraestructura (una sola vez)
+
 ```bash
 cd frontend/terraform
+cp terraform.tfvars.example terraform.tfvars  # configurar bucket y dominio
 terraform init
 terraform apply
 ```
 
-**CI/CD (GitHub Actions):**
-Configurado en `.github/workflows/deploy.yml`. Al hacer push a `main`:
-1.  Instala dependencias y compila (`npm run build`).
-2.  Sincroniza la carpeta `dist/` con el bucket S3.
-3.  Invalida el caché de CloudFront para reflejar cambios inmediatos.
+Esto crea:
+- Bucket S3 privado (`moteles-frontend-prod`)
+- Distribución CloudFront con OAC
+- Certificado SSL en ACM (dominio: `moteles.criterioingenieria.online`)
 
-**Variables de Entorno (Frontend):**
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `VITE_API_URL` | URL base del backend | `https://api.tu-app.com` |
-| `VITE_API_PREFIX` | Prefijo de la API backend | `/api/v1` |
+Anotar el **CloudFront domain** del output (`xxxx.cloudfront.net`) — se necesita para `FRONTEND_URL` en Render y para el secret `CLOUDFRONT_DISTRIBUTION_ID` en GitHub.
 
-### 4. Despliegue en Render (Backend)
-Render es la opción recomendada para el despliegue rápido del backend.
+#### 2. Secrets de GitHub Actions
 
-**Opción A: Uso de Blueprint (Recomendado)**
-El proyecto incluye un archivo `render.yaml` en la raíz. Solo tienes que:
-1.  Ir a **Blueprints** en Render.
-2.  Conectar este repositorio.
-3.  Render detectará automáticamente la configuración del Web Service, incluyendo las variables `JWT_EXPIRES_IN` y `API_PREFIX`.
+Ir a **Settings → Secrets and variables → Actions** y agregar:
 
-**Opción B: Configuración Manual**
-1.  **Web Service**: Conectar el repo.
-2.  **Root Directory**: `backend`
-3.  **Build Command**: `./render-build.sh`
-4.  **Start Command**: `npm run start:prod`
-5.  **Health Check Path**: `/api/v1/health`
+| Secret | Descripción |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` | IAM user con permisos S3 + CloudFront |
+| `AWS_SECRET_ACCESS_KEY` | Clave del IAM user |
+| `CLOUDFRONT_DISTRIBUTION_ID` | ID de la distribución CloudFront |
+| `VITE_API_URL` | URL del backend en Render (ej. `https://motel-backend.onrender.com`) |
+| `VITE_API_PREFIX` | Prefijo de la API (ej. `/api`) |
 
-**Variables de Entorno en Render:**
-- `DATABASE_URL`: Se configura automáticamente mediante el Blueprint (vinculado a `motel-db`).
-- `JWT_SECRET`: Se genera automáticamente la primera vez.
-- `JWT_EXPIRES_IN`: Tiempo de expiración (ej. `1h`).
-- `API_PREFIX`: Prefijo de la API (ej. `/api/v1`).
-- `FRONTEND_URL`: URL del frontend (para CORS). Ejemplo: `https://d123.cloudfront.net`.
+#### 3. CI/CD
+
+El workflow `.github/workflows/frontend-deploy.yml` se dispara en cada push a `main` que modifique archivos en `frontend/`:
+
+1. Instala dependencias y compila (`npm run build`).
+2. Sincroniza `dist/` con el bucket S3 (`aws s3 sync --delete`).
+3. Invalida el caché de CloudFront (`/*`).
+
+---
+
+### Migraciones en producción
+
+Las migraciones se aplican automáticamente en el build de Render via `render-build.sh`:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy   # nunca migrate dev en producción
+npm run build
+```
+
+Para aplicar manualmente:
+```bash
+DATABASE_URL=<prod_url> npx prisma migrate deploy
+```
 
 ---
 
@@ -166,28 +226,32 @@ El proyecto incluye un archivo `render.yaml` en la raíz. Solo tienes que:
 
 ```bash
 # Backend
-npm run build              # compilar para producción
-npm run start:prod         # lanzar ejecutable compilado
-npx prisma studio          # explorador visual de la DB (dev)
+npm run build              # compilar TypeScript
+npm run start:prod         # lanzar build compilado
+npm run start:dev          # modo desarrollo con hot-reload
+npx prisma studio          # explorador visual de la DB
 npx prisma migrate deploy  # aplicar migraciones en producción
-./render-build.sh          # script de build para Render (local test)
 
 # Frontend
-npm run build              # build de producción (genera carpeta dist/)
+npm run build              # build de producción (genera dist/)
 npm run preview            # previsualizar build localmente
-npm run test:e2e           # correr tests de extremo a extremo (Playwright)
+npm run test               # tests unitarios (Vitest)
+npm run test:e2e           # tests E2E (Playwright)
 ```
+
+---
 
 ## Arquitectura backend
 
 Todos los recursos siguen el patrón `BaseController` / `BaseService`:
 
-- **`BaseController`**: Maneja paginación, filtros e inyección de contexto multi-tenant.
-- **`BaseService`**: Aplica aislamiento por `motelId` y soporte para "soft-delete".
-- **Seguridad**: Implementa `Helmet` para cabeceras HTTP seguras y `ValidationPipe` para mitigar ataques de inyección.
+- **`BaseController`**: Paginación, filtros e inyección de contexto multi-tenant.
+- **`BaseService`**: Aislamiento por `motelId`, soft-delete automático (modelos con `deletedAt`).
+- **Auth**: Cookie HttpOnly con JWT. La estrategia Passport extrae el token desde `req.cookies.token` con fallback al header `Authorization`.
 
 ## Arquitectura frontend
 
-- **`nestDataProvider`**: Adaptador personalizado para `react-admin` que se comunica con el backend NestJS.
-- **`HttpClient`**: Centraliza las peticiones y maneja el `Authorization Header` y la gestión de errores 401.
-- **`MotelContext`**: Gestiona el cambio de motel activo para usuarios con múltiples sedes asignadas.
+- **`nestDataProvider`**: Adaptador para `react-admin` que se comunica con el backend NestJS.
+- **`HttpClient`**: Centraliza peticiones con `credentials: 'include'` para enviar la cookie automáticamente.
+- **`MotelContext`**: Gestiona el motel activo; persiste en `sessionStorage` (se limpia al cerrar el tab).
+- **`authProvider`**: `checkAuth` valida contra el backend (llama a `/autenticacion/refresh`), no depende de datos locales.
