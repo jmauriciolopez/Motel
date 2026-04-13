@@ -154,8 +154,8 @@ El proyecto incluye un archivo `render.yaml` en la raíz. Solo tienes que:
 5.  **Health Check Path**: `/api/v1/health`
 
 **Variables de Entorno en Render:**
-- `DATABASE_URL`: URL de tu Postgres externo.
-- `JWT_SECRET`: Clave secreta para tokens.
+- `DATABASE_URL`: Se configura automáticamente mediante el Blueprint (vinculado a `motel-db`).
+- `JWT_SECRET`: Se genera automáticamente la primera vez.
 - `JWT_EXPIRES_IN`: Tiempo de expiración (ej. `1h`).
 - `API_PREFIX`: Prefijo de la API (ej. `/api/v1`).
 - `FRONTEND_URL`: URL del frontend (para CORS). Ejemplo: `https://d123.cloudfront.net`.

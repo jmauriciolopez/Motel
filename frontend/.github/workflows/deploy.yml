@@ -24,7 +24,8 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          VITE_APP_URL_STRAPI: ${{ secrets.VITE_APP_URL_STRAPI }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_PREFIX: ${{ secrets.VITE_API_PREFIX }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

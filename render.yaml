@@ -1,3 +1,10 @@
+databases:
+  - name: motel-db
+    databaseName: moteles
+    user: admin
+    plan: free
+    region: ohio
+
 services:
   - type: web
     name: motel-backend
@@ -7,10 +14,12 @@ services:
     rootDir: backend
     buildCommand: ./render-build.sh
     startCommand: npm run start:prod
-    healthCheckPath: /api/health
+    healthCheckPath: /api/v1/health
     envVars:
       - key: DATABASE_URL
-        sync: false # Debes configurarla manualmente o conectarla a una BD de Render
+        fromDatabase:
+          name: motel-db
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
