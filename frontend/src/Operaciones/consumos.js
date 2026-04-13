@@ -5,7 +5,7 @@ import { Button } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const Requerido = [required()];
 
@@ -66,11 +66,7 @@ export const ConsumoCreate = () => {
 
     useEffect(() => {
         if (!motelId) return;
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/productos/con-stock-secundario?facturable=true'), {
-            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
-        })
-            .then(r => r.json())
+        http.get('/productos/con-stock-secundario', { params: { facturable: true } })
             .then(d => setProductos(d.data || []))
             .catch(() => {});
     }, [motelId]);

@@ -12,36 +12,35 @@ const normalizeRole = (role) => {
     return map[upperRole] || role;
 };
 
+const saveSession = (usuario) => {
+    sessionStorage.setItem('user', JSON.stringify(usuario));
+    if (usuario.id) sessionStorage.setItem('userId', String(usuario.id));
+    sessionStorage.setItem('fullName', usuario.Username || usuario.username || usuario.Email || usuario.email);
+    sessionStorage.setItem('email', usuario.Email || usuario.email);
+    sessionStorage.setItem('role', normalizeRole(usuario.Rol || usuario.rol || 'RECEPCIONISTA'));
+
+    const motelesNormalizados = (usuario.moteles || []).map(m => ({
+        id: m.motelId || m.id,
+        nombre: m.nombre || m.Nombre,
+        OnboardingCompleto: m.OnboardingCompleto,
+    }));
+    sessionStorage.setItem('moteles', JSON.stringify(motelesNormalizados));
+
+    if (motelesNormalizados.length > 0) {
+        sessionStorage.setItem('motelId', motelesNormalizados[0].id);
+    }
+};
+
 const login = async ({ username, password }) => {
     try {
-        // NestJS endpoint for login (Spanish path)
         const response = await http.post('/autenticacion/login', { identificador: username, password });
-        const { token, usuario } = response;
-
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(usuario));
-        if (usuario.id) localStorage.setItem('userId', String(usuario.id));
-        localStorage.setItem('fullName', usuario.Username || usuario.username || usuario.Email || usuario.email);
-        localStorage.setItem('email', usuario.Email || usuario.email);
-        localStorage.setItem('role', normalizeRole(usuario.Rol || usuario.rol || 'RECEPCIONISTA'));
-
-        // Normalizar estructura de moteles — backend devuelve { motelId, nombre: motel.nombre }
-        const motelesNormalizados = (usuario.moteles || []).map(m => ({
-            id: m.motelId || m.id,
-            nombre: m.nombre || m.Nombre,
-            OnboardingCompleto: m.OnboardingCompleto,
-        }));
-        localStorage.setItem('moteles', JSON.stringify(motelesNormalizados));
-
-        if (motelesNormalizados.length > 0) {
-            localStorage.setItem('motelId', motelesNormalizados[0].id);
-        }
-
+        saveSession(response.usuario);
         // Forzar recarga para reinicializar contextos (MotelProvider, etc.)
         window.location.href = window.location.origin + window.location.pathname;
         return Promise.resolve();
     } catch (error) {
-        throw new Error(error.message || 'Credenciales inválidas');
+        // Lanzar objeto con message para que react-admin lo muestre directo sin pasar por i18n
+        return Promise.reject({ message: error.message || 'Credenciales inválidas' });
     }
 };
 
@@ -49,52 +48,47 @@ const register = async (params) => {
     const { username, email, password } = params;
     try {
         const response = await http.post('/autenticacion/registro', { username, email, password });
-        const { token, usuario } = response;
-
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(usuario));
-        if (usuario.id) localStorage.setItem('userId', String(usuario.id));
-        localStorage.setItem('email', usuario.Email || usuario.email);
-        localStorage.setItem('fullName', usuario.Username || usuario.username || usuario.Email || usuario.email);
-        localStorage.setItem('role', normalizeRole(usuario.Rol || usuario.rol || 'ADMINISTRADOR'));
-
+        saveSession(response.usuario);
         return Promise.resolve();
     } catch (error) {
         throw new Error(error.message || 'Error en el registro');
     }
 };
 
-const logout = () => {
-    localStorage.clear();
+const logout = async () => {
+    try { await http.post('/autenticacion/logout'); } catch (_) {}
     sessionStorage.clear();
     return Promise.resolve();
 };
 
-const checkAuth = () => {
-    return localStorage.getItem('token') ? Promise.resolve() : Promise.reject();
+const checkAuth = async () => {
+    // Verificar contra el backend — la cookie HttpOnly se envía automáticamente
+    try {
+        await http.post('/autenticacion/refresh');
+        return Promise.resolve();
+    } catch {
+        sessionStorage.clear();
+        return Promise.reject();
+    }
 };
 
 const checkError = (error) => {
     const status = error.status;
-    if (status === 401 || status === 403) {
-        // En NestJS 401 es No Auth, 403 es Forbidden. 
-        // Si es 401, forzamos logout.
-        if (status === 401) {
-            logout();
-            return Promise.reject();
-        }
+    if (status === 401) {
+        logout();
+        return Promise.reject();
     }
     return Promise.resolve();
 };
 
 const getPermissions = () => {
-    const role = localStorage.getItem('role');
+    const role = sessionStorage.getItem('role');
     return role ? Promise.resolve(normalizeRole(role)) : Promise.reject();
 };
 
 const getIdentity = () => {
-    const fullName = localStorage.getItem('fullName');
-    const email = localStorage.getItem('email');
+    const fullName = sessionStorage.getItem('fullName');
+    const email = sessionStorage.getItem('email');
     if (!fullName && !email) return Promise.reject();
     return Promise.resolve({
         id: email,

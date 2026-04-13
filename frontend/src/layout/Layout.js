@@ -5,7 +5,7 @@ import ModernMenu from './ModernMenu';
 import TrialGuard from '../components/TrialGuard';
 import OnboardingWizard from '../components/OnboardingWizard';
 import { useMotel } from '../context/MotelContext';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const DevResetOnboarding = React.lazy(() => import('../components/DevResetOnboarding'));
 
@@ -13,7 +13,7 @@ export const ModernLayout = (props) => {
     const { currentMotelId, availableMoteles, setAvailableMoteles } = useMotel();
     const refresh = useRefresh();
     const dataProvider = useDataProvider();
-    const role = localStorage.getItem('role');
+    const role = sessionStorage.getItem('role');
     const isSuperUser = role === 'SuperAdmin' || role === 'SuperUser';
     const isOwner = role === 'Administrador';
     const [shouldShow, setShouldShow] = React.useState(false);
@@ -57,25 +57,17 @@ export const ModernLayout = (props) => {
         // Motel existe pero Onboarding_Completed es false: verificar si ya tiene datos
         const checkBypass = async () => {
             try {
-                const token = Cookies.getCookie('token');
-                const headers = {
-                    'Authorization': `Bearer ${token}`,
-                    'x-motel-id': currentMotelId,
-                };
-                const tarifasUrl = getApiUrl(`/tarifas?_page=1&_limit=1&motelId=${encodeURIComponent(currentMotelId)}`);
-                const habitacionesUrl = getApiUrl(`/habitaciones?_page=1&_limit=1&motelId=${encodeURIComponent(currentMotelId)}`);
-
-                const [tarifasRes, habitacionesRes] = await Promise.all([
-                    fetch(tarifasUrl, { headers }).then(r => r.json()),
-                    fetch(habitacionesUrl, { headers }).then(r => r.json()),
+                const [tarifasData, habitacionesData] = await Promise.all([
+                    http.get(`/tarifas`, { params: { _page: 1, _limit: 1, motelId: currentMotelId } }),
+                    http.get(`/habitaciones`, { params: { _page: 1, _limit: 1, motelId: currentMotelId } }),
                 ]);
 
-                const hasTarifas = Array.isArray(tarifasRes)
-                    ? tarifasRes.length > 0
-                    : (tarifasRes?.data?.length ?? 0) > 0 || (tarifasRes?.total ?? 0) > 0;
-                const hasHabitaciones = Array.isArray(habitacionesRes)
-                    ? habitacionesRes.length > 0
-                    : (habitacionesRes?.data?.length ?? 0) > 0 || (habitacionesRes?.total ?? 0) > 0;
+                const hasTarifas = Array.isArray(tarifasData)
+                    ? tarifasData.length > 0
+                    : (tarifasData?.data?.length ?? 0) > 0 || (tarifasData?.total ?? 0) > 0;
+                const hasHabitaciones = Array.isArray(habitacionesData)
+                    ? habitacionesData.length > 0
+                    : (habitacionesData?.data?.length ?? 0) > 0 || (habitacionesData?.total ?? 0) > 0;
 
                 if (hasTarifas || hasHabitaciones) {
                     await dataProvider.update('moteles', { id: currentMotelId, data: { onboardingCompleto: true } });

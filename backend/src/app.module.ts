@@ -31,6 +31,8 @@ import { CajasModule } from './modulos/cajas/cajas.module';
 import { ProveedoresModule } from './modulos/proveedores/proveedores.module';
 import { ReservasModule } from './modulos/reservas/reservas.module';
 
+import { AppController } from './app.controller';
+
 @Module({
   imports: [
     PrismaModule,
@@ -61,7 +63,7 @@ import { ReservasModule } from './modulos/reservas/reservas.module';
     ProveedoresModule,
     ReservasModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: TenantGuard },

@@ -54,7 +54,6 @@ import { useMotel } from '../context/MotelContext';
 import QuickCreateCliente from './QuickCreateCliente';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useGetOne, FormDataConsumer } from 'react-admin';
-import { Cookies, getApiUrl } from '../helpers/Utils';
 import { http } from '../shared/api/HttpClient';
 
 const AZURE_BLUE = '#213894';
@@ -154,13 +153,9 @@ const QuickConsumoPopover = ({ anchorEl, onClose, open, turnoId }) => {
     useEffect(() => {
         if (!motelId) return;
         setIsLoadingProducts(true);
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/productos/con-stock-secundario?facturable=true'), {
-            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
-        })
-            .then(r => r.json())
+        http.get('/productos/con-stock-secundario', { params: { facturable: true } })
             .then(d => setProductos(d.data || []))
-            .catch(() => { })
+            .catch(() => {})
             .finally(() => setIsLoadingProducts(false));
     }, [motelId]);
 
@@ -1071,7 +1066,7 @@ const TurnoCreate = () => {
         // userId del usuario logueado
         let usuarioAperturaId = null;
         try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            const u = JSON.parse(sessionStorage.getItem('user') || '{}');
             usuarioAperturaId = u?.id || null;
         } catch { /* ignore */ }
 

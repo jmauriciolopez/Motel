@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import CustomToolbar from '../layout/CustomToolbar';
 import { Button, Typography } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 import { useMotel } from '../context/MotelContext';
 
 const StockDisponibleEnOrigen = ({ transferenciaId, productoId }) => {
@@ -136,11 +136,7 @@ export const TransferenciaDetalleCreate = () => {
     const [productos, setProductos] = useState([]);
     useEffect(() => {
         if (!motelId) return;
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/productos/con-stock-primario'), {
-            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
-        })
-            .then(r => r.json())
+        http.get('/productos/con-stock-primario')
             .then(d => setProductos(d.data || []))
             .catch(() => {});
     }, [motelId]);

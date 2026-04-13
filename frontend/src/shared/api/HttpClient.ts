@@ -38,14 +38,8 @@ class HttpClient {
             ...(customConfig.headers as Record<string, string> || {}),
         };
 
-        // Inject Authorization header if token exists in localStorage
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
         // Inject Motel ID header for data isolation
-        const motelId = typeof window !== 'undefined' ? localStorage.getItem('motelId') : null;
+        const motelId = typeof window !== 'undefined' ? sessionStorage.getItem('motelId') : null;
         if (motelId) {
             headers['x-motel-id'] = motelId;
         }
@@ -66,7 +60,9 @@ class HttpClient {
 
         // 4. Response Interceptor
         if (response.status === 401) {
-            localStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('motelId');
+            sessionStorage.removeItem('moteles');
             if (this.onUnauthorized) {
                 this.onUnauthorized();
             }

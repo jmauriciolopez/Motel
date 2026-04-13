@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { useNotify, useRefresh } from 'react-admin';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 import { useMotel } from '../context/MotelContext';
 
 const SyncCatalogoDialog = ({ open, onClose }) => {
@@ -22,13 +22,8 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
     useEffect(() => {
         if (!open) return;
         setLoading(true);
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/catalogo-productos?_limit=300&_sort=Nombre&_order=asc'), {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(r => r.json())
+        http.get('/catalogo-productos', { params: { _limit: 300, _sort: 'Nombre', _order: 'asc' } })
             .then(data => {
-                // Normalizar camelCase → PascalCase para compatibilidad con el render
                 const items = (data.data || []).map(p => ({
                     ...p,
                     Nombre: p.Nombre,
@@ -76,29 +71,10 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
         console.log('[SyncCatalogo] Starting sync...', { motelId, selectedCount: selected.length });
         setSyncing(true);
         try {
-            const token = Cookies.getCookie('token');
             const payload = { motelId, catalogoIds: selected };
             console.log('[SyncCatalogo] Payload:', payload);
-            
-            const res = await fetch(getApiUrl('/productos/sync-catalogo'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                    'x-motel-id': motelId,
-                },
-                body: JSON.stringify(payload),
-            });
-            
-            console.log('[SyncCatalogo] Response status:', res.status);
-            
-            if (!res.ok) {
-                const errorText = await res.text();
-                console.error('[SyncCatalogo] Error response:', errorText);
-                throw new Error(errorText || 'Error en sync');
-            }
-            
-            const data = await res.json();
+
+            const data = await http.post('/productos/sync-catalogo', payload);
             console.log('[SyncCatalogo] Success:', data);
             
             notify(`${data.length ?? selected.length} productos sincronizados`, { type: 'success' });

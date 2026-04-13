@@ -17,7 +17,7 @@ import {
     RestartAlt as ResetIcon,
 } from '@mui/icons-material';
 import CustomToolbar from '../layout/CustomToolbar';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 import { useMotel } from '../context/MotelContext';
 
 const Requerido = [required()];
@@ -81,10 +81,7 @@ const ResetOnboardingButton = () => {
         if (!window.confirm(`¿Resetear el onboarding de "${record.Nombre}"? Se eliminarán todos los datos del motel.`)) return;
 
         setLoading(true);
-        const token = Cookies.getCookie('token');
-
         try {
-            // Obtener moteles del propietario
             const { data: moteles } = await dataProvider.getList('moteles', {
                 filter: { propietarioId: record.id },
                 pagination: { page: 1, perPage: 50 },
@@ -108,66 +105,44 @@ const ResetOnboardingButton = () => {
                     dataProvider.getList('rubros', { filter: { motelId }, pagination: { page: 1, perPage: 100 }, sort: { field: 'id', order: 'ASC' } }).catch(() => ({ data: [] })),
                 ]);
 
-                // Eliminar en cascada via dataProvider (usa DELETE /recurso/:id del nuevo backend)
                 await Promise.all([
-                    ...habitaciones.map(h => dataProvider.delete('habitaciones', { id: h.id }).catch(() => { })),
-                    ...tarifas.map(t => dataProvider.delete('tarifas', { id: t.id }).catch(() => { })),
-                    ...depositos.map(d => dataProvider.delete('depositos', { id: d.id }).catch(() => { })),
-                    ...productos.map(p => dataProvider.delete('productos', { id: p.id }).catch(() => { })),
-                    ...rubros.map(r => dataProvider.delete('rubros', { id: r.id }).catch(() => { })),
+                    ...habitaciones.map(h => dataProvider.delete('habitaciones', { id: h.id }).catch(() => {})),
+                    ...tarifas.map(t => dataProvider.delete('tarifas', { id: t.id }).catch(() => {})),
+                    ...depositos.map(d => dataProvider.delete('depositos', { id: d.id }).catch(() => {})),
+                    ...productos.map(p => dataProvider.delete('productos', { id: p.id }).catch(() => {})),
+                    ...rubros.map(r => dataProvider.delete('rubros', { id: r.id }).catch(() => {})),
                 ]);
 
-                // Desvincular usuarios del motel via endpoint NestJS
-                const usersRes = await fetch(getApiUrl(`/usuarios/por-motel?motelId=${motelId}`), {
-                    headers: { Authorization: `Bearer ${token}` },
-                }).catch(() => null);
-                if (usersRes?.ok) {
-                    const motelUsers = await usersRes.json();
-                    for (const u of (motelUsers || [])) {
-                        await fetch(getApiUrl(`/usuarios/${u.id}/desvincular-moteles`), {
-                            method: 'PATCH',
-                            headers: { Authorization: `Bearer ${token}` },
-                        }).catch(() => { });
-                    }
+                // Desvincular usuarios del motel
+                const motelUsers = await http.get(`/usuarios/por-motel`, { params: { motelId } }).catch(() => []);
+                for (const u of (motelUsers || [])) {
+                    await http.patch(`/usuarios/${u.id}/desvincular-moteles`, {}).catch(() => {});
                 }
 
                 // Resetear OnboardingCompleto del motel
-                await fetch(getApiUrl(`/moteles/${motelId}`), {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ OnboardingCompleto: false }),
-                }).catch(() => { });
+                await http.patch(`/moteles/${motelId}`, { OnboardingCompleto: false }).catch(() => {});
 
-                // Eliminar el motel
-                await dataProvider.delete('moteles', { id: motelId }).catch(() => { });
+                await dataProvider.delete('moteles', { id: motelId }).catch(() => {});
             }
 
-            // Eliminar el propietario
-            await dataProvider.delete('propietarios', { id: record.id }).catch(() => { });
+            await dataProvider.delete('propietarios', { id: record.id }).catch(() => {});
 
             // Refrescar lista de moteles en contexto
-            const mRes = await fetch(getApiUrl('/moteles?_limit=100'), {
-                headers: { Authorization: `Bearer ${token}` },
-            }).catch(() => null);
+            const mJson = await http.get('/moteles', { params: { _limit: 100 } }).catch(() => null);
+            const motelesActualizados = (mJson?.data || []).map(m => ({
+                id: m.id,
+                Nombre: m.Nombre,
+                OnboardingCompleto: m.OnboardingCompleto,
+            }));
 
-            let motelesActualizados = [];
-            if (mRes?.ok) {
-                const mJson = await mRes.json();
-                motelesActualizados = (mJson?.data || []).map(m => ({
-                    id: m.id,
-                    Nombre: m.Nombre,
-                    OnboardingCompleto: m.OnboardingCompleto,
-                }));
-            }
-
-            localStorage.setItem('moteles', JSON.stringify(motelesActualizados));
+            sessionStorage.setItem('moteles', JSON.stringify(motelesActualizados));
             setAvailableMoteles(motelesActualizados);
             if (motelesActualizados.length > 0) {
                 setCurrentMotelId(motelesActualizados[0].id);
-                localStorage.setItem('motelId', motelesActualizados[0].id);
+                sessionStorage.setItem('motelId', motelesActualizados[0].id);
             } else {
                 setCurrentMotelId(null);
-                localStorage.removeItem('motelId');
+                sessionStorage.removeItem('motelId');
             }
 
             notify('Onboarding reseteado correctamente', { type: 'success' });

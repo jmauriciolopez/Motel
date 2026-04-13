@@ -32,7 +32,6 @@ describe('HttpClient', () => {
     it('should handle 401 Unauthorized by clearing storage and invoking callback', async () => {
         const mockCallback = vi.fn();
         httpClient.setUnauthorizedCallback(mockCallback);
-        localStorage.setItem('token', 'expired-token');
         vi.mocked(fetch).mockResolvedValue({
             ok: false,
             status: 401,
@@ -40,7 +39,6 @@ describe('HttpClient', () => {
 
         await expect(httpClient.get('/test')).rejects.toThrow('Sesión expirada');
         
-        expect(localStorage.getItem('token')).toBeNull();
         expect(mockCallback).toHaveBeenCalled();
     });
 

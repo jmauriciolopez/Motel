@@ -5,26 +5,19 @@ import { fetchUtils } from 'react-admin';
  */
 export const Cookies = {
     getCookie: (name) => {
-        // Fallback a localStorage para facilitar la migración
-        const localVal = localStorage.getItem(name === 'motel' ? 'motelId' : name);
-        if (localVal) return localVal;
-
-        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-        return v ? v[2] : null;
+        // Fallback a sessionStorage para facilitar la migración
+        const key = name === 'motel' ? 'motelId' : name;
+        return sessionStorage.getItem(key) || null;
     },
 
-    setCookie: (name, value, days) => {
-        // También guardamos en localStorage para consistencia
-        localStorage.setItem(name === 'motel' ? 'motelId' : name, value);
-        
-        var d = new Date();
-        d.setTime(d.getTime() + 24 * 60 * 60 * 1000 * days);
-        document.cookie = name + "=" + value + ";path=/;expires=" + d.toGMTString();
+    setCookie: (name, value, _days) => {
+        const key = name === 'motel' ? 'motelId' : name;
+        sessionStorage.setItem(key, value);
     },
 
     deleteCookie: (name) => {
-        localStorage.removeItem(name === 'motel' ? 'motelId' : name);
-        Cookies.setCookie(name, '', -1)
+        const key = name === 'motel' ? 'motelId' : name;
+        sessionStorage.removeItem(key);
     }
 };
 
@@ -55,11 +48,11 @@ const httpClient = (url, options = {}) => {
     if (!options.headers) {
         options.headers = new Headers({ Accept: 'application/json' });
     }
-    const token = localStorage.getItem('token') || Cookies.getCookie('token');
+    const token = Cookies.getCookie('token');
     if (token) {
         options.headers.set('Authorization', `Bearer ${token}`);
     }
-    const motelId = localStorage.getItem('motelId') || Cookies.getCookie('motel');
+    const motelId = sessionStorage.getItem('motelId') || Cookies.getCookie('motel');
     if (motelId) {
         options.headers.set('x-motel-id', motelId);
     }

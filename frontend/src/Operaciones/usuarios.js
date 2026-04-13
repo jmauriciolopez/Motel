@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { Title, useNotify } from 'react-admin';
 import { UserPlus, Trash2, RefreshCw, KeyRound, PencilLine, Eye, EyeOff } from 'lucide-react';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 import { useMotel } from '../context/MotelContext';
 import { useTrial } from '../helpers/useTrial';
 
@@ -21,12 +21,11 @@ const ROL_COLOR = {
 };
 
 const GestorUsuarios = () => {
-    const { availableMoteles } = useMotel();
+    const { availableMoteles, currentMotelId } = useMotel();
     const { isTrial } = useTrial();
     const TRIAL_MAX_USERS = 3;
     const notify = useNotify();
-    const token = Cookies.getCookie('token');
-    const userRole = localStorage.getItem('role');
+    const userRole = sessionStorage.getItem('role');
     const isSuperAdmin = userRole === 'SuperAdmin';
 
     const [currentUserId, setCurrentUserId] = useState(null);
@@ -34,46 +33,22 @@ const GestorUsuarios = () => {
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    // Dialog crear
     const [openCreate, setOpenCreate] = useState(false);
     const [form, setForm] = useState({ Username: '', Email: '', Password: '', Rol: 'Recepcionista', motelId: '' });
 
-    // Dialog editar (clave + estado)
     const [openEdit, setOpenEdit] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [editForm, setEditForm] = useState({ newPassword: '', blocked: false });
     const [showPassword, setShowPassword] = useState(false);
 
-    const motelIds = availableMoteles.map(m => m.id).filter(Boolean);
-    const motelDocIds = availableMoteles.map(m => m.id).filter(Boolean);
-
     const fetchUsuarios = async () => {
         setLoading(true);
         try {
-            if (isSuperAdmin) {
-                // SuperAdmin: Carga global de todos los usuarios
-                const res = await fetch(getApiUrl('/usuarios?_limit=1000'), {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const result = await res.json();
-                setUsuarios(result.data || []);
-            } else {
-                if (!motelIds.length) {
-                    setLoading(false);
-                    return;
-                }
-                // Propietario/Admin: Carga por motel para aislamiento
-                const results = await Promise.all(
-                    motelIds.map(motelId =>
-                        fetch(getApiUrl(`/usuarios/por-motel?motelId=${motelId}`), {
-                            headers: { Authorization: `Bearer ${token}` }
-                        }).then(r => r.json())
-                    )
-                );
-                const todos = results.flat();
-                const unicos = Array.from(new Map(todos.map(u => [u.id, u])).values());
-                setUsuarios(unicos);
-            }
+            const motelIdActivo = currentMotelId || (availableMoteles.length > 0 ? availableMoteles[0].id : null);
+            if (!motelIdActivo) { setUsuarios([]); return; }
+
+            const result = await http.get(`/usuarios/por-motel`, { params: { motelId: motelIdActivo } });
+            setUsuarios(Array.isArray(result) ? result : result.data || []);
         } catch {
             notify('Error al cargar usuarios', { type: 'error' });
         } finally {
@@ -82,13 +57,12 @@ const GestorUsuarios = () => {
     };
 
     useEffect(() => {
-        fetch(getApiUrl('/usuarios/me'), { headers: { Authorization: `Bearer ${token}` } })
-            .then(r => r.json())
+        http.get('/usuarios/me')
             .then(data => setCurrentUserId(data?.id))
             .catch(() => {});
     }, []);
 
-    useEffect(() => { fetchUsuarios(); }, [availableMoteles.length]);
+    useEffect(() => { fetchUsuarios(); }, [currentMotelId, availableMoteles.length]);
 
     const handleCreate = async () => {
         if (isTrial && usuarios.length >= TRIAL_MAX_USERS) {
@@ -100,21 +74,13 @@ const GestorUsuarios = () => {
         }
         setSaving(true);
         try {
-            const res = await fetch(getApiUrl('/autenticacion/registro'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({
-                    Username: form.Username,
-                    Email: form.Email,
-                    Password: form.Password,
-                    Rol: form.Rol.toUpperCase(),
-                    motelId: form.motelId,
-                }),
+            await http.post('/autenticacion/registro', {
+                Username: form.Username,
+                Email: form.Email,
+                Password: form.Password,
+                Rol: form.Rol.toUpperCase(),
+                motelId: form.motelId,
             });
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Error al crear usuario');
-            }
             notify(`Usuario ${form.Username} creado`, { type: 'success' });
             setOpenCreate(false);
             setForm({ Username: '', Email: '', Password: '', Rol: 'Recepcionista', motelId: '' });
@@ -133,10 +99,7 @@ const GestorUsuarios = () => {
         }
         if (!window.confirm('¿Eliminar este usuario?')) return;
         try {
-            await fetch(getApiUrl(`/usuarios/${userId}`), {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            await http.delete(`/usuarios/${userId}`);
             notify('Usuario eliminado', { type: 'success' });
             setUsuarios(prev => prev.filter(u => u.id !== userId));
         } catch {
@@ -153,22 +116,13 @@ const GestorUsuarios = () => {
 
     const handleEdit = async () => {
         const { newPassword } = editForm;
-
         if (!newPassword || newPassword.length < 6) {
             notify('La contraseña debe tener al menos 6 caracteres', { type: 'warning' });
             return;
         }
-
         setSaving(true);
         try {
-            const res = await fetch(getApiUrl(`/usuarios/${editTarget.id}`), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ password: newPassword }),
-            });
-
-            if (!res.ok) throw new Error('Error al actualizar');
-
+            await http.patch(`/usuarios/${editTarget.id}`, { password: newPassword });
             notify('Contraseña actualizada', { type: 'success' });
             setOpenEdit(false);
         } catch (err) {
@@ -205,7 +159,6 @@ const GestorUsuarios = () => {
                             setOpenCreate(true);
                         }}
                         disabled={isTrial && usuarios.length >= TRIAL_MAX_USERS}
-                        title={isTrial && usuarios.length >= TRIAL_MAX_USERS ? `Límite trial: ${TRIAL_MAX_USERS} usuarios` : ''}
                         sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}>
                         Nuevo Usuario {isTrial ? `(${usuarios.length}/${TRIAL_MAX_USERS})` : ''}
                     </Button>
@@ -240,12 +193,7 @@ const GestorUsuarios = () => {
                                     <TableCell sx={{ fontWeight: 600 }}>{u.Username}</TableCell>
                                     <TableCell>{u.Email}</TableCell>
                                     <TableCell>
-                                        <Chip
-                                            label={u.Rol || '—'}
-                                            size="small"
-                                            color={ROL_COLOR[u.Rol] || 'default'}
-                                            sx={{ fontWeight: 700 }}
-                                        />
+                                        <Chip label={u.Rol || '—'} size="small" color={ROL_COLOR[u.Rol] || 'default'} sx={{ fontWeight: 700 }} />
                                     </TableCell>
                                     <TableCell>
                                         <Chip
@@ -264,7 +212,7 @@ const GestorUsuarios = () => {
                                     </TableCell>
                                     <TableCell align="center">
                                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                            <Tooltip title={u.id === currentUserId ? 'Cambiar mi clave' : 'Cambiar clave / Bloquear'}>
+                                            <Tooltip title={u.id === currentUserId ? 'Cambiar mi clave' : 'Cambiar clave'}>
                                                 <IconButton size="small" color="primary" onClick={() => openEditDialog(u)}>
                                                     <PencilLine size={16} />
                                                 </IconButton>
@@ -285,7 +233,6 @@ const GestorUsuarios = () => {
                 </Paper>
             )}
 
-            {/* Dialog crear usuario */}
             <Dialog open={openCreate} onClose={() => setOpenCreate(false)} maxWidth="sm" fullWidth
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle sx={{ fontWeight: 800 }}>Nuevo Usuario</DialogTitle>
@@ -303,7 +250,7 @@ const GestorUsuarios = () => {
                     <TextField label="Motel *" select value={form.motelId}
                         onChange={e => setForm(f => ({ ...f, motelId: e.target.value }))} fullWidth>
                         {availableMoteles.map(m => (
-                            <MenuItem key={m.id} value={m.id}>{m.Nombre}</MenuItem>
+                            <MenuItem key={m.id} value={m.id}>{m.nombre || m.Nombre}</MenuItem>
                         ))}
                     </TextField>
                 </DialogContent>
@@ -317,7 +264,6 @@ const GestorUsuarios = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Dialog editar usuario */}
             <Dialog open={openEdit} onClose={() => setOpenEdit(false)} maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle sx={{ fontWeight: 800 }}>

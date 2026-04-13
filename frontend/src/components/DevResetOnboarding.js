@@ -3,7 +3,7 @@ import { useDataProvider, useNotify } from 'react-admin';
 import { Box, Button, CircularProgress, Tooltip } from '@mui/material';
 import { Trash2 } from 'lucide-react';
 import { useMotel } from '../context/MotelContext';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const DevResetOnboarding = () => {
     const { currentMotelId } = useMotel();
@@ -17,15 +17,13 @@ const DevResetOnboarding = () => {
         setLoading(true);
         try {
             const motelId = currentMotelId;
-            const token = Cookies.getCookie('token');
-            console.log('[DevReset] Starting reset for motel:', motelId);
 
             // Obtener motel para resolver su propietario sin depender de filtros no soportados
             const motelData = motelId
                 ? await dataProvider.getOne('moteles', { id: motelId }).catch(() => ({ data: null }))
                 : { data: null };
+
             const propietarioId = motelData?.data?.Propietario?.id || motelData?.data?.propietario?.id || null;
-            console.log('[DevReset] Propietario ID:', propietarioId);
 
             // Obtener todo lo vinculado al motel en paralelo
             console.log('[DevReset] Fetching related records...');
@@ -74,68 +72,33 @@ const DevResetOnboarding = () => {
             // Obtener id real del usuario actual para excluirlo
             let myNumericId = null;
             try {
-                const meRes = await fetch(getApiUrl('/usuarios/me'), {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (meRes.ok) {
-                    const me = await meRes.json();
-                    myNumericId = me?.id;
-                    console.log('[DevReset] Current user ID:', myNumericId);
-                }
+                const me = await http.get('/usuarios/me');
+                myNumericId = me?.id;
             } catch { /* no bloquear */ }
 
             const deleteRecord = (resource, id) =>
-                fetch(getApiUrl(`/${resource}/${id}`), {
-                    method: 'DELETE',
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
-                        'x-motel-id': motelId || '',
-                    },
-                }).then(res => {
-                    if (!res.ok) {
-                        console.warn(`[DevReset] Failed to delete ${resource}/${id}:`, res.status);
-                    }
-                    return res;
-                }).catch(err => {
+                http.delete(`/${resource}/${id}`).catch(err => {
                     console.warn(`[DevReset] Error deleting ${resource}/${id}:`, err);
                 });
 
-            // Obtener usuarios vinculados al motel (excepto el usuario actual)
             let motelUsers = [];
-            if (motelId && token) {
+            if (motelId) {
                 try {
-                    const motelNumericRes = await fetch(
-                        getApiUrl(`/usuarios/por-motel?motelId=${encodeURIComponent(motelId)}&excluirUsuarioId=${encodeURIComponent(myNumericId || '')}`),
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    if (motelNumericRes.ok) {
-                        const allUsers = await motelNumericRes.json();
-                        motelUsers = allUsers || [];
-                        console.log('[DevReset] Found motel users:', motelUsers.length);
-                    }
+                    const params = { motelId: encodeURIComponent(motelId) };
+                    if (myNumericId) params.excluirUsuarioId = encodeURIComponent(myNumericId);
+                    motelUsers = await http.get('/usuarios/por-motel', { params }) || [];
                 } catch { /* no bloquear */ }
             }
 
-            // 1. Desvincular al admin actual del motel (sin borrarlo)
-            console.log('[DevReset] Unlinking current user from motel...');
+            // 1. Desvincular al admin actual del motel
             if (myNumericId) {
-                await fetch(getApiUrl(`/usuarios/${myNumericId}/desvincular-moteles`), {
-                    method: 'PATCH',
-                    headers: { Authorization: `Bearer ${token}` },
-                }).catch(() => {});
+                await http.patch(`/usuarios/${myNumericId}/desvincular-moteles`, {}).catch(() => {});
             }
 
-            // 2. Desvincular y eliminar usuarios secundarios del motel
-            console.log('[DevReset] Deleting motel users...');
+            // 2. Desvincular y eliminar usuarios secundarios
             for (const u of motelUsers) {
-                await fetch(getApiUrl(`/usuarios/${u.id}/desvincular-moteles`), {
-                    method: 'PATCH',
-                    headers: { Authorization: `Bearer ${token}` },
-                }).catch(() => {});
-                await fetch(getApiUrl(`/usuarios/${u.id}`), {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` },
-                }).catch(() => {});
+                await http.patch(`/usuarios/${u.id}/desvincular-moteles`, {}).catch(() => {});
+                await http.delete(`/usuarios/${u.id}`).catch(() => {});
             }
 
             // 3. Eliminar registros del motel en orden correcto (respetando FKs)
@@ -155,25 +118,16 @@ const DevResetOnboarding = () => {
             await Promise.all(depositos.map(d => deleteRecord('depositos', d.id)));
 
             // 4. Eliminar el motel
-            console.log('[DevReset] Deleting motel...');
             if (motelId) {
-                await fetch(getApiUrl(`/moteles/${motelId}`), {
-                    method: 'DELETE',
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
-                        'x-motel-id': motelId,
-                    },
-                }).catch(() => {});
+                await http.delete(`/moteles/${motelId}`).catch(() => {});
             }
 
-            // 5. Eliminar el propietario (después del motel para evitar FK violations)
-            console.log('[DevReset] Deleting propietario...');
+            // 5. Eliminar el propietario
             if (propietarioId) {
                 await deleteRecord('propietarios', propietarioId);
             }
 
-            console.log('[DevReset] Clearing cookies and redirecting...');
-            ['token', 'email', 'role', 'motel', 'moteles', 'fullName', 'userId'].forEach(c => Cookies.deleteCookie(c));
+            sessionStorage.clear();
             notify('Reset completo. Redirigiendo al login...', { type: 'success' });
             setTimeout(() => { window.location.href = '/#/login'; }, 800);
         } catch (err) {

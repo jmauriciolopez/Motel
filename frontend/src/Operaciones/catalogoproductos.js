@@ -8,7 +8,7 @@ import {
 import { Grid, Button, CircularProgress } from '@mui/material';
 import { Sync as SyncIcon } from '@mui/icons-material';
 import CustomToolbar from '../layout/CustomToolbar';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const Requerido = [required()];
 
@@ -24,19 +24,11 @@ const SyncRowButton = () => {
         e.stopPropagation();
         setLoading(true);
         try {
-            const token = Cookies.getCookie('token');
-            const motelId = Cookies.getCookie('motel');
-            const res = await fetch(getApiUrl('/productos/sync-catalogo'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                    'x-motel-id': motelId,
-                },
-                body: JSON.stringify({ catalogoIds: [record.id] }),
+            const motelId = sessionStorage.getItem('motelId');
+            const data = await http.post('/productos/sync-catalogo', {
+                catalogoIds: [record.id],
+                ...(motelId && { motelId }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error?.message || 'Error');
             notify(data.message, { type: 'success' });
             refresh();
         } catch (err) {

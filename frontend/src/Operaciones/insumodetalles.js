@@ -8,7 +8,7 @@ import CustomToolbar from '../layout/CustomToolbar';
 import { Button } from '@mui/material';
 import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useMotel } from '../context/MotelContext';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const InsumoDetalleListActions = () => {
     const location = useLocation();
@@ -75,11 +75,7 @@ export const InsumoDetalleCreate = () => {
     const [productos, setProductos] = useState([]);
     useEffect(() => {
         if (!motelId) return;
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/productos/con-stock-secundario?facturable=false'), {
-            headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
-        })
-            .then(r => r.json())
+        http.get('/productos/con-stock-secundario', { params: { facturable: false } })
             .then(d => setProductos(d.data || []))
             .catch(() => {});
     }, [motelId]);

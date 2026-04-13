@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { TrendingUp, TrendingDown, Percent, CheckCircle } from 'lucide-react';
 import { useNotify, useGetList, AutocompleteInput, ReferenceInput, SimpleForm } from 'react-admin';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 const REDONDEOS = [1, 10, 50, 100, 500];
 
@@ -34,16 +34,12 @@ const AjustePrecios = () => {
         const timer = setTimeout(async () => {
             setLoadingPreview(true);
             try {
-                const token = Cookies.getCookie('token');
-                const motelId = localStorage.getItem('motelId');
-                let url = `/productos?_limit=500`;
-                if (filtroRubroId) url += `&rubroId=${filtroRubroId}`;
-                if (filtroFacturable !== null) url += `&Facturable=${filtroFacturable}`;
+                let url = `/productos`;
+                const params: Record<string, any> = { _limit: 500 };
+                if (filtroRubroId) params.rubroId = filtroRubroId;
+                if (filtroFacturable !== null) params.Facturable = filtroFacturable;
 
-                const res = await fetch(getApiUrl(url), {
-                    headers: { Authorization: `Bearer ${token}`, 'x-motel-id': motelId },
-                });
-                const data = await res.json();
+                const data = await http.get(url, { params });
                 const productos = data.data || [];
                 const factor = 1 + Number(porcentaje) / 100;
                 const r = redondeo;
@@ -70,25 +66,13 @@ const AjustePrecios = () => {
         setLoading(true);
         setResultado(null);
         try {
-            const token = Cookies.getCookie('token');
-            const motelId = localStorage.getItem('motelId');
-            const res = await fetch(getApiUrl('/productos/ajuste-precios'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                    'x-motel-id': motelId,
-                },
-                body: JSON.stringify({
-                    campo,
-                    porcentaje: Number(porcentaje),
-                    redondeo,
-                    ...(filtroRubroId && { filtroRubroId }),
-                    ...(filtroFacturable !== null && { filtroFacturable }),
-                }),
+            const data = await http.post('/productos/ajuste-precios', {
+                campo,
+                porcentaje: Number(porcentaje),
+                redondeo,
+                ...(filtroRubroId && { filtroRubroId }),
+                ...(filtroFacturable !== null && { filtroFacturable }),
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Error');
             setResultado(data.message);
             notify(data.message, { type: 'success' });
             setPorcentaje('');

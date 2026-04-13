@@ -7,7 +7,7 @@ import {
 import { useNotify, useDataProvider, useRefresh } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
 import { Building2, User, Rocket, Package, CheckCircle2, Users, AlertCircle } from 'lucide-react';
-import { Cookies, getApiUrl } from '../helpers/Utils';
+import { http } from '../shared/api/HttpClient';
 
 
 const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
@@ -69,11 +69,7 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
     useEffect(() => {
         if (activeStep !== productosStep) return;
         setLoadingCatalogo(true);
-        const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/catalogo-productos?_page=1&_limit=8&_sort=Nombre&_order=asc'), {
-            headers: { Authorization: `Bearer ${token}` },
-        })
-            .then(r => r.json())
+        http.get('/catalogo-productos', { params: { _page: 1, _limit: 8, _sort: 'Nombre', _order: 'asc' } })
             .then(data => {
                 const items = Array.isArray(data) ? data : (data?.data || []);
                 setCatalogoItems(items);
@@ -109,10 +105,9 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
 
     // ── Guardar o actualizar el registro del paso actual ───────────────────────
     const saveStep = async () => {
-        const token = Cookies.getCookie('token');
-        let userId = Cookies.getCookie('userId');
+        let userId = sessionStorage.getItem('userId');
         try {
-            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            const u = JSON.parse(sessionStorage.getItem('user') || '{}');
             if (u?.id) userId = String(u.id);
         } catch { /* ignore */ }
         const motelId = created.motelId || currentMotelId;
@@ -165,61 +160,30 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
                 }
                 const now = new Date();
                 const userIds = userId ? [String(userId)] : [];
-                const res = await fetch(getApiUrl('/moteles'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({
-                        Nombre: form.MotelNombre.trim(),
-                        DuracionDiaria: parseInt(form.MotelDuracionTurno) || 2,
-                        DuracionNocturna: parseInt(form.MotelDuracionTurno) || 2,
-                        HorarioUnico: false,
-                        Tolerancia: 15,
-                        MaxHrAdicional: 1,
-                        InicioDia: new Date(new Date(now).setHours(8, 0, 0, 0)).toISOString(),
-                        InicioNoche: new Date(new Date(now).setHours(20, 0, 0, 0)).toISOString(),
-                        CheckOutDia: new Date(new Date(now).setHours(12, 0, 0, 0)).toISOString(),
-                        propietarioId: created.propietarioId,
-                        userIds,
-                    }),
+                const motel = await http.post('/moteles', {
+                    Nombre: form.MotelNombre.trim(),
+                    DuracionDiaria: parseInt(form.MotelDuracionTurno) || 2,
+                    DuracionNocturna: parseInt(form.MotelDuracionTurno) || 2,
+                    HorarioUnico: false,
+                    Tolerancia: 15,
+                    MaxHrAdicional: 1,
+                    InicioDia: new Date(new Date(now).setHours(8, 0, 0, 0)).toISOString(),
+                    InicioNoche: new Date(new Date(now).setHours(20, 0, 0, 0)).toISOString(),
+                    CheckOutDia: new Date(new Date(now).setHours(12, 0, 0, 0)).toISOString(),
+                    propietarioId: created.propietarioId,
+                    userIds,
                 });
-                if (!res.ok) {
-                    const text = await res.text();
-                    let message = 'Error al crear el motel';
-                    try {
-                        const json = JSON.parse(text);
-                        message = json.message || json.error || message;
-                    } catch {
-                        message = text || message;
-                    }
-                    throw new Error(message);
-                }
-
-                const motel = await res.json();
                 const newMotelId = motel.id;
                 setCreated(c => ({ ...c, motelId: newMotelId }));
-                Cookies.setCookie('motel', newMotelId, 1);
-                Cookies.setCookie('moteles', JSON.stringify([motel]), 1);
+                sessionStorage.setItem('motelId', newMotelId);
+                sessionStorage.setItem('moteles', JSON.stringify([motel]));
                 setCurrentMotelId(newMotelId);
                 setAvailableMoteles([motel]);
 
-                const depRes = await Promise.all([
-                    fetch(getApiUrl('/depositos'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-motel-id': newMotelId },
-                        body: JSON.stringify({ Nombre: 'Depósito Central', EsPrincipal: true, motelId: newMotelId }),
-                    }),
-                    fetch(getApiUrl('/depositos'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-motel-id': newMotelId },
-                        body: JSON.stringify({ Nombre: 'Depósito de Frente/Recepción', EsPrincipal: false, motelId: newMotelId }),
-                    }),
+                await Promise.all([
+                    http.post('/depositos', { Nombre: 'Depósito Central', EsPrincipal: true, motelId: newMotelId }),
+                    http.post('/depositos', { Nombre: 'Depósito de Frente/Recepción', EsPrincipal: false, motelId: newMotelId }),
                 ]);
-                for (const r of depRes) {
-                    if (!r.ok) {
-                        const txt = await r.text();
-                        throw new Error(txt || 'Error al crear depósitos del motel');
-                    }
-                }
 
                 // El motel ya se crea con propietarioId en el body — no hace falta un update adicional
             }
@@ -233,26 +197,14 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
                 if (!p.username || !p.email || !p.password) continue;
                 try {
                     // 1. Crear usuario y vincular a motel en un solo paso (NestJS)
-                    const regRes = await fetch(getApiUrl('/usuarios'), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({
-                            Username: p.username,
-                            Email: p.email,
-                            Password: p.password,
-                            Rol: p.rol, // El backend normaliza a SUPERVISOR/RECEPCIONISTA
-                            motelId: motelId
-                        }),
+                    const regRes = await http.post('/usuarios', {
+                        Username: p.username,
+                        Email: p.email,
+                        Password: p.password,
+                        Rol: p.rol,
+                        motelId: motelId,
                     });
-
-                    if (!regRes.ok) {
-                        const errData = await regRes.json();
-                        const rawMsg = errData.message || (typeof errData === 'string' ? errData : '');
-                        throw new Error(rawMsg || `Error al crear el usuario ${p.username}`);
-                    }
-
-                    const user = await regRes.json();
-                    if (user?.id) createdUserIds.push(user.id);
+                    if (regRes?.id) createdUserIds.push(regRes.id);
                 } catch (err) {
                     throw err; // propagar para mostrar en el modal
                 }
@@ -323,58 +275,21 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
     };
 
     const finishOnboarding = async () => {
-        const token = Cookies.getCookie('token');
-        const motelId = created.motelId || Cookies.getCookie('motel') || currentMotelId;
+        const motelId = created.motelId || sessionStorage.getItem('motelId') || currentMotelId;
         console.log('[Onboarding] Finalizing onboarding for motel:', motelId);
         console.log('[Onboarding] importarCatalogo:', importarCatalogo);
 
         if (importarCatalogo && motelId) {
             try {
                 console.log('[Onboarding] Fetching catalog products...');
-                const catRes = await fetch(getApiUrl('/catalogo-productos?_page=1&_limit=1000&_sort=Nombre&_order=asc'), {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                
-                if (!catRes.ok) {
-                    console.error('[Onboarding] Failed to fetch catalog:', catRes.status, await catRes.text());
-                    throw new Error('Failed to fetch catalog');
-                }
-                
-                const catData = await catRes.json();
-                console.log('[Onboarding] Catalog response:', catData);
-                
+                const catData = await http.get('/catalogo-productos', { params: { _page: 1, _limit: 1000, _sort: 'Nombre', _order: 'asc' } });
                 const itemsList = Array.isArray(catData) ? catData : (catData?.data || []);
-                console.log('[Onboarding] Catalog items count:', itemsList.length);
-                
                 const allIds = itemsList.map(p => p.id).filter(id => !!id);
-                console.log('[Onboarding] Catalog IDs to sync:', allIds);
 
                 if (allIds.length > 0) {
-                    console.log('[Onboarding] Syncing catalog products:', allIds.length);
-                    const syncPayload = { motelId, catalogoIds: allIds };
-                    console.log('[Onboarding] Sync payload:', syncPayload);
-                    
-                    const syncRes = await fetch(getApiUrl('/productos/sync-catalogo'), {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json', 
-                            Authorization: `Bearer ${token}`,
-                            'x-motel-id': motelId,
-                        },
-                        body: JSON.stringify(syncPayload),
+                    await http.post('/productos/sync-catalogo', { motelId, catalogoIds: allIds }).catch(err => {
+                        console.error('[Onboarding] Failed to sync catalog:', err);
                     });
-                    
-                    console.log('[Onboarding] Sync response status:', syncRes.status);
-                    
-                    if (!syncRes.ok) {
-                        const errorMsg = await syncRes.text();
-                        console.error('[Onboarding] Failed to sync catalog:', errorMsg);
-                    } else {
-                        const syncResult = await syncRes.json();
-                        console.log('[Onboarding] Sync successful:', syncResult);
-                    }
-                } else {
-                    console.warn('[Onboarding] No catalog IDs to sync');
                 }
             } catch (err) { 
                 console.error('[Onboarding] Error syncing products:', err); 
@@ -391,36 +306,15 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
 
         // Refrescar el token para obtener los moteles actualizados
         try {
-            console.log('[Onboarding] Refreshing token...');
-            const refreshRes = await fetch(getApiUrl('/autenticacion/refresh'), {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (refreshRes.ok) {
-                const refreshData = await refreshRes.json();
-                console.log('[Onboarding] Token refreshed successfully:', refreshData);
-                
-                // Actualizar el token en las cookies
-                if (refreshData.token) {
-                    Cookies.setCookie('token', refreshData.token, 1);
-                }
-
-                // Actualizar los moteles disponibles
-                if (refreshData.usuario?.moteles) {
-                    const motelesNormalizados = refreshData.usuario.moteles.map(m => ({
-                        id: m.motelId || m.id,
-                        nombre: m.nombre || m.Nombre,
-                        OnboardingCompleto: m.OnboardingCompleto,
-                    }));
-                    setAvailableMoteles(motelesNormalizados);
-                    localStorage.setItem('moteles', JSON.stringify(motelesNormalizados));
-                }
-            } else {
-                console.error('[Onboarding] Failed to refresh token:', refreshRes.status);
+            const refreshData = await http.post('/autenticacion/refresh');
+            if (refreshData?.usuario?.moteles) {
+                const motelesNormalizados = refreshData.usuario.moteles.map(m => ({
+                    id: m.motelId || m.id,
+                    nombre: m.nombre || m.Nombre,
+                    OnboardingCompleto: m.OnboardingCompleto,
+                }));
+                setAvailableMoteles(motelesNormalizados);
+                sessionStorage.setItem('moteles', JSON.stringify(motelesNormalizados));
             }
         } catch (err) {
             console.error('[Onboarding] Error refreshing token:', err);

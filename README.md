@@ -67,17 +67,10 @@ El `motelId` viaja en el JWT — el backend lo extrae del token en cada request.
 cd backend
 cp .env.example .env   # configurar DATABASE_URL y JWT_SECRET
 npm install
-npx prisma migrate dev
+npx prisma generate    # generar el cliente Prisma
+npx prisma migrate dev # aplicar migraciones en desarrollo
 npx prisma db seed     # datos iniciales
 npm run start:dev
-```
-
-Variables de entorno requeridas:
-
-```env
-DATABASE_URL="postgresql://usuario:password@localhost:5432/motel?schema=public"
-JWT_SECRET="tu_secreto_seguro"
-PORT=3000
 ```
 
 ### Frontend
@@ -88,39 +81,102 @@ npm install
 npm run dev
 ```
 
-Variable de entorno:
-
+Variable de entorno (`.env`):
 ```env
 VITE_API_URL=http://localhost:3000
 ```
 
-El frontend corre en `http://localhost:5173` por defecto (o el puerto que asigne Vite).
+---
+
+## Despliegue a Producción
+
+### 1. Preparación de la Base de Datos
+En el entorno de producción, las migraciones deben aplicarse usando el comando `deploy` para evitar el borrado accidental de datos:
+```bash
+npx prisma migrate deploy
+```
+
+### 2. Backend (NestJS)
+El backend está diseñado para correr como un proceso Node.js. Se recomienda usar un gestor de procesos como **PM2**.
+
+**Pasos de despliegue:**
+1.  Configurar variables de entorno (ver tabla abajo).
+2.  `npm install --production`
+3.  `npm run build`
+4.  `pm2 start dist/main.js --name motel-backend`
+
+**Variables de Entorno (Backend):**
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `DATABASE_URL` | String de conexión a Postgres | `postgresql://user:pass@host:5432/db` |
+| `JWT_SECRET` | Clave para firmar tokens (CRÍTICO) | *Usar una clave larga y aleatoria* |
+| `PORT` | Puerto de escucha | `3000` |
+
+### 3. Frontend (React)
+El frontend se despliega como contenido estático en **AWS S3** y se sirve a través de **CloudFront**.
+
+**Infraestructura (Terraform):**
+Ubicada en `frontend/terraform/`. Define el bucket S3, la distribución CloudFront y el certificado SSL (ACM).
+```bash
+cd frontend/terraform
+terraform init
+terraform apply
+```
+
+**CI/CD (GitHub Actions):**
+Configurado en `.github/workflows/deploy.yml`. Al hacer push a `main`:
+1.  Instala dependencias y compila (`npm run build`).
+2.  Sincroniza la carpeta `dist/` con el bucket S3.
+3.  Invalida el caché de CloudFront para reflejar cambios inmediatos.
+
+**Variables de Entorno (Frontend):**
+| Variable | Descripción |
+|----------|-------------|
+| `VITE_API_URL` | URL pública de la API backend |
+
+### 4. Despliegue en Render (Backend)
+Render es la opción recomendada para el despliegue rápido del backend.
+
+**Configuración en Render:**
+1.  **Web Service**: Conectar el repo.
+2.  **Root Directory**: `backend`
+3.  **Build Command**: `./render-build.sh`
+4.  **Start Command**: `npm run start:prod`
+5.  **Health Check Path**: `/api/health`
+
+**Variables de Entorno en Render:**
+- `DATABASE_URL`: URL de tu Postgres externo.
+- `JWT_SECRET`: Clave secreta para tokens.
+- `FRONTEND_URL`: URL del frontend (para CORS). Ejemplo: `https://d123.cloudfront.net`.
+
+---
 
 ## Scripts útiles
 
 ```bash
 # Backend
-npm run start:dev          # desarrollo con hot-reload
-npm run build              # compilar
-npx prisma studio          # explorador visual de la DB
-npx prisma migrate dev     # aplicar migraciones
+npm run build              # compilar para producción
+npm run start:prod         # lanzar ejecutable compilado
+npx prisma studio          # explorador visual de la DB (dev)
+npx prisma migrate deploy  # aplicar migraciones en producción
+./render-build.sh          # script de build para Render (local test)
 
 # Frontend
-npm run dev                # desarrollo
-npm run build              # build de producción
-npm run test               # tests unitarios (Vitest)
+npm run build              # build de producción (genera carpeta dist/)
+npm run preview            # previsualizar build localmente
+npm run test:e2e           # correr tests de extremo a extremo (Playwright)
 ```
 
 ## Arquitectura backend
 
 Todos los recursos siguen el patrón `BaseController` / `BaseService`:
 
-- **`BaseController`** maneja paginación, filtros, inyección de `motelId` desde el token y bloqueo de `SUPERADMIN` en creates.
-- **`BaseService`** aplica soft-delete (`deletedAt`), filtro por `motelId` y paginación genérica.
-- Los módulos específicos sobreescriben solo lo que necesitan (ej: `CajasService` calcula el saldo acumulado en `crear`).
+- **`BaseController`**: Maneja paginación, filtros e inyección de contexto multi-tenant.
+- **`BaseService`**: Aplica aislamiento por `motelId` y soporte para "soft-delete".
+- **Seguridad**: Implementa `Helmet` para cabeceras HTTP seguras y `ValidationPipe` para mitigar ataques de inyección.
 
 ## Arquitectura frontend
 
-- **`nestDataProvider`** adapta react-admin al backend NestJS. Traduce filtros de RA a query params y JSON `filtro` para Prisma.
-- **`HttpClient`** inyecta el `Authorization: Bearer` header en todos los requests.
-- Los filtros de `motelId` fueron eliminados de todos los componentes — el backend los resuelve desde el token.
+- **`nestDataProvider`**: Adaptador personalizado para `react-admin` que se comunica con el backend NestJS.
+- **`HttpClient`**: Centraliza las peticiones y maneja el `Authorization Header` y la gestión de errores 401.
+- **`MotelContext`**: Gestiona el cambio de motel activo para usuarios con múltiples sedes asignadas.
