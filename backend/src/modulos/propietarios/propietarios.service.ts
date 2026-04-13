@@ -18,20 +18,24 @@ export class PropietariosService extends BaseService<Propietario> {
     if (datosRestantes.Email) {
       const existente = await this.prisma.propietario.findUnique({
         where: { Email: datosRestantes.Email },
-        include: { moteles: true },
+        include: { moteles: true, usuarios: true },
       });
-      if (existente) return existente;
+      if (existente) {
+        // Si existe y tiene userId, asegurarse de que el usuario esté vinculado
+        if (userId && !existente.usuarios.some(u => u.id === userId)) {
+          await this.prisma.usuario.update({
+            where: { id: userId },
+            data: { propietarioId: existente.id },
+          });
+        }
+        return existente;
+      }
     }
 
-    return this.prisma.propietario.create({
+    const propietario = await this.prisma.propietario.create({
       data: {
         ...datosRestantes,
         FormaPago: FormaPago || 'EFECTIVO',
-        ...(userId && {
-          usuarios: {
-            connect: { id: userId },
-          },
-        }),
         ...(motelIds && motelIds.length > 0 && {
           moteles: {
             connect: motelIds.map((id) => ({ id })),
@@ -39,6 +43,16 @@ export class PropietariosService extends BaseService<Propietario> {
         }),
       },
     });
+
+    // Actualizar el usuario con el propietarioId
+    if (userId) {
+      await this.prisma.usuario.update({
+        where: { id: userId },
+        data: { propietarioId: propietario.id },
+      });
+    }
+
+    return propietario;
   }
 
   async actualizar(

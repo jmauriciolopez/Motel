@@ -132,7 +132,7 @@ const SignupPage = () => {
                                 Unirse a Gestor de Moteles
                             </Typography>
                             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
-                                Comienza tu prueba gratuita de 30 días hoy
+                                Comienza tu prueba gratuita de 15 días hoy
                             </Typography>
                         </Box>
 

@@ -4,6 +4,7 @@ import { InicioSesionDto } from './dto/inicio-sesion.dto';
 import { RegistroDto } from './dto/registro.dto';
 import { Public } from '../../compartido/decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AllowGlobal } from '../../compartido/decorators/allow-global.decorator';
 
 @Controller('autenticacion')
 export class AutenticacionController {
@@ -23,6 +24,7 @@ export class AutenticacionController {
     return this.autenticacionService.registro(registroDto);
   }
 
+  @AllowGlobal()
   @UseGuards(JwtAuthGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)

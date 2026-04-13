@@ -331,7 +331,7 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
         if (importarCatalogo && motelId) {
             try {
                 console.log('[Onboarding] Fetching catalog products...');
-                const catRes = await fetch(getApiUrl('/catalogo-productos?_page=1&_limit=1000&_sort=nombre&_order=asc'), {
+                const catRes = await fetch(getApiUrl('/catalogo-productos?_page=1&_limit=1000&_sort=Nombre&_order=asc'), {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 
@@ -388,6 +388,44 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
         setAvailableMoteles(prev =>
             prev.map(m => m.id === motelId ? { ...m, OnboardingCompleto: true } : m)
         );
+
+        // Refrescar el token para obtener los moteles actualizados
+        try {
+            console.log('[Onboarding] Refreshing token...');
+            const refreshRes = await fetch(getApiUrl('/autenticacion/refresh'), {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (refreshRes.ok) {
+                const refreshData = await refreshRes.json();
+                console.log('[Onboarding] Token refreshed successfully:', refreshData);
+                
+                // Actualizar el token en las cookies
+                if (refreshData.token) {
+                    Cookies.setCookie('token', refreshData.token, 1);
+                }
+
+                // Actualizar los moteles disponibles
+                if (refreshData.usuario?.moteles) {
+                    const motelesNormalizados = refreshData.usuario.moteles.map(m => ({
+                        id: m.motelId || m.id,
+                        nombre: m.nombre || m.Nombre,
+                        OnboardingCompleto: m.OnboardingCompleto,
+                    }));
+                    setAvailableMoteles(motelesNormalizados);
+                    localStorage.setItem('moteles', JSON.stringify(motelesNormalizados));
+                }
+            } else {
+                console.error('[Onboarding] Failed to refresh token:', refreshRes.status);
+            }
+        } catch (err) {
+            console.error('[Onboarding] Error refreshing token:', err);
+        }
+
         notify('¡Motel listo para operar!', { type: 'success' });
         refresh();
         if (onFinish) onFinish();
