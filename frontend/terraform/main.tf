@@ -12,7 +12,7 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   restrict_public_buckets = true
 }
 
-# 2. SSL Certificate (ACM)
+# 2. SSL Certificate (ACM) - Se mantiene pero no se vincula aún para evitar esperas
 resource "aws_acm_certificate" "cert" {
   domain_name       = var.domain_name
   validation_method = "DNS"
@@ -20,6 +20,11 @@ resource "aws_acm_certificate" "cert" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# 2.1 Certificate Validation Logic
+resource "aws_acm_certificate_validation" "cert" {
+  certificate_arn = aws_acm_certificate.cert.arn
 }
 
 # 3. CloudFront Origin Access Control (OAC)
@@ -30,7 +35,7 @@ resource "aws_cloudfront_origin_access_control" "oac" {
   signing_protocol                  = "sigv4"
 }
 
-# 4. CloudFront Distribution
+# 4. CloudFront Distribution (Simplificada sin dominio personalizado para despliegue rápido)
 resource "aws_cloudfront_distribution" "cdn" {
   origin {
     domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
@@ -42,7 +47,7 @@ resource "aws_cloudfront_distribution" "cdn" {
   is_ipv6_enabled     = true
   default_root_object = "index.html"
 
-  aliases = [var.domain_name]
+  # aliases = [var.domain_name] # Comentado para evitar el error de certificado SSL
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD"]
@@ -62,7 +67,7 @@ resource "aws_cloudfront_distribution" "cdn" {
     max_ttl                = 84600
   }
 
-  # SPA Support: Redirect errors to index.html for client-side routing
+  # SPA Support: Redirect errores a index.html
   custom_error_response {
     error_code            = 403
     response_code         = 200
@@ -84,10 +89,13 @@ resource "aws_cloudfront_distribution" "cdn" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.cert.arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = true # Usar certificado por defecto de CloudFront (*.cloudfront.net)
+    # acm_certificate_arn      = aws_acm_certificate.cert.arn
+    # ssl_support_method       = "sni-only"
+    # minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  # depends_on = [aws_acm_certificate_validation.cert] # Eliminada dependencia para que sea instantáneo
 }
 
 # 5. S3 Bucket Policy to allow CloudFront OAC
