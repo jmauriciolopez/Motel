@@ -108,7 +108,7 @@ export const DepositoList = () => {
             actions={<DepositoListActions />}
             sx={{ '& .RaList-main': { marginTop: 2 } }}
             filter={{ motelId: currentMotelId }}
-            queryOptions={{ meta: { include: { motel: true } } }}
+            queryOptions={{ meta: { include: { motel: true , rubro: true } } }}
         >
             <Datagrid rowClick="edit" sx={{
                 '& .RaDatagrid-rowCell': { padding: '16px 8px' },

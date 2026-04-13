@@ -7,8 +7,10 @@ import {
 import { Search as SearchIcon, Sync as SyncIcon } from '@mui/icons-material';
 import { useNotify, useRefresh } from 'react-admin';
 import { Cookies, getApiUrl } from '../helpers/Utils';
+import { useMotel } from '../context/MotelContext';
 
 const SyncCatalogoDialog = ({ open, onClose }) => {
+    const { currentMotelId } = useMotel();
     const [catalogo, setCatalogo] = useState([]);
     const [selected, setSelected] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -64,10 +66,20 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
 
     const handleSync = async () => {
         if (selected.length === 0) return;
+        
+        const motelId = currentMotelId || Cookies.getCookie('motel');
+        if (!motelId) {
+            notify('No hay motel activo seleccionado', { type: 'error' });
+            return;
+        }
+        
+        console.log('[SyncCatalogo] Starting sync...', { motelId, selectedCount: selected.length });
         setSyncing(true);
         try {
             const token = Cookies.getCookie('token');
-            const motelId = localStorage.getItem('motelId');
+            const payload = { motelId, catalogoIds: selected };
+            console.log('[SyncCatalogo] Payload:', payload);
+            
             const res = await fetch(getApiUrl('/productos/sync-catalogo'), {
                 method: 'POST',
                 headers: {
@@ -75,15 +87,26 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
                     Authorization: `Bearer ${token}`,
                     'x-motel-id': motelId,
                 },
-                body: JSON.stringify({ motelId, catalogoIds: selected }),
+                body: JSON.stringify(payload),
             });
+            
+            console.log('[SyncCatalogo] Response status:', res.status);
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error('[SyncCatalogo] Error response:', errorText);
+                throw new Error(errorText || 'Error en sync');
+            }
+            
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Error en sync');
+            console.log('[SyncCatalogo] Success:', data);
+            
             notify(`${data.length ?? selected.length} productos sincronizados`, { type: 'success' });
             refresh();
             setSelected([]);
             onClose();
         } catch (err) {
+            console.error('[SyncCatalogo] Error:', err);
             notify('Error: ' + err.message, { type: 'error' });
         } finally {
             setSyncing(false);

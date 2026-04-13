@@ -489,7 +489,7 @@ const CerrarTurnoButton = ({ showLabel = true }) => {
                 isOpen={open}
                 loading={isLoading}
                 title="Cerrar turno"
-                content="Se calculará el total (tarifa + consumos) y la habitación pasará a limpieza. El pago se registra por separado. ¿Continuar?"
+                content="La habitación pasará a limpieza. Registra el pago se  por separado. ¿Continuar?"
                 onConfirm={handleConfirm}
                 onClose={(e) => { e.stopPropagation(); setOpen(false); }}
                 confirmColor="warning"

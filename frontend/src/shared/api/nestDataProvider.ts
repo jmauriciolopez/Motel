@@ -129,7 +129,18 @@ const sanitizeFilter = (filter: any): any => {
             if (key === '$or' || key === '$and') {
                 const prismaKey = key === '$or' ? 'OR' : 'AND';
                 sanitized[prismaKey] = sanitizeFilter(value);
-            } else {
+            } 
+            // Caso especial: Operador $null para campos nullable
+            else if ('$null' in value) {
+                if (value.$null === true) {
+                    // $null: true → campo debe ser null
+                    sanitized[key] = null;
+                } else if (value.$null === false) {
+                    // $null: false → campo NO debe ser null
+                    sanitized[key] = { not: null };
+                }
+            }
+            else {
                 sanitized[key] = sanitizeFilter(value);
             }
             continue;

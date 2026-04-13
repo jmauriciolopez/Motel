@@ -5,6 +5,7 @@ import { Turno, EstadoHabitacion } from '@prisma/client';
 import { CrearTurnoDto } from './dto/crear-turno.dto';
 import { TenantContext } from '../../compartido/interfaces/tenant-context.interface';
 import { MotorTarifarioService } from '../tarifas/motor-tarifario.service';
+import { TurnoCalculator } from '../tarifas/turno-calculator';
 
 function motelIdRequerido(tenant: TenantContext): string {
   if (!tenant?.motelId) {
@@ -33,6 +34,7 @@ export class TurnosService extends BaseService<Turno> {
   constructor(
     prisma: PrismaService,
     private motorTarifario: MotorTarifarioService,
+    private turnoCalculator: TurnoCalculator,
   ) {
     super(prisma, 'turno', { hasMotelId: true });
   }
@@ -46,6 +48,9 @@ export class TurnosService extends BaseService<Turno> {
           id: crearTurnoDto.habitacionId,
           motelId: motelIdActivo,
           deletedAt: null,
+        },
+        include: {
+          motel: true,
         },
       });
 
@@ -80,6 +85,13 @@ export class TurnosService extends BaseService<Turno> {
         throw new BadRequestException('La tarifa no pertenece al motel activo');
       }
 
+      // Calculate initial values using TurnoCalculator
+      const initialValues = this.turnoCalculator.calculateInitialValues(
+        { motel: habitacion.motel as any, tarifa: tarifa as any },
+        crearTurnoDto.Ingreso,
+        crearTurnoDto.TipoEstadia,
+      );
+
       const turno = await tx.turno.create({
         data: {
           habitacionId: crearTurnoDto.habitacionId,
@@ -87,8 +99,9 @@ export class TurnosService extends BaseService<Turno> {
           tarifaId,
           usuarioAperturaId: crearTurnoDto.usuarioAperturaId,
           Ingreso: crearTurnoDto.Ingreso ? new Date(crearTurnoDto.Ingreso) : new Date(),
-          Total: crearTurnoDto.Total ?? 0,
-          Precio: crearTurnoDto.Precio ?? 0,
+          Total: initialValues.Total,
+          Precio: initialValues.Precio,
+          Minutos: initialValues.Minutos,
           PagoPendiente: true,
           TipoEstadia: crearTurnoDto.TipoEstadia,
           Observacion: crearTurnoDto.Observacion,
@@ -133,37 +146,17 @@ export class TurnosService extends BaseService<Turno> {
         throw new BadRequestException('El turno ya fue cerrado');
       }
 
-      const Salida = new Date();
-
-      const consumosCalc = turno.consumos.map((c) => {
-        const imp = Number(c.Importe);
-        const qty = c.Cantidad;
-        return {
-          productoId: c.productoId,
-          cantidad: qty,
-          precioUnitario: qty > 0 ? imp / qty : 0,
-          importe: imp,
-        };
-      });
-
-      const calculo = this.motorTarifario.calcularTurno({
-        motelId: motelIdActivo,
-        habitacionId: turno.habitacionId,
-        tarifaId: turno.tarifaId,
-        fechaInicio: turno.Ingreso,
-        fechaFin: Salida,
-        tarifa: turno.tarifa,
-        motel: turno.habitacion.motel,
-        consumos: consumosCalc,
-      });
-
-      const Total = calculo.total;
+      // Calculate closing values using TurnoCalculator
+      const closingValues = this.turnoCalculator.calculateClosingValues(
+        turno as any,
+        { motel: turno.habitacion.motel as any, tarifa: turno.tarifa as any },
+      );
 
       let turnoResult = await tx.turno.update({
         where: { id },
         data: {
-          Salida,
-          Total,
+          Salida: closingValues.Salida,
+          Total: closingValues.Total,
           usuarioCierreId,
           PagoPendiente: true,
         },

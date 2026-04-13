@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Turno" ADD COLUMN     "Minutos" INTEGER NOT NULL DEFAULT 0;

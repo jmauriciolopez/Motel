@@ -38,8 +38,4 @@ export class CrearPropietarioDto {
   @IsBoolean()
   @IsOptional()
   PagoActivo?: boolean;
-
-  @IsBoolean()
-  @IsOptional()
-  OnboardingCompleto?: boolean;
 }

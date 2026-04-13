@@ -122,13 +122,22 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
             const data = {
                 Nombre: form.PropietarioNombre,
                 Email: Cookies.getCookie('email') || undefined,
-                Telefono: form.PropietarioTelefono || undefined,
-                Cuit: form.PropietarioCUIT || undefined,
-                Ciudad: form.PropietarioCiudad || undefined,
                 Activo: true,
                 FormaPago: 'EFECTIVO',
                 userId: userId || undefined,
+                FechaVencimientoPrueba: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
             };
+
+            // Solo agregar campos opcionales si tienen valor
+            if (form.PropietarioTelefono && form.PropietarioTelefono.trim()) {
+                data.Telefono = form.PropietarioTelefono.trim();
+            }
+            if (form.PropietarioCUIT && form.PropietarioCUIT.trim()) {
+                data.Cuit = form.PropietarioCUIT.trim();
+            }
+            if (form.PropietarioCiudad && form.PropietarioCiudad.trim()) {
+                data.Ciudad = form.PropietarioCiudad.trim();
+            }
 
             if (created.propietarioId) {
                 await dataProvider.update('propietarios', { id: created.propietarioId, data });
@@ -316,30 +325,62 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
     const finishOnboarding = async () => {
         const token = Cookies.getCookie('token');
         const motelId = created.motelId || Cookies.getCookie('motel') || currentMotelId;
-        console.log('Finalizing onboarding for motel:', motelId);
+        console.log('[Onboarding] Finalizing onboarding for motel:', motelId);
+        console.log('[Onboarding] importarCatalogo:', importarCatalogo);
 
         if (importarCatalogo && motelId) {
             try {
+                console.log('[Onboarding] Fetching catalog products...');
                 const catRes = await fetch(getApiUrl('/catalogo-productos?_page=1&_limit=1000&_sort=nombre&_order=asc'), {
                     headers: { Authorization: `Bearer ${token}` },
                 });
+                
+                if (!catRes.ok) {
+                    console.error('[Onboarding] Failed to fetch catalog:', catRes.status, await catRes.text());
+                    throw new Error('Failed to fetch catalog');
+                }
+                
                 const catData = await catRes.json();
+                console.log('[Onboarding] Catalog response:', catData);
+                
                 const itemsList = Array.isArray(catData) ? catData : (catData?.data || []);
+                console.log('[Onboarding] Catalog items count:', itemsList.length);
+                
                 const allIds = itemsList.map(p => p.id).filter(id => !!id);
+                console.log('[Onboarding] Catalog IDs to sync:', allIds);
 
                 if (allIds.length > 0) {
-                    console.log('Syncing catalog products:', allIds.length);
+                    console.log('[Onboarding] Syncing catalog products:', allIds.length);
+                    const syncPayload = { motelId, catalogoIds: allIds };
+                    console.log('[Onboarding] Sync payload:', syncPayload);
+                    
                     const syncRes = await fetch(getApiUrl('/productos/sync-catalogo'), {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ motelId, catalogoIds: allIds }),
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            Authorization: `Bearer ${token}`,
+                            'x-motel-id': motelId,
+                        },
+                        body: JSON.stringify(syncPayload),
                     });
+                    
+                    console.log('[Onboarding] Sync response status:', syncRes.status);
+                    
                     if (!syncRes.ok) {
                         const errorMsg = await syncRes.text();
-                        console.error('Failed to sync catalog:', errorMsg);
+                        console.error('[Onboarding] Failed to sync catalog:', errorMsg);
+                    } else {
+                        const syncResult = await syncRes.json();
+                        console.log('[Onboarding] Sync successful:', syncResult);
                     }
+                } else {
+                    console.warn('[Onboarding] No catalog IDs to sync');
                 }
-            } catch (err) { console.error('Error syncing products:', err); }
+            } catch (err) { 
+                console.error('[Onboarding] Error syncing products:', err); 
+            }
+        } else {
+            console.log('[Onboarding] Skipping catalog sync - importarCatalogo:', importarCatalogo, 'motelId:', motelId);
         }
 
 

@@ -41,7 +41,6 @@ model Propietario {
   Activo                 Boolean   @default(true) @map("activo")
   FechaVencimientoPrueba DateTime? @map("fechaVencimientoPrueba")
   PagoActivo             Boolean   @default(false) @map("pagoActivo")
-  OnboardingCompleto     Boolean   @default(false) @map("onboardingCompleto")
 
   moteles  Motel[]
   usuarios Usuario[]
@@ -258,6 +257,7 @@ model Turno {
   Ingreso     DateTime
   Salida      DateTime?
   TipoEstadia TipoEstadia @default(Standard) @map("tipoEstadia")
+  Minutos     Int         @default(0)
 
   // Financiero
   Total         Decimal

@@ -164,12 +164,16 @@ export const PagoEdit = () => (
 );
 
 const PagoCreate = () => {
-    const { data: formasPago } = useGetList('formapagos', {
+    const { data: formasPago, isLoading } = useGetList('formapagos', {
         pagination: { page: 1, perPage: 100 }
     });
 
-    const recordEfectivo = formasPago?.find(f => f.Tipo?.toLowerCase().includes('efectivo'));
-    const defaultFormaPago = recordEfectivo?.id || recordEfectivo?.id;
+    // Buscar "Efectivo" en las formas de pago
+    const recordEfectivo = formasPago?.find(f => 
+        f.Tipo?.toLowerCase().includes('efectivo') || 
+        f.Tipo?.toLowerCase() === 'efectivo'
+    );
+    const defaultFormaPago = recordEfectivo?.id;
 
     const { currentMotelId } = useMotel();
 
@@ -195,9 +199,15 @@ const PagoCreate = () => {
 
     return (
         <Create redirect="/turnos" transform={transform} sx={{ mt: 2 }}>
-            <SimpleForm validate={validateCreation} defaultValues={{ Importe: initialImporte, turnoId: initialTurnoId }} toolbar={<CustomToolbar backTo="/turnos" />}>
-                <DefaultValueSetter source="formaPagoId" value={defaultFormaPago} />
-
+            <SimpleForm 
+                validate={validateCreation} 
+                defaultValues={{ 
+                    Importe: initialImporte, 
+                    turnoId: initialTurnoId,
+                    formaPagoId: defaultFormaPago 
+                }} 
+                toolbar={<CustomToolbar backTo="/turnos" />}
+            >
                 <SectionHeader icon={PaymentsIcon} title="Nuevo Comprobante de Pago" />
                 <Paper elevation={0} sx={{ p: 4, backgroundColor: 'action.hover', borderRadius: 4, mb: 3 }}>
                     <Grid container spacing={3}>

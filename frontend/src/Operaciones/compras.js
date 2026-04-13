@@ -142,6 +142,7 @@ const CompraList = () => {
             sort={{ field: 'Fecha', order: 'DESC' }}
             disableSyncWithLocation
             sx={{ '& .RaList-main': { marginTop: 2 } }}
+            queryOptions={{ meta: { include: { proveedor: true } } }}
         >
             <Datagrid bulkActionButtons={false} rowClick={false} sx={{
                 '& .RaDatagrid-rowCell': { padding: '16px 8px' },

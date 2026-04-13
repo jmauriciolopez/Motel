@@ -99,7 +99,7 @@ export class ConsumosService extends BaseService<Consumo> {
         -cantidad,
       );
 
-      return tx.consumo.create({
+      const consumo = await tx.consumo.create({
         data: {
           Cantidad: cantidad,
           Importe: importe,
@@ -108,6 +108,26 @@ export class ConsumosService extends BaseService<Consumo> {
           motelId,
         },
       });
+
+      // Recalcular el total del turno sumando todos los consumos
+      const todosLosConsumos = await tx.consumo.findMany({
+        where: { turnoId, deletedAt: null },
+      });
+
+      const totalConsumos = todosLosConsumos.reduce(
+        (sum, c) => sum + Number(c.Importe),
+        0,
+      );
+
+      // El total del turno es: Precio base + consumos
+      const nuevoTotal = Number(turno.Precio) + totalConsumos;
+
+      await tx.turno.update({
+        where: { id: turnoId },
+        data: { Total: nuevoTotal },
+      });
+
+      return consumo;
     });
   }
 
@@ -144,5 +164,57 @@ export class ConsumosService extends BaseService<Consumo> {
       extraWhere,
       scopedMotelId,
     );
+  }
+
+  override async eliminar(id: string, scopedMotelId?: string | null): Promise<Consumo> {
+    return this.prisma.$transaction(async (tx) => {
+      // Obtener el consumo antes de eliminarlo
+      const consumo = await tx.consumo.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+          ...(scopedMotelId ? { motelId: scopedMotelId } : {}),
+        },
+      });
+
+      if (!consumo) {
+        throw new NotFoundException('Consumo no encontrado');
+      }
+
+      // Obtener el turno
+      const turno = await tx.turno.findFirst({
+        where: { id: consumo.turnoId, deletedAt: null },
+      });
+
+      if (!turno) {
+        throw new NotFoundException('Turno no encontrado');
+      }
+
+      // Soft delete del consumo
+      const consumoEliminado = await tx.consumo.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+
+      // Recalcular el total del turno sin el consumo eliminado
+      const consumosActivos = await tx.consumo.findMany({
+        where: { turnoId: consumo.turnoId, deletedAt: null },
+      });
+
+      const totalConsumos = consumosActivos.reduce(
+        (sum, c) => sum + Number(c.Importe),
+        0,
+      );
+
+      // El total del turno es: Precio base + consumos activos
+      const nuevoTotal = Number(turno.Precio) + totalConsumos;
+
+      await tx.turno.update({
+        where: { id: consumo.turnoId },
+        data: { Total: nuevoTotal },
+      });
+
+      return consumoEliminado;
+    });
   }
 }

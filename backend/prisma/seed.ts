@@ -17,7 +17,6 @@ async function main() {
       Email: 'propietario@motel.com',
       FormaPago: 'EFECTIVO',
       Activo: true,
-      OnboardingCompleto: true,
     },
   });
 

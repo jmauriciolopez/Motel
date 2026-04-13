@@ -10,12 +10,23 @@ export class StockService extends BaseService<Stock> {
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {
+    // Merge includes: default + custom from options
+    const defaultInclude = {
+      producto: true,
+      deposito: true,
+    };
+    
+    const customInclude = options?.include || {};
+    
+    // Si el frontend envía un include custom para producto, usarlo
+    const finalInclude = {
+      ...defaultInclude,
+      ...customInclude,
+    };
+    
     return super.obtenerTodos({
       ...options,
-      include: {
-        producto: true,
-        deposito: true,
-      },
+      include: finalInclude,
     }, extraWhere);
   }
 

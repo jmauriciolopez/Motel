@@ -18,14 +18,17 @@ const DevResetOnboarding = () => {
         try {
             const motelId = currentMotelId;
             const token = Cookies.getCookie('token');
+            console.log('[DevReset] Starting reset for motel:', motelId);
 
             // Obtener motel para resolver su propietario sin depender de filtros no soportados
             const motelData = motelId
                 ? await dataProvider.getOne('moteles', { id: motelId }).catch(() => ({ data: null }))
                 : { data: null };
             const propietarioId = motelData?.data?.Propietario?.id || motelData?.data?.propietario?.id || null;
+            console.log('[DevReset] Propietario ID:', propietarioId);
 
             // Obtener todo lo vinculado al motel en paralelo
+            console.log('[DevReset] Fetching related records...');
             const [
                 { data: habitaciones },
                 { data: tarifas },
@@ -60,6 +63,14 @@ const DevResetOnboarding = () => {
                 }).catch(() => ({ data: [] })) : { data: [] },
             ]);
 
+            console.log('[DevReset] Found:', {
+                habitaciones: habitaciones.length,
+                tarifas: tarifas.length,
+                depositos: depositos.length,
+                productos: productos.length,
+                rubros: rubros.length,
+            });
+
             // Obtener id real del usuario actual para excluirlo
             let myNumericId = null;
             try {
@@ -69,14 +80,25 @@ const DevResetOnboarding = () => {
                 if (meRes.ok) {
                     const me = await meRes.json();
                     myNumericId = me?.id;
+                    console.log('[DevReset] Current user ID:', myNumericId);
                 }
             } catch { /* no bloquear */ }
 
             const deleteRecord = (resource, id) =>
                 fetch(getApiUrl(`/${resource}/${id}`), {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` },
-                }).catch(() => {});
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'x-motel-id': motelId || '',
+                    },
+                }).then(res => {
+                    if (!res.ok) {
+                        console.warn(`[DevReset] Failed to delete ${resource}/${id}:`, res.status);
+                    }
+                    return res;
+                }).catch(err => {
+                    console.warn(`[DevReset] Error deleting ${resource}/${id}:`, err);
+                });
 
             // Obtener usuarios vinculados al motel (excepto el usuario actual)
             let motelUsers = [];
@@ -89,11 +111,13 @@ const DevResetOnboarding = () => {
                     if (motelNumericRes.ok) {
                         const allUsers = await motelNumericRes.json();
                         motelUsers = allUsers || [];
+                        console.log('[DevReset] Found motel users:', motelUsers.length);
                     }
                 } catch { /* no bloquear */ }
             }
 
             // 1. Desvincular al admin actual del motel (sin borrarlo)
+            console.log('[DevReset] Unlinking current user from motel...');
             if (myNumericId) {
                 await fetch(getApiUrl(`/usuarios/${myNumericId}/desvincular-moteles`), {
                     method: 'PATCH',
@@ -102,6 +126,7 @@ const DevResetOnboarding = () => {
             }
 
             // 2. Desvincular y eliminar usuarios secundarios del motel
+            console.log('[DevReset] Deleting motel users...');
             for (const u of motelUsers) {
                 await fetch(getApiUrl(`/usuarios/${u.id}/desvincular-moteles`), {
                     method: 'PATCH',
@@ -113,32 +138,46 @@ const DevResetOnboarding = () => {
                 }).catch(() => {});
             }
 
-            // 3. Eliminar registros del motel (habitaciones, tarifas, depósitos, productos, rubros)
+            // 3. Eliminar registros del motel en orden correcto (respetando FKs)
+            console.log('[DevReset] Deleting productos...');
+            await Promise.all(productos.map(p => deleteRecord('productos', p.id)));
+            
+            console.log('[DevReset] Deleting rubros...');
+            await Promise.all(rubros.map(r => deleteRecord('rubros', r.id)));
+            
+            console.log('[DevReset] Deleting habitaciones and tarifas...');
             await Promise.all([
                 ...habitaciones.map(h => deleteRecord('habitaciones', h.id)),
                 ...tarifas.map(t => deleteRecord('tarifas', t.id)),
-                ...depositos.map(d => deleteRecord('depositos', d.id)),
-                ...productos.map(p => deleteRecord('productos', p.id)),
-                ...rubros.map(r => deleteRecord('rubros', r.id)),
             ]);
+            
+            console.log('[DevReset] Deleting depositos...');
+            await Promise.all(depositos.map(d => deleteRecord('depositos', d.id)));
 
             // 4. Eliminar el motel
+            console.log('[DevReset] Deleting motel...');
             if (motelId) {
                 await fetch(getApiUrl(`/moteles/${motelId}`), {
                     method: 'DELETE',
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: { 
+                        Authorization: `Bearer ${token}`,
+                        'x-motel-id': motelId,
+                    },
                 }).catch(() => {});
             }
 
             // 5. Eliminar el propietario (después del motel para evitar FK violations)
+            console.log('[DevReset] Deleting propietario...');
             if (propietarioId) {
                 await deleteRecord('propietarios', propietarioId);
             }
 
+            console.log('[DevReset] Clearing cookies and redirecting...');
             ['token', 'email', 'role', 'motel', 'moteles', 'fullName', 'userId'].forEach(c => Cookies.deleteCookie(c));
             notify('Reset completo. Redirigiendo al login...', { type: 'success' });
             setTimeout(() => { window.location.href = '/#/login'; }, 800);
         } catch (err) {
+            console.error('[DevReset] Error:', err);
             notify('Error en reset: ' + err.message, { type: 'warning' });
             setLoading(false);
         }

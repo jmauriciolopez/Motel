@@ -45,6 +45,18 @@ const StockReporte = (props) => {
             filters={<FiltroStocks />}
             sort={{ field: 'id', order: 'DESC' }}
             title="Reporte de Stocks"
+            queryOptions={{ 
+                meta: { 
+                    include: { 
+                        deposito: true,
+                        producto: {
+                            include: {
+                                rubro: true
+                            }
+                        }
+                    } 
+                } 
+            }}
         >
             <Datagrid optimized>
                 <TextField label="Deposito" source="deposito.Nombre" />

@@ -45,8 +45,18 @@ export class PagosService extends BaseService<Pago> {
     });
 
     // Registro automático en Caja
+    const format = (d: Date): string => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+
+  return `${day}-${month} ${hours}:${minutes}`;
+};
     await this.cajasService.crear({
-        Concepto: `Cobro Turno #${pago.turnoId.slice(-6)}`,
+        Concepto: `Cobro Turno #${format(turno.Salida)}`,
         Importe: Number(pago.Importe),
         motelId: pago.motelId,
         conceptoCaja: 'INGRESO', // Aseguramos que se identifique como ingreso si fuera necesario
