@@ -70,7 +70,7 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
         if (activeStep !== productosStep) return;
         setLoadingCatalogo(true);
         const token = Cookies.getCookie('token');
-        fetch(getApiUrl('/catalogo-productos?_page=1&_limit=8&_sort=nombre&_order=asc'), {
+        fetch(getApiUrl('/catalogo-productos?_page=1&_limit=8&_sort=Nombre&_order=asc'), {
             headers: { Authorization: `Bearer ${token}` },
         })
             .then(r => r.json())
