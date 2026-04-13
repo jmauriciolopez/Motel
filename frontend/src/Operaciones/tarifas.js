@@ -13,6 +13,7 @@ import {
 import { Link } from 'react-router-dom';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useMotel } from '../context/MotelContext';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 
 // -- Helper Components --
 const SectionHeader = ({ icon: Icon, title }) => (
@@ -60,12 +61,13 @@ const TarifaEditActions = () => {
 // -- Components --
 
 export const TarifaList = () => {
+    const deletedRowSx = useDeletedRowSx();
     return (
         <List
             actions={<TarifaListActions />}
             sx={{ '& .RaList-main': { marginTop: 2 } }}
         >
-            <Datagrid rowClick="edit" sx={{
+            <Datagrid rowClick="edit" rowSx={deletedRowSx} sx={{
                 '& .RaDatagrid-rowCell': { padding: '16px 8px' },
                 '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }
             }}>

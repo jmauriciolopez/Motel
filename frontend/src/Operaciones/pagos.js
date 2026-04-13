@@ -3,6 +3,7 @@ import {
     AutocompleteInput, Create, Datagrid, DateField, DateTimeInput, Edit, EditButton, List, NumberField, NumberInput, ReferenceInput, required, SimpleForm, TextField, TextInput, useDataProvider, useNotify, useRecordContext, useGetList,
     TopToolbar, CreateButton, usePermissions, FunctionField
 } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { useMotel } from '../context/MotelContext';
 import { useFormContext } from 'react-hook-form';
 import { Grid, Box, Typography, Paper, InputAdornment, Chip } from '@mui/material';
@@ -95,11 +96,12 @@ const PagoListActions = () => {
 const PagoList = () => {
     const { currentMotelId: motelId } = useMotel();
     const filter = motelId ? { motelId: motelId } : {};
+    const deletedRowSx = useDeletedRowSx();
 
     return (
         <Box sx={{ mt: 2 }}>
             <List actions={<PagoListActions />} filters={Filtros} sort={{ field: 'createdAt', order: 'DESC' }} filter={filter}>
-                <Datagrid bulkActionButtons={false} rowClick="edit" sx={{
+                <Datagrid bulkActionButtons={false} rowClick="edit" rowSx={deletedRowSx} sx={{
                     '& .RaDatagrid-rowCell': { padding: '16px 8px' },
                     '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' },
                     borderRadius: '16px', border: '1px solid', borderColor: 'divider', overflow: 'hidden'

@@ -22,7 +22,9 @@ class HttpClient {
         const { params, ...customConfig } = options;
 
         // 1. URL Construction with Query Params
-        const fullURL = `${this.baseUrl}/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+        const prefix = import.meta.env.VITE_API_PREFIX || '/api/v1';
+        const cleanPrefix = prefix.startsWith('/') ? prefix : `/${prefix}`;
+        const fullURL = `${this.baseUrl}${cleanPrefix}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
         const url = new URL(fullURL);
         
         if (params) {

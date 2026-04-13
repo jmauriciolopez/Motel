@@ -13,7 +13,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey_alternativa_segura',
-      signOptions: { expiresIn: '1d' },
+      signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN || '1d') as any },
     }),
   ],
   controllers: [AutenticacionController],

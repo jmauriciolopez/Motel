@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: motel-backend
+    runtime: node
+    plan: starter # O el plan que prefieras (free, starter)
+    region: ohio # O tu región preferida
+    rootDir: backend
+    buildCommand: ./render-build.sh
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Debes configurarla manualmente o conectarla a una BD de Render
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: "1h"
+      - key: API_VERSION
+        value: "1"
+      - key: API_PREFIX
+        value: "/api/v1"
+      - key: PORT
+        value: 3000
+      - key: FRONTEND_URL
+        sync: false # URL de tu frontend (S3/CloudFront)
+      - key: NODE_VERSION
+        value: "24.0.0"

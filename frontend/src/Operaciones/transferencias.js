@@ -4,6 +4,7 @@ import {
     useRecordContext, required, DateTimeInput, TextInput, TopToolbar, CreateButton,
     useNotify, useRefresh, FormDataConsumer, usePermissions, useGetList
 } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { Link } from 'react-router-dom';
 import { Grid, Button, Alert } from '@mui/material';
 import CustomToolbar from '../layout/CustomToolbar';
@@ -116,6 +117,7 @@ const TransferenciaListActions = () => {
 };
 
 const TransferenciaList = () => {
+    const deletedRowSx = useDeletedRowSx();
     return (
         <List
             resource="transferencias"
@@ -123,7 +125,7 @@ const TransferenciaList = () => {
             sort={{ field: 'Fecha', order: 'DESC' }}
             sx={{ '& .RaList-main': { marginTop: 2 } }}
         >
-            <Datagrid bulkActionButtons={false} rowClick={false}>
+            <Datagrid bulkActionButtons={false} rowClick={false} rowSx={deletedRowSx}>
                 <DetailsButton />
                 <AddDetailButton />
                 <DateField

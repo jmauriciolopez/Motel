@@ -7,6 +7,7 @@ import {
 import { Divider, Typography, Box, Grid, Paper, Chip, TextField as MuiTextField, Button, Tooltip } from '@mui/material';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useTrial } from '../helpers/useTrial';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import {
     Info as InfoIcon,
     Settings as SettingsIcon,
@@ -160,13 +161,17 @@ const MotelListActions = () => {
 export const MotelList = () => {
     const { permissions } = usePermissions();
     const isSuperAdmin = permissions === 'SuperAdmin' || permissions === 'SuperUser';
+    const deletedRowSx = useDeletedRowSx();
 
     return (
         <List actions={<MotelListActions />} sx={{ '& .RaList-main': { marginTop: 2 } }}>
-            <Datagrid rowClick="edit" sx={{
-                '& .RaDatagrid-rowCell': { padding: '16px 8px' },
-                '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }
-            }}>
+            <Datagrid
+                rowClick="edit"
+                rowSx={deletedRowSx}
+                sx={{
+                    '& .RaDatagrid-rowCell': { padding: '16px 8px' },
+                    '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }
+                }}>
                 <TextField source="Nombre" sx={{ fontWeight: 600, color: 'primary.main' }} />
                 <TextField label="Propietario" source="propietario.Nombre" />
                 <TextField source="Direccion" />

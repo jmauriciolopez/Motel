@@ -1,5 +1,6 @@
 import { Create, Edit, SimpleForm, TextInput, ReferenceInput, AutocompleteInput, required, useRecordContext } from 'react-admin';
 import { Datagrid, List, TextField, EditButton, TopToolbar, CreateButton, usePermissions } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { Grid, Box, Typography, Paper, IconButton } from '@mui/material';
 import {
     Business as BusinessIcon,
@@ -71,9 +72,11 @@ const ProveedorListActions = () => {
     );
 };
 
-export const ProveedorList = () => (
+export const ProveedorList = () => {
+    const deletedRowSx = useDeletedRowSx();
+    return (
     <List actions={<ProveedorListActions />} sx={{ '& .RaList-main': { marginTop: 2 } }}>
-        <Datagrid rowClick="edit" sx={{
+        <Datagrid rowClick="edit" rowSx={deletedRowSx} sx={{
             '& .RaDatagrid-rowCell': { padding: '16px 8px' },
             '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }
         }}>
@@ -84,7 +87,8 @@ export const ProveedorList = () => (
             <EditButton />
         </Datagrid>
     </List>
-);
+    );
+};
 
 export const ProveedorEdit = () => {
     const { permissions } = usePermissions();

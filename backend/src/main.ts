@@ -34,7 +34,7 @@ async function bootstrap() {
     credentials: true,
   });
   // Configurar prefijo global para coincidir con el frontend
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(process.env.API_PREFIX || 'api/v1');
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,

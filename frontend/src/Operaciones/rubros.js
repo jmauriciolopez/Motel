@@ -1,4 +1,5 @@
 import { Create, Edit, SimpleForm, TextInput, Datagrid, List, TextField, EditButton, BooleanField, useRecordContext, TopToolbar, CreateButton, usePermissions } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import CustomToolbar from '../layout/CustomToolbar';
 import { Box, Typography, Chip } from '@mui/material';
 import { Star as StarIcon } from '@mui/icons-material';
@@ -32,10 +33,13 @@ const RubroListActions = () => {
     );
 };
 
-const RubroList = () => (
+const RubroList = () => {
+    const deletedRowSx = useDeletedRowSx();
+    return (
     <List actions={<RubroListActions />} sx={{ '& .RaList-main': { marginTop: 2 } }}>
         <Datagrid
             rowClick={(id, resource, record) => record.EsMaestro ? false : "edit"}
+            rowSx={deletedRowSx}
             sx={{
                 '& .RaDatagrid-rowCell': { padding: '16px 8px' },
                 '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }
@@ -47,7 +51,8 @@ const RubroList = () => (
             <CustomEditButton />
         </Datagrid>
     </List>
-);
+    );
+};
 
 export const RubroEdit = () => {
     return (

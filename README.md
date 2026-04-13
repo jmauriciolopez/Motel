@@ -110,6 +110,8 @@ El backend está diseñado para correr como un proceso Node.js. Se recomienda us
 |----------|-------------|---------|
 | `DATABASE_URL` | String de conexión a Postgres | `postgresql://user:pass@host:5432/db` |
 | `JWT_SECRET` | Clave para firmar tokens (CRÍTICO) | *Usar una clave larga y aleatoria* |
+| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `1h` (default) o `24h` |
+| `API_PREFIX` | Prefijo global de rutas | `/api/v1` (default) |
 | `PORT` | Puerto de escucha | `3000` |
 
 ### 3. Frontend (React)
@@ -130,23 +132,32 @@ Configurado en `.github/workflows/deploy.yml`. Al hacer push a `main`:
 3.  Invalida el caché de CloudFront para reflejar cambios inmediatos.
 
 **Variables de Entorno (Frontend):**
-| Variable | Descripción |
-|----------|-------------|
-| `VITE_API_URL` | URL pública de la API backend |
+| Variable | Descripción | Ejemplo |
+|----------|-------------|---------|
+| `VITE_API_URL` | URL base del backend | `https://api.tu-app.com` |
+| `VITE_API_PREFIX` | Prefijo de la API backend | `/api/v1` |
 
 ### 4. Despliegue en Render (Backend)
 Render es la opción recomendada para el despliegue rápido del backend.
 
-**Configuración en Render:**
+**Opción A: Uso de Blueprint (Recomendado)**
+El proyecto incluye un archivo `render.yaml` en la raíz. Solo tienes que:
+1.  Ir a **Blueprints** en Render.
+2.  Conectar este repositorio.
+3.  Render detectará automáticamente la configuración del Web Service, incluyendo las variables `JWT_EXPIRES_IN` y `API_PREFIX`.
+
+**Opción B: Configuración Manual**
 1.  **Web Service**: Conectar el repo.
 2.  **Root Directory**: `backend`
 3.  **Build Command**: `./render-build.sh`
 4.  **Start Command**: `npm run start:prod`
-5.  **Health Check Path**: `/api/health`
+5.  **Health Check Path**: `/api/v1/health`
 
 **Variables de Entorno en Render:**
 - `DATABASE_URL`: URL de tu Postgres externo.
 - `JWT_SECRET`: Clave secreta para tokens.
+- `JWT_EXPIRES_IN`: Tiempo de expiración (ej. `1h`).
+- `API_PREFIX`: Prefijo de la API (ej. `/api/v1`).
 - `FRONTEND_URL`: URL del frontend (para CORS). Ejemplo: `https://d123.cloudfront.net`.
 
 ---

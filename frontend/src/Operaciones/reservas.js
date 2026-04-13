@@ -20,6 +20,7 @@ import {
     CreateButton,
     usePermissions
 } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { Grid, Box } from '@mui/material';
 import {
     PlayCircle as PlayIcon,
@@ -94,6 +95,7 @@ const ReservaListActions = () => {
 };
 
 const ReservaList = () => {
+    const deletedRowSx = useDeletedRowSx();
     return (
         <List
             actions={<ReservaListActions />}
@@ -105,6 +107,7 @@ const ReservaList = () => {
                 rowClick={(id, resource, record) =>
                     ['Finalizada', 'Cancelada'].includes(record.Estado) ? false : "edit"
                 }
+                rowSx={deletedRowSx}
                 sx={{
                     '& .RaDatagrid-headerCell': {
                         fontWeight: 800,

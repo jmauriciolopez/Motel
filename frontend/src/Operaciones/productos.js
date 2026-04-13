@@ -1,4 +1,5 @@
 import { Datagrid, DateField, List, NumberField, TextField, EditButton, useRecordContext, BulkDeleteButton } from 'react-admin';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import {
     Create, Edit, NumberInput, SimpleForm, TextInput, ReferenceInput,
     AutocompleteInput, required, BooleanField, BooleanInput, TopToolbar, CreateButton, usePermissions
@@ -130,6 +131,7 @@ export const ProductoList = () => {
     };
 
     const { currentMotelId } = useMotel();
+    const deletedRowSx = useDeletedRowSx();
 
     return (
         <>
@@ -142,6 +144,7 @@ export const ProductoList = () => {
             >
                 <Datagrid
                     bulkActionButtons={<BulkDeleteButton mutationMode="pessimistic" />}
+                    rowSx={deletedRowSx}
                     sx={{
                         '& .RaDatagrid-rowCell': { padding: '16px 8px' },
                         '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' }

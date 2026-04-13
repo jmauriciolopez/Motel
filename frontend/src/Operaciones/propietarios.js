@@ -18,6 +18,7 @@ import {
 } from '@mui/icons-material';
 import CustomToolbar from '../layout/CustomToolbar';
 import { http } from '../shared/api/HttpClient';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { useMotel } from '../context/MotelContext';
 
 const Requerido = [required()];
@@ -180,18 +181,24 @@ const PropietarioListActions = () => {
     );
 };
 
-const PropietarioList = () => (
+const PropietarioList = () => {
+    const deletedRowSx = useDeletedRowSx();
+    return (
     <Box sx={{ mt: 2 }}>
         <List
             actions={<PropietarioListActions />}
             sort={{ field: 'Nombre', order: 'ASC' }}
             filters={[<TextInput key="q" label="Buscar" source="q" alwaysOn />]}
         >
-            <Datagrid bulkActionButtons={false} rowClick="edit" sx={{
-                '& .RaDatagrid-rowCell': { padding: '16px 8px' },
-                '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' },
-                borderRadius: '16px', border: '1px solid', borderColor: 'divider', overflow: 'hidden'
-            }}>
+            <Datagrid
+                bulkActionButtons={false}
+                rowClick="edit"
+                rowSx={deletedRowSx}
+                sx={{
+                    '& .RaDatagrid-rowCell': { padding: '16px 8px' },
+                    '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' },
+                    borderRadius: '16px', border: '1px solid', borderColor: 'divider', overflow: 'hidden'
+                }}>
                 <TextField source="Nombre" sx={{ fontWeight: 600, color: 'primary.main' }} />
                 <EmailField source="Email" />
                 <TextField source="Telefono" label="Teléfono" />
@@ -215,7 +222,8 @@ const PropietarioList = () => (
             </Datagrid>
         </List>
     </Box>
-);
+    );
+};
 
 export const PropietarioEdit = () => {
     const { permissions } = usePermissions();

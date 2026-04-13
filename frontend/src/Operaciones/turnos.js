@@ -55,6 +55,7 @@ import QuickCreateCliente from './QuickCreateCliente';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useGetOne, FormDataConsumer } from 'react-admin';
 import { http } from '../shared/api/HttpClient';
+import { useDeletedRowSx } from '../helpers/deletedRowSx';
 
 const AZURE_BLUE = '#213894';
 const TONAL_SURFACE = 'rgba(33, 56, 148, 0.04)';
@@ -813,6 +814,7 @@ const TurnoCardGrid = () => {
 const TurnoListContent = ({ viewMode }) => {
     const { total, isPending, filterValues } = useListContext();
     const translate = useTranslate();
+    const deletedRowSx = useDeletedRowSx();
     const { permissions } = usePermissions();
     const isAdmin = permissions === 'Administrador' || permissions === 'SuperAdmin';
     const canCreate = isAdmin || permissions === 'Supervisor' || permissions === 'Recepcionista';
@@ -856,6 +858,7 @@ const TurnoListContent = ({ viewMode }) => {
             rowClick="edit"
             bulkActionButtons={false}
             size="medium"
+            rowSx={deletedRowSx}
             sx={{
                 '& .RaDatagrid-headerCell': {
                     fontWeight: 800,

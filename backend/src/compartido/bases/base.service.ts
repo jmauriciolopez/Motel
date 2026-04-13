@@ -202,16 +202,13 @@ export abstract class BaseService<T> {
 
   async eliminar(id: string, scopedMotelId?: string | null): Promise<T> {
     if (!this.hasMotelId) {
-      try {
-        return await this.model.update({
+      if (this.hasSoftDelete) {
+        return this.model.update({
           where: { id },
           data: { deletedAt: new Date() },
         });
-      } catch {
-        return this.model.delete({
-          where: { id },
-        });
       }
+      return this.model.delete({ where: { id } });
     }
 
     const where: any = { id };
@@ -227,15 +224,13 @@ export abstract class BaseService<T> {
       throw new NotFoundException('Registro no encontrado');
     }
 
-    try {
-      return await this.model.update({
+    if (this.hasSoftDelete) {
+      return this.model.update({
         where: { id: existing.id },
         data: { deletedAt: new Date() },
       });
-    } catch {
-      return this.model.delete({
-        where: { id: existing.id },
-      });
     }
+
+    return this.model.delete({ where: { id: existing.id } });
   }
 }
