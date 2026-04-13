@@ -119,6 +119,7 @@ model Motel {
   rubros         Rubro[]
   productos      Producto[]
   depositos      Deposito[]
+  proveedores    Proveedor[]
   compras        Compra[]
   consumos       Consumo[]
   pagos          Pago[]
@@ -654,10 +655,14 @@ model Reserva {
 }
 
 model Proveedor {
-  id             String  @id @default(cuid())
-  Nombre         String  @map("nombre")
-  NombreContacto String? @map("nombreContacto")
-  Telefono       String? @map("telefono")
+  id             String    @id @default(cuid())
+  Nombre         String    @map("nombre")
+  NombreContacto String?   @map("nombreContacto")
+  Telefono       String?   @map("telefono")
+  deletedAt      DateTime?
+
+  motelId String
+  motel   Motel  @relation(fields: [motelId], references: [id])
 
   rubroId String?
   rubro   Rubro?  @relation(fields: [rubroId], references: [id])

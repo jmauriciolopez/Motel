@@ -1,8 +1,9 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, UseGuards, Request } from '@nestjs/common';
 import { AutenticacionService } from './autenticacion.service';
 import { InicioSesionDto } from './dto/inicio-sesion.dto';
 import { RegistroDto } from './dto/registro.dto';
 import { Public } from '../../compartido/decorators/public.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('autenticacion')
 export class AutenticacionController {
@@ -20,5 +21,13 @@ export class AutenticacionController {
   @Post('registro')
   async registro(@Body() registroDto: RegistroDto) {
     return this.autenticacionService.registro(registroDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Request() req: any) {
+    const userId = req.user?.sub || req.user?.id;
+    return this.autenticacionService.refrescarToken(userId);
   }
 }

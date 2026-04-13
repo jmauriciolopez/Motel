@@ -6,22 +6,36 @@ import { Proveedor } from '@prisma/client';
 @Injectable()
 export class ProveedoresService extends BaseService<Proveedor> {
   constructor(prisma: PrismaService) {
-    super(prisma, 'proveedor');
+    super(prisma, 'proveedor', { hasMotelId: true });
   }
 
-  async obtenerTodos(options: any) {
+  async obtenerTodos(options: any, extraWhere: any = {}) {
+    const { include, ...rest } = options;
     return super.obtenerTodos({
-      ...options,
-      include: { rubro: true },
-    });
+      ...rest,
+      include: {
+        rubro: true,
+        motel: true,
+        ...(include || {}),
+      },
+    }, extraWhere);
   }
 
   async obtenerUno(
     id: string,
-    _include?: unknown,
+    include?: any,
     extraWhere: any = {},
     scopedMotelId?: string | null,
   ) {
-    return super.obtenerUno(id, { rubro: true }, extraWhere, scopedMotelId);
+    return super.obtenerUno(
+      id,
+      {
+        rubro: true,
+        motel: true,
+        ...(include || {}),
+      },
+      extraWhere,
+      scopedMotelId,
+    );
   }
 }

@@ -107,43 +107,69 @@ export class ProductosService extends BaseService<Producto> {
 
     const catalogoItems = await this.prisma.catalogoProducto.findMany({
       where: { id: { in: catalogoIds } },
+      include: { rubro: true },
     });
 
-    const createdProducts: Producto[] = [];
-
-    for (const item of catalogoItems) {
-      // Verificar si ya existe un producto con el mismo nombre en este motel para evitar duplicados
-      const existe = await this.prisma.producto.findFirst({
-        where: { Nombre: item.Nombre, motelId, deletedAt: null },
-      });
-
-      if (existe) continue;
-
-      // Verificar que el rubro existe antes de crear
-      const rubroExiste = await this.prisma.rubro.findUnique({ where: { id: item.rubroId } });
-      if (!rubroExiste) {
-        console.error(`[syncCatalogo] Rubro no encontrado: ${item.rubroId} para producto ${item.Nombre}`);
-        continue;
-      }
-
-      const nuevoProducto = await this.prisma.producto.create({
-        data: {
-          Nombre: item.Nombre,
-          Precio: item.Precio,
-          Costo: item.Costo,
-          Facturable: item.Facturable,
-          StockMinimo: item.StockMinimo,
-          EsComun: true,
-          CriterioBusqueda: item.CriterioBusqueda,
-          rubroId: item.rubroId,
-          motelId,
-          catalogoProductoId: item.id,
-        },
-      });
-      createdProducts.push(nuevoProducto);
+    if (catalogoItems.length === 0) {
+      throw new Error('No se encontraron productos en el catálogo con los IDs proporcionados');
     }
 
-    return createdProducts;
+    const createdProducts: Producto[] = [];
+    const errors: string[] = [];
+
+    for (const item of catalogoItems) {
+      try {
+        // Verificar si ya existe un producto con el mismo nombre en este motel para evitar duplicados
+        const existe = await this.prisma.producto.findFirst({
+          where: { Nombre: item.Nombre, motelId, deletedAt: null },
+        });
+
+        if (existe) {
+          console.log(`[syncCatalogo] Producto ya existe: ${item.Nombre} en motel ${motelId}`);
+          continue;
+        }
+
+        // Verificar que el rubro existe
+        const rubroExiste = await this.prisma.rubro.findUnique({ where: { id: item.rubroId } });
+        if (!rubroExiste) {
+          const errorMsg = `Rubro no encontrado: ${item.rubroId} (${item.rubro?.Nombre || 'desconocido'}) para producto ${item.Nombre}`;
+          console.error(`[syncCatalogo] ${errorMsg}`);
+          errors.push(errorMsg);
+          continue;
+        }
+
+        const nuevoProducto = await this.prisma.producto.create({
+          data: {
+            Nombre: item.Nombre,
+            Precio: item.Precio,
+            Costo: item.Costo,
+            Facturable: item.Facturable,
+            StockMinimo: item.StockMinimo,
+            EsComun: true,
+            CriterioBusqueda: item.CriterioBusqueda,
+            rubroId: item.rubroId,
+            motelId,
+            catalogoProductoId: item.id,
+          },
+        });
+        createdProducts.push(nuevoProducto);
+      } catch (error) {
+        const errorMsg = `Error al crear producto ${item.Nombre}: ${error instanceof Error ? error.message : String(error)}`;
+        console.error(`[syncCatalogo] ${errorMsg}`);
+        errors.push(errorMsg);
+      }
+    }
+
+    if (errors.length > 0 && createdProducts.length === 0) {
+      throw new Error(`No se pudo sincronizar ningún producto. Errores: ${errors.join('; ')}`);
+    }
+
+    return {
+      success: true,
+      created: createdProducts.length,
+      errors: errors.length > 0 ? errors : undefined,
+      products: createdProducts,
+    };
   }
 
 

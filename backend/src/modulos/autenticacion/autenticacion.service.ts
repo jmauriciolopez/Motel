@@ -101,4 +101,16 @@ export class AutenticacionService {
 
     return this.login(usuario);
   }
+
+  async refrescarToken(usuarioId: string) {
+    const usuario = await this.usuariosService.obtenerUno(usuarioId, {
+      moteles: { include: { motel: true } },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    return this.login(usuario);
+  }
 }

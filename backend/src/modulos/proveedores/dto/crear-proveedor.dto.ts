@@ -2,15 +2,15 @@ import { IsString, IsOptional } from 'class-validator';
 
 export class CrearProveedorDto {
   @IsString()
-  nombre: string;
+  Nombre: string;
 
   @IsString()
   @IsOptional()
-  nombreContacto?: string;
+  NombreContacto?: string;
 
   @IsString()
   @IsOptional()
-  telefono?: string;
+  Telefono?: string;
 
   @IsString()
   @IsOptional()
