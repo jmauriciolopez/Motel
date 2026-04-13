@@ -129,6 +129,7 @@ const sanitizeFilter = (filter: any): any => {
             if (key === '$or' || key === '$and') {
                 const prismaKey = key === '$or' ? 'OR' : 'AND';
                 sanitized[prismaKey] = sanitizeFilter(value);
+                continue;
             } 
             // Caso especial: Operador $null para campos nullable
             else if ('$null' in value) {
@@ -139,6 +140,23 @@ const sanitizeFilter = (filter: any): any => {
                     // $null: false → campo NO debe ser null
                     sanitized[key] = { not: null };
                 }
+                continue;
+            }
+            // Caso especial: Operadores de comparación de Prisma - convertir de $ a prisma
+            else if ('$gte' in value || '$lte' in value || '$gt' in value || '$lt' in value || '$ne' in value) {
+                const converted: any = {};
+                if ('$gte' in value) converted.gte = value.$gte;
+                if ('$lte' in value) converted.lte = value.$lte;
+                if ('$gt' in value) converted.gt = value.$gt;
+                if ('$lt' in value) converted.lt = value.$lt;
+                if ('$ne' in value) converted.not = value.$ne;
+                sanitized[key] = converted;
+                continue;
+            }
+            // Operadores de Prisma ya en formato correcto (not, gte, lte, etc) - mantener tal cual
+            else if ('not' in value || 'gte' in value || 'lte' in value || 'gt' in value || 'lt' in value || 'contains' in value || 'startsWith' in value || 'endsWith' in value) {
+                sanitized[key] = value;
+                continue;
             }
             else {
                 sanitized[key] = sanitizeFilter(value);

@@ -28,7 +28,7 @@ import { customTheme } from './layout/theme';
 import { i18nProvider } from './traductor';
 import Dashboard from './dashboard/Dashboard';
 import StockReporte from './Reportes/stocks'
-import ReportTurnos from './Reportes/reporteturnos';
+import ReporteTurnosCompletados from './Reportes/reporteturnoscompletados';
 import ReporteIngresos from './Reportes/reporteingresos';
 import ReporteRendimiento from './Reportes/reporterendimiento';
 import EstimacionCostos from './Reportes/EstimacionCostos';
@@ -131,7 +131,7 @@ function App() {
               )}
 
               <CustomRoutes>
-                {isSupervisor && <Route path="/ReporteTurnos" element={<ReportTurnos />} />}
+                {isSupervisor && <Route path="/ReporteTurnosCompletados" element={<ReporteTurnosCompletados />} />}
                 {isAdmin && <Route path="/GestorUsuarios" element={<GestorUsuarios />} />}
                 {isSupervisor && <Route path="/ReporteIngresos" element={<ReporteIngresos />} />}
                 {isSupervisor && <Route path="/ReporteRendimiento" element={<ReporteRendimiento />} />}

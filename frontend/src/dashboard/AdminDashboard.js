@@ -117,7 +117,7 @@ const AdminDashboard = () => {
         pagination: { page: 1, perPage: 1000 }
     });
 
-    const totalRevenue = allTodayPayments?.reduce((sum, p) => sum + (p.Importe || 0), 0) || 0;
+    const totalRevenue = allTodayPayments?.reduce((sum, p) => sum + Number(p.Importe || 0), 0) || 0;
     
     // Fetch Active Maintenances
     const { data: activeMantenimientos, isLoading: loadingMaint } = useGetList('mantenimientos', {
@@ -143,17 +143,19 @@ const AdminDashboard = () => {
         pagination: { page: 1, perPage: 1000 }
     });
 
-    const totalConsumos = todayConsumos?.reduce((sum, c) => sum + (c.Importe || 0), 0) || 0;
+    const totalConsumos = todayConsumos?.reduce((sum, c) => sum + Number(c.Importe || 0), 0) || 0;
 
     // Fetch Historical Turns for Efficiency
     const { data: historicalTurns } = useGetList('turnos', {
         filter: { 
-            'habitacion.motelId': motelId,
-            Salida: { $null: false }
+            Salida: { $null: false },
+            mostrar_cerrados: true  // Importante: permite ver turnos cerrados
         },
         sort: { field: 'Salida', order: 'DESC' },
         pagination: { page: 1, perPage: 50 }
     });
+    
+    console.log('[AdminDashboard] historicalTurns:', historicalTurns?.length, historicalTurns);
 
     // Recent Payments List
     const { data: recentPayments, isLoading: loadingPayments } = useGetList('pagos', {

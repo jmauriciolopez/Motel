@@ -71,6 +71,8 @@ model Usuario {
   transferencias Transferencia[]
   limpiezas      Limpieza[]
   mantenimientos Mantenimiento[]
+  turnosAbiertos Turno[] @relation("TurnosAbiertos")
+  turnosCerrados Turno[] @relation("TurnosCerrados")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -266,7 +268,9 @@ model Turno {
 
   // Personal
   usuarioAperturaId String
+  usuarioApertura   Usuario @relation("TurnosAbiertos", fields: [usuarioAperturaId], references: [id])
   usuarioCierreId   String?
+  usuarioCierre     Usuario? @relation("TurnosCerrados", fields: [usuarioCierreId], references: [id])
 
   // Notas
   Observacion           String?

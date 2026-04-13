@@ -878,7 +878,7 @@ const TurnoListContent = ({ viewMode }) => {
             <TextField label="Hab" source="habitacion.Identificador" sx={{ fontWeight: 800, color: AZURE_BLUE }} />
             <TextField label="Patente" source="cliente.Patente" />
             <StatusField label="Estado" />
-            <TextField label="Personal" source="usuario.Username" />
+            <TextField label="Personal" source="usuarioApertura.Username" />
             <FunctionField
                 label="Pagado"
                 render={record => (

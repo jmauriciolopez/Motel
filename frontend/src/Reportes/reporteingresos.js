@@ -51,17 +51,18 @@ const StatCard = ({ title, value, icon, color }) => (
 const ReporteIngresos = () => {
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
 
-    const turnosFilter = useMemo(() => ({
-        Salida: {
-            $gte: `${filterDate}T00:00:00.000Z`,
-            $lte: `${filterDate}T23:59:59.999Z`
-        },
-        Estado: 'Cerrado',
-    }), [filterDate]);
+    const { availableMoteles } = useMotel();
+    const horaCierre = availableMoteles?.[0]?.HoraCierreCaja || '06:00';
 
-    const { data, isLoading, error } = useGetList('turnos', {
+    const turnosFilter = useMemo(() => ({
+        fechaDesde: filterDate,
+        fechaHasta: filterDate,
+        horaCierre: horaCierre,
+    }), [filterDate, horaCierre]);
+
+    const { data, isLoading, error } = useGetList('turnos/reporte-completados', {
         pagination: { page: 1, perPage: 1000 },
-        sort: { field: 'id', order: 'DESC' },
+        sort: { field: 'Salida', order: 'DESC' },
         filter: turnosFilter
     });
 

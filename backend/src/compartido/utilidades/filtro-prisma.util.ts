@@ -70,7 +70,7 @@ export const normalizarFiltroParaPrisma = (value: any): any => {
   for (const [key, rawVal] of Object.entries(value)) {
     // IGNORAR FILTROS LEGACY / EXTRAÑOS
     const lowerKey = key.toLowerCase();
-    if (FORBIDDEN_KEYS.has(lowerKey) || lowerKey.endsWith('_exist') || lowerKey.endsWith('_existe')) {
+    if (FORBIDDEN_KEYS.has(lowerKey) || lowerKey.endsWith('_exist') || lowerKey.endsWith('_existe') || lowerKey.startsWith('r_')) {
       continue;
     }
     // 1. Bracket notation: "Cantidad[$lt]" → { cantidad: { lt: 5 } }

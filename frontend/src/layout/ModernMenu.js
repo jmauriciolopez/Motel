@@ -156,7 +156,7 @@ const ModernMenu = (props) => {
                     icon={<BarChart2 size={20} />}
                 >
 
-                    <MenuItemLink to="/ReporteTurnos" primaryText="Reporte Turnos" leftIcon={<Activity size={20} />} />
+                    <MenuItemLink to="/ReporteTurnosCompletados" primaryText="Turnos Completados" leftIcon={<Activity size={20} />} />
                     <MenuItemLink to="/ReporteIngresos" primaryText="Reporte Ingresos" leftIcon={<Activity size={20} />} />
                     <MenuItemLink to="/ReporteRendimiento" primaryText="Rendimiento" leftIcon={<TrendingUp size={20} />} />
                     <MenuItemLink to="/ReporteEstimacion" primaryText="Est. de Costos" leftIcon={<Calculator size={20} />} />

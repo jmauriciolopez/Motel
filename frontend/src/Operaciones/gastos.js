@@ -82,7 +82,8 @@ const GastoList = () => {
 
     return (
         <Box sx={{ mt: 2 }}>
-            <List actions={<GastoListActions />} sort={{ field: 'updatedAt', order: 'DESC' }} filter={filter}>
+            <List actions={<GastoListActions />} sort={{ field: 'updatedAt', order: 'DESC' }} filter={filter}
+              queryOptions={{ meta: { include: { motel: true } } }}>
                 <Datagrid bulkActionButtons={false} sx={{
                     '& .RaDatagrid-rowCell': { padding: '16px 8px' },
                     '& .MuiTableCell-head': { fontWeight: 700, color: 'text.secondary' },

@@ -5,6 +5,8 @@ import {
   Param,
   Request,
   BadRequestException,
+  Get,
+  Query,
 } from '@nestjs/common';
 import { RolUsuario } from '@prisma/client';
 import { TurnosService } from './turnos.service';
@@ -30,6 +32,25 @@ export class TurnosController extends BaseController<
 > {
   constructor(private readonly turnosService: TurnosService) {
     super(turnosService);
+  }
+
+  @Get('reporte-completados')
+  reporteCompletados(
+    @Query('fechaDesde') fechaDesde: string,
+    @Query('fechaHasta') fechaHasta: string,
+    @Query('horaCierre') horaCierre: string,
+    @Query('_page') page?: string,
+    @Query('_limit') limit?: string,
+    @Tenant() tenant?: TenantContext,
+  ) {
+    return this.turnosService.obtenerTurnosCompletados({
+      fechaDesde,
+      fechaHasta,
+      horaCierre,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 50,
+      motelId: tenant?.motelId,
+    });
   }
 
   @Post('abrir')

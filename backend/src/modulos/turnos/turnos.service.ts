@@ -178,6 +178,7 @@ export class TurnosService extends BaseService<Turno> {
       r_Salida_desde: salidaDesde,
       r_Salida_hasta: salidaHasta,
       Estado: estadoFiltro,
+      hora_cierre: _horaCierreExtra,
       ...reportFilters
     } = extraWhere || {};
 
@@ -198,8 +199,15 @@ export class TurnosService extends BaseService<Turno> {
     const finalSalidaDesde = salidaDesde ?? salidaDesdeOpt;
     const finalSalidaHasta = salidaHasta ?? salidaHastaOpt;
 
+    // Extraer también r_Salida_desde/hasta de reportFilters para evitar conflictos
+    const {
+      r_Salida_desde: _salidaDesdeReport,
+      r_Salida_hasta: _salidaHastaReport,
+      ...cleanReportFilters
+    } = reportFilters;
+
     const where: any = {
-      ...reportFilters,
+      ...cleanReportFilters,
     };
 
     if (finalMostrarCerrados !== true && finalMostrarCerrados !== 'true') {
@@ -221,15 +229,20 @@ export class TurnosService extends BaseService<Turno> {
     }
 
     if (finalSalidaDesde || finalSalidaHasta) {
-      where.Salida = {
-        ...(where.Salida || {}),
-        ...(finalSalidaDesde
-          ? { gte: new Date(`${finalSalidaDesde}T00:00:00.000Z`) }
-          : {}),
-        ...(finalSalidaHasta
-          ? { lte: new Date(`${finalSalidaHasta}T23:59:59.999Z`) }
-          : {}),
-      };
+      const dateFilter: any = {};
+      if (finalSalidaDesde) {
+        dateFilter.gte = new Date(`${finalSalidaDesde}T00:00:00.000Z`);
+      }
+      if (finalSalidaHasta) {
+        dateFilter.lte = new Date(`${finalSalidaHasta}T23:59:59.999Z`);
+      }
+      
+      // Merge with existing Salida filter if present
+      if (where.Salida && typeof where.Salida === 'object') {
+        where.Salida = { ...where.Salida, ...dateFilter };
+      } else {
+        where.Salida = dateFilter;
+      }
     }
 
     if (motelId) {
@@ -248,6 +261,8 @@ export class TurnosService extends BaseService<Turno> {
           },
           cliente: true,
           tarifa: true,
+          usuarioApertura: true,
+          usuarioCierre: true,
           consumos: {
             include: { producto: true },
           },
@@ -288,5 +303,68 @@ export class TurnosService extends BaseService<Turno> {
       scopedMotelId,
     );
     return turno ? conEstado(turno as any) : null;
+  }
+
+  async obtenerTurnosCompletados(params: {
+    fechaDesde: string;
+    fechaHasta: string;
+    horaCierre: string;
+    page: number;
+    limit: number;
+    motelId?: string | null;
+  }) {
+    const { fechaDesde, fechaHasta, horaCierre, page, limit, motelId } = params;
+
+    // Construir fechas con hora de cierre contable
+    // Formato: "2026-04-11" + "T" + "06:00" + ":00.000Z"
+    const salidaDesde = new Date(`${fechaDesde}T${horaCierre}:00.000Z`);
+    const salidaHasta = new Date(`${fechaHasta}T${horaCierre}:00.000Z`);
+
+    const where: any = {
+      Salida: {
+        gte: salidaDesde,
+        lt: salidaHasta,
+      },
+    };
+
+    if (motelId) {
+      where.habitacion = { motelId };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.model.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { Salida: 'desc' },
+        include: {
+          habitacion: {
+            include: {
+              tarifa: true,
+              motel: true,
+            },
+          },
+          cliente: true,
+          tarifa: true,
+          usuarioApertura: true,
+          usuarioCierre: true,
+          consumos: {
+            include: { producto: true },
+          },
+          pago: {
+            include: { formaPago: true },
+          },
+          limpieza: true,
+        },
+      }),
+      this.model.count({ where }),
+    ]);
+
+    return {
+      data: data.map(conEstado),
+      total,
+    };
   }
 }
