@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppBar, UserMenu, useDataProvider } from 'react-admin';
 import { Typography, Box, useMediaQuery, IconButton, Tooltip, Badge, Menu, MenuItem, ListItemIcon, ListItemText, Divider, CircularProgress } from '@mui/material';
-import { Bell, Search, Settings, Sparkles, Wrench, Package, Clock, AlertTriangle, CheckCircle2, X, ChevronDown, Building2 } from 'lucide-react';
+import { Bell, Search, Settings, Sparkles, Wrench, Package, Clock, AlertTriangle, CheckCircle2, X, ChevronDown, Building2, Languages } from 'lucide-react';
 import { Cookies } from '../helpers/Utils';
 import { Link } from 'react-router-dom';
 import { useMotel } from '../context/MotelContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const ModernAppBar = (props) => {
     const isSmall = useMediaQuery(theme => theme.breakpoints.down('sm'));
@@ -274,6 +275,7 @@ const ModernAppBar = (props) => {
             </Box>
 
             <Box display="flex" alignItems="center" gap={0.5}>
+                <LanguageSwitcher />
                 <Tooltip title="Notificaciones">
                     <IconButton
                         onClick={handleOpen}

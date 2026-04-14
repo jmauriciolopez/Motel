@@ -1,0 +1,55 @@
+const portugueseMessages = {
+  ra: {
+    notification: {
+      caja_cerrada: 'O caixa já está fechado.',
+      caja_abierta: 'O caixa já está aberto.',
+      caja_no_abierta: 'O caixa não está aberto.',
+      caja_no_cerrada: 'O caixa não está fechado.',
+      'Cierre de caja realizado': 'Fechamento de caixa realizado',
+      'Turno cerrado correctamente': 'Estadia encerrada com sucesso',
+      'Turno creado y reserva finalizada': 'Estadia criada e reserva finalizada',
+    },
+  },
+  resources: {
+    moteles: { name: 'Motéis' },
+    clientes: { name: 'Clientes' },
+    turnos: {
+      name: 'Estadias',
+      fields: {
+        mostrar_cerrados: 'Ver Encerrados',
+        PagoPendiente: 'Pago',
+      },
+      actions: {
+        cerrar: 'Encerrar',
+        pago: 'Pagamento',
+        limpiar: 'Limpar',
+      },
+      empty: 'Não há estadias ativas ou pendentes.',
+    },
+    productos: { name: 'Produtos' },
+    gastos: { name: 'Despesas' },
+    cajas: { name: 'Caixas' },
+    rubros: { name: 'Categorias' },
+    proveedores: { name: 'Fornecedores' },
+    habitaciones: { name: 'Quartos' },
+    depositos: { name: 'Depósitos' },
+    tarifas: { name: 'Tarifas' },
+    consumos: { name: 'Consumos' },
+    limpiezas: { name: 'Limpezas' },
+    pagos: { name: 'Pagamentos' },
+    mantenimientos: { name: 'Manutenções' },
+    propietarios: { name: 'Proprietários' },
+    compras: { name: 'Compras' },
+    compradetalles: { name: 'Detalhes de Compra' },
+    formapagos: { name: 'Formas de Pagamento' },
+    insumos: { name: 'Insumos' },
+    insumodetalles: { name: 'Detalhes de Insumos' },
+    transferencias: { name: 'Movimentações de Estoque' },
+    transferenciadetalles: { name: 'Detalhes de Movimentação' },
+    'catalogo-productos': { name: 'Catálogo' },
+    stocks: { name: 'Estoques' },
+    usuarios: { name: 'Usuários' },
+  },
+};
+
+export default portugueseMessages;
