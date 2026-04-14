@@ -21,7 +21,6 @@ import { motion } from 'framer-motion';
 import { useGetList, usePermissions } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
 import { Cookies } from '../helpers/Utils';
-
 const StatCard = ({ title, value, icon: Icon, color, loading, subtitle }) => (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         <Card sx={{ height: '100%', borderRadius: '24px', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', background: 'white', border: `1px solid ${color}20` }}>
@@ -93,11 +92,11 @@ const OperatorDashboard = () => {
     const todayISO = today.toISOString();
 
     // Obtener userId del usuario logueado
-    const userCookie = Cookies.getCookie('user');
     let userId = null;
-    try { 
-        const parsed = userCookie ? JSON.parse(userCookie) : null;
-        userId = parsed?.id || parsed?.id; 
+    try {
+        const userStr = sessionStorage.getItem('user');
+        const parsed = userStr ? JSON.parse(userStr) : null;
+        userId = parsed?.id || null;
     } catch {
         userId = null;
     }

@@ -1,11 +1,10 @@
 import React from 'react';
 import { useMotel } from '../context/MotelContext';
 import { Box, Typography, Button, Paper } from '@mui/material';
-import { Cookies } from '../helpers/Utils';
 
 const TrialGuard = ({ children }) => {
     const { currentMotelId, availableMoteles } = useMotel();
-    const role = Cookies.getCookie('role');
+    const role = sessionStorage.getItem('role');
     const isSuperUser = role === 'SuperUser' || role === 'SuperAdmin';
 
     if (!currentMotelId || isSuperUser) {

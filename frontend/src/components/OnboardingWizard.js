@@ -116,7 +116,7 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
         if (!isTarifaOnly && activeStep === propietarioStep) {
             const data = {
                 Nombre: form.PropietarioNombre,
-                Email: Cookies.getCookie('email') || undefined,
+                Email: sessionStorage.getItem('email') || undefined,
                 Activo: true,
                 FormaPago: 'EFECTIVO',
                 userId: userId || undefined,

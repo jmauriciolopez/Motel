@@ -62,7 +62,7 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
     const handleSync = async () => {
         if (selected.length === 0) return;
         
-        const motelId = currentMotelId || Cookies.getCookie('motel');
+        const motelId = currentMotelId || sessionStorage.getItem('motelId');
         if (!motelId) {
             notify('No hay motel activo seleccionado', { type: 'error' });
             return;
