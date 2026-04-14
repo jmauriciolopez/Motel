@@ -42,7 +42,7 @@ jobs:
 
       - name: Sync to S3
         run: |
-          aws s3 sync dist/ s3://moteles-frontend-prod --delete
+          aws s3 sync build/ s3://moteles-frontend-prod --delete
 
       - name: Invalidate CloudFront Cache
         run: |
