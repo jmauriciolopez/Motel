@@ -3,7 +3,8 @@ import {
     Title,
     useGetList,
     Loading,
-    Error
+    Error,
+    useTranslate
 } from 'react-admin';
 import {
     Card,
@@ -76,6 +77,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 );
 
 const HistorialClientes = () => {
+    const translate = useTranslate();
     const { currentMotelId } = useMotel();
     const defaultDesde = new Date();
     defaultDesde.setDate(defaultDesde.getDate() - 90);
@@ -154,17 +156,17 @@ const HistorialClientes = () => {
 
     return (
         <Box sx={{ p: 4, backgroundColor: '#f3f4f6', minHeight: '100vh' }}>
-            <Title title="Historial de Fidelización por Cliente" />
+            <Title title={translate('pos.reports.customer_loyalty')} />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mb: 4, flexWrap: 'wrap', gap: 2 }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>Historial por Cliente</Typography>
-                    <Typography variant="body1" color="textSecondary">Ranking de visitas y análisis de recurrencia por patente</Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#111827' }}>{translate('pos.reports.customer_loyalty')}</Typography>
+                    <Typography variant="body1" color="textSecondary">{translate('pos.dashboard.strategic_subtitle')}</Typography>
                 </Box>
                 <Paper sx={{ p: 2, display: 'flex', gap: 2, borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.05)', alignItems: 'center' }}>
                     <TextField
                         type="date"
-                        label="Desde"
+                        label={translate('pos.reports.date_from')}
                         value={desde}
                         onChange={(e) => setDesde(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -172,7 +174,7 @@ const HistorialClientes = () => {
                     />
                     <TextField
                         type="date"
-                        label="Hasta"
+                        label={translate('pos.reports.date_to')}
                         value={hasta}
                         onChange={(e) => setHasta(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -198,7 +200,7 @@ const HistorialClientes = () => {
                 {/* KPIs */}
                 <Grid item xs={12} md={4}>
                     <StatCard
-                        title="Clientes Únicos"
+                        title={translate('pos.reports.unique_customers')}
                         value={stats?.totalUnique}
                         icon={Users}
                         color="#6366f1"
@@ -206,15 +208,15 @@ const HistorialClientes = () => {
                 </Grid>
                 <Grid item xs={12} md={4}>
                     <StatCard
-                        title="Promedio Visitas"
-                        value={`${stats?.avgVisits} visitas/cli`}
+                        title={translate('pos.reports.average_visits')}
+                        value={`${stats?.avgVisits} ${translate('pos.reports.visits').toLowerCase()}/cli`}
                         icon={TrendingUp}
                         color="#10b981"
                     />
                 </Grid>
                 <Grid item xs={12} md={4}>
                     <StatCard
-                        title="Cliente más Frecuente"
+                        title={translate('pos.reports.top_customer')}
                         value={stats?.topCustomer}
                         icon={Award}
                         color="#f59e0b"
@@ -227,7 +229,7 @@ const HistorialClientes = () => {
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                                 <Car color="#6366f1" />
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Ranking de Visitas por Patente (Frecuencia)</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{translate('pos.reports.customer_loyalty')} ({translate('pos.reports.visits')})</Typography>
                             </Box>
                             <Box sx={{ height: 350 }}>
                                 <ResponsiveContainer width="100%" height="100%">
@@ -239,7 +241,7 @@ const HistorialClientes = () => {
                                             contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                             cursor={{ fill: '#f3f4f6' }}
                                         />
-                                        <Bar dataKey="visits" name="Visitas" radius={[6, 6, 0, 0]}>
+                                        <Bar dataKey="visits" name={translate('pos.reports.visits')} radius={[6, 6, 0, 0]}>
                                             {stats?.topXData.map((entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
@@ -264,11 +266,11 @@ const HistorialClientes = () => {
                                     <TableHead>
                                         <TableRow sx={{ backgroundColor: '#f9fafb' }}>
                                             <TableCell sx={{ fontWeight: 700 }}>#</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Patente</TableCell>
-                                            <TableCell sx={{ fontWeight: 700 }}>Vehículo</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700 }}>Visitas</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700 }}>Consumo Total</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700 }}>Última Visita</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>{translate('pos.reports.license_plate')}</TableCell>
+                                            <TableCell sx={{ fontWeight: 700 }}>{translate('pos.reports.vehicle')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700 }}>{translate('pos.reports.visits')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700 }}>{translate('pos.reports.revenue')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700 }}>{translate('pos.reports.last_visit')}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>

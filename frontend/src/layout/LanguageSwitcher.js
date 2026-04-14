@@ -1,11 +1,10 @@
 import React from 'react';
-import { useLocaleState, useTranslate } from 'react-admin';
+import { useLocaleState } from 'react-admin';
 import { Button, Menu, MenuItem, Tooltip, Box } from '@mui/material';
 import { Languages, ChevronDown } from 'lucide-react';
 
 const LanguageSwitcher = () => {
     const [locale, setLocale] = useLocaleState();
-    const translate = useTranslate();
     const [anchorEl, setAnchorEl] = React.useState(null);
     const open = Boolean(anchorEl);
 
@@ -23,14 +22,14 @@ const LanguageSwitcher = () => {
     };
 
     const languages = [
-        { id: 'es', name: 'Español', flag: '🇪🇸' },
-        { id: 'pt', name: 'Português', flag: '🇧🇷' },
+        { id: 'es', name: 'Español' },
+        { id: 'pt', name: 'Português' },
     ];
 
     const currentLanguage = languages.find(l => l.id === locale) || languages[0];
 
     return (
-        <Box sx={{ ml: 1 }}>
+        <Box sx={{ ml: 1, display: 'inline-flex' }}>
             <Tooltip title="Cambiar Idioma">
                 <Button
                     onClick={handleClick}
@@ -77,11 +76,8 @@ const LanguageSwitcher = () => {
                         sx={{
                             fontSize: '0.875rem',
                             fontWeight: lang.id === locale ? 700 : 400,
-                            display: 'flex',
-                            gap: 1
                         }}
                     >
-                        <span>{lang.flag}</span>
                         {lang.name}
                     </MenuItem>
                 ))}

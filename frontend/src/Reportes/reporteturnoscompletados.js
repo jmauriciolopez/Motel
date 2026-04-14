@@ -1,15 +1,19 @@
-import { List, TextField, Datagrid, NumberField, DateInput, DateField, Filter, FunctionField } from 'react-admin';
+import { List, TextField, Datagrid, NumberField, DateInput, DateField, Filter, FunctionField, useTranslate } from 'react-admin';
 import { useRef } from 'react';
 import { useMotel } from '../context/MotelContext';
 
-const FiltroReporte = (props) => (
-    <Filter {...props}>
-      <DateInput label="Fecha Desde" source="fechaDesde" alwaysOn />
-      <DateInput label="Fecha Hasta" source="fechaHasta" alwaysOn />
-    </Filter>
-);
+const FiltroReporte = (props) => {
+    const translate = useTranslate();
+    return (
+        <Filter {...props}>
+          <DateInput label={translate('pos.reports.date_from')} source="fechaDesde" alwaysOn />
+          <DateInput label={translate('pos.reports.date_to')} source="fechaHasta" alwaysOn />
+        </Filter>
+    );
+};
 
 const ReporteTurnosCompletados = () => {
+    const translate = useTranslate();
     const { availableMoteles, currentMotelId } = useMotel();
     const horaCierre = availableMoteles?.[0]?.HoraCierreCaja || '06:00';
 
@@ -30,44 +34,44 @@ const ReporteTurnosCompletados = () => {
             style={{ minWidth: maxWidth * 0.8 }}
           >
             <Datagrid optimized bulkActionButtons={false}>
-              <TextField label="Habitacion" source="habitacion.Identificador" />
-              <TextField label="Cliente" source="cliente.Patente" />
+              <TextField label={translate('pos.reports.room')} source="habitacion.Identificador" />
+              <TextField label={translate('pos.reports.customer')} source="cliente.Patente" />
               <FunctionField 
-                label="Tarifa" 
+                label={translate('pos.dashboard.rate')} 
                 render={(record) => {
                     const t = record.tarifa || record.habitacion?.tarifa;
                     return t ? `${t.Nombre} (${t.Precio || record.Precio})` : '-';
                 }} 
                 sortable={false} 
               />
-              <DateField source="Ingreso" showTime showDate={true} options={{ year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }} />
-              <DateField source="Salida" showTime showDate={true} options={{ year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }} />
+              <DateField label={translate('pos.reports.checkin')} source="Ingreso" showTime showDate={true} options={{ year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }} />
+              <DateField label={translate('pos.reports.checkout')} source="Salida" showTime showDate={true} options={{ year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }} />
               <FunctionField 
-                label="Estadía" 
+                label={translate('pos.reports.duration')} 
                 render={(record) => {
                     if (!record.Salida || !record.Ingreso) return '-';
                     const start = new Date(record.Ingreso);
                     const end = new Date(record.Salida);
                     const diff = Math.floor((end - start) / (1000 * 60));
-                    if (diff < 0) return 'Error';
+                    if (diff < 0) return translate('pos.dashboard.error');
                     const h = Math.floor(diff / 60);
                     const m = diff % 60;
                     return h > 0 ? `${h}h ${m}m` : `${m}m`;
                 }} 
               />
-              <NumberField source="Precio" label="P. Turno" />
+              <NumberField source="Precio" label={translate('pos.dashboard.turn_price')} />
               <FunctionField 
-                label="Consumos" 
+                label={translate('pos.dashboard.consumptions')} 
                 render={(record) => {
                     if (!record.consumos || record.consumos.length === 0) return '$0';
                     const total = record.consumos.reduce((sum, c) => sum + Number(c.Importe || 0), 0);
                     return `$${total.toFixed(2)}`;
                 }} 
               />
-              <NumberField source="Total" />
-              <TextField label="Cerrado por" source="usuarioCierre.Username" />
-              <TextField source="Observacion" />
-              <TextField source="ObservacionSecundaria" />
+              <NumberField source="Total" label={translate('pos.reports.total')} />
+              <TextField label={translate('pos.dashboard.closed_by')} source="usuarioCierre.Username" />
+              <TextField label={translate('pos.reports.observations')} source="Observacion" />
+              <TextField label={translate('pos.reports.observations')} source="ObservacionSecundaria" />
             </Datagrid>
           </List>
         </div>

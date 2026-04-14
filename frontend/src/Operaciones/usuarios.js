@@ -5,7 +5,7 @@ import {
     DialogActions, TextField, MenuItem, CircularProgress, IconButton, Tooltip,
     InputAdornment,
 } from '@mui/material';
-import { Title, useNotify } from 'react-admin';
+import { Title, useNotify, useTranslate } from 'react-admin';
 import { UserPlus, Trash2, RefreshCw, KeyRound, PencilLine, Eye, EyeOff } from 'lucide-react';
 import { http } from '../shared/api/HttpClient';
 import { useMotel } from '../context/MotelContext';
@@ -21,6 +21,7 @@ const ROL_COLOR = {
 };
 
 const GestorUsuarios = () => {
+    const translate = useTranslate();
     const { availableMoteles, currentMotelId } = useMotel();
     const { isTrial } = useTrial();
     const TRIAL_MAX_USERS = 3;
@@ -50,7 +51,7 @@ const GestorUsuarios = () => {
             const result = await http.get(`/usuarios/por-motel`, { params: { motelId: motelIdActivo } });
             setUsuarios(Array.isArray(result) ? result : result.data || []);
         } catch {
-            notify('Error al cargar usuarios', { type: 'error' });
+            notify(translate('pos.users.load_error'), { type: 'error' });
         } finally {
             setLoading(false);
         }
@@ -66,11 +67,11 @@ const GestorUsuarios = () => {
 
     const handleCreate = async () => {
         if (isTrial && usuarios.length >= TRIAL_MAX_USERS) {
-            notify(`En modo trial el máximo es ${TRIAL_MAX_USERS} usuarios`, { type: 'warning' });
+            notify(translate('pos.users.trial_limit', { max: TRIAL_MAX_USERS }), { type: 'warning' });
             return;
         }
         if (!form.Username || !form.Email || !form.Password || !form.motelId) {
-            notify('Completá todos los campos', { type: 'warning' }); return;
+            notify(translate('pos.users.fill_all_fields'), { type: 'warning' }); return;
         }
         setSaving(true);
         try {
@@ -81,7 +82,7 @@ const GestorUsuarios = () => {
                 Rol: form.Rol.toUpperCase(),
                 motelId: form.motelId,
             });
-            notify(`Usuario ${form.Username} creado`, { type: 'success' });
+            notify(translate('pos.users.user_created', { name: form.Username }), { type: 'success' });
             setOpenCreate(false);
             setForm({ Username: '', Email: '', Password: '', Rol: 'Recepcionista', motelId: '' });
             fetchUsuarios();
@@ -94,16 +95,16 @@ const GestorUsuarios = () => {
 
     const handleDelete = async (userId) => {
         if (userId === currentUserId) {
-            notify('No podés eliminarte a vos mismo', { type: 'warning' });
+            notify(translate('pos.users.cannot_delete_self'), { type: 'warning' });
             return;
         }
-        if (!window.confirm('¿Eliminar este usuario?')) return;
+        if (!window.confirm(translate('pos.users.delete_confirm'))) return;
         try {
             await http.delete(`/usuarios/${userId}`);
-            notify('Usuario eliminado', { type: 'success' });
+            notify(translate('pos.users.user_deleted'), { type: 'success' });
             setUsuarios(prev => prev.filter(u => u.id !== userId));
         } catch {
-            notify('Error al eliminar', { type: 'error' });
+            notify(translate('pos.users.delete_error'), { type: 'error' });
         }
     };
 
@@ -117,13 +118,13 @@ const GestorUsuarios = () => {
     const handleEdit = async () => {
         const { newPassword } = editForm;
         if (!newPassword || newPassword.length < 6) {
-            notify('La contraseña debe tener al menos 6 caracteres', { type: 'warning' });
+            notify(translate('pos.users.min_6_chars'), { type: 'warning' });
             return;
         }
         setSaving(true);
         try {
             await http.patch(`/usuarios/${editTarget.id}`, { password: newPassword });
-            notify('Contraseña actualizada', { type: 'success' });
+            notify(translate('pos.users.password_updated'), { type: 'success' });
             setOpenEdit(false);
         } catch (err) {
             notify('Error: ' + err.message, { type: 'error' });
@@ -134,14 +135,14 @@ const GestorUsuarios = () => {
 
     return (
         <Box sx={{ mt: 2, maxWidth: 900, mx: 'auto' }}>
-            <Title title="Gestión de Usuarios" />
+            <Title title={translate('pos.users.title')} />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Box>
                     <Typography variant="h6" fontWeight={800} sx={{ color: '#1e1b4b' }}>
-                        {isSuperAdmin ? 'Gestión Global de Usuarios' : 'Usuarios del Propietario'}
+                        {isSuperAdmin ? translate('pos.users.global_management') : translate('pos.users.owner_management')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                        {isSuperAdmin ? 'Administración completa de personal del sistema.' : 'Personal con acceso a tus moteles.'}
+                        {isSuperAdmin ? translate('pos.users.global_subtitle') : translate('pos.users.owner_subtitle')}
                     </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -153,14 +154,14 @@ const GestorUsuarios = () => {
                     <Button variant="contained" startIcon={<UserPlus size={18} />}
                         onClick={() => {
                             if (isTrial && usuarios.length >= TRIAL_MAX_USERS) {
-                                notify(`En modo trial el máximo es ${TRIAL_MAX_USERS} usuarios`, { type: 'warning' });
+                                notify(translate('pos.users.trial_limit', { max: TRIAL_MAX_USERS }), { type: 'warning' });
                                 return;
                             }
                             setOpenCreate(true);
                         }}
                         disabled={isTrial && usuarios.length >= TRIAL_MAX_USERS}
                         sx={{ borderRadius: '10px', fontWeight: 700, textTransform: 'none' }}>
-                        Nuevo Usuario {isTrial ? `(${usuarios.length}/${TRIAL_MAX_USERS})` : ''}
+                        {translate('pos.users.new_user')} {isTrial ? `(${usuarios.length}/${TRIAL_MAX_USERS})` : ''}
                     </Button>
                 </Box>
             </Box>
@@ -172,19 +173,19 @@ const GestorUsuarios = () => {
                     <Table size="small">
                         <TableHead sx={{ bgcolor: '#f8fafc' }}>
                             <TableRow>
-                                <TableCell sx={{ fontWeight: 700 }}>Usuario</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Rol</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Estado</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Moteles</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }} align="center">Acciones</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{translate('pos.users.username')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{translate('pos.users.email')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{translate('pos.users.role')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{translate('pos.users.status')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>{translate('pos.users.motels')}</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }} align="center">{translate('pos.users.actions')}</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {usuarios.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                                        No hay usuarios registrados
+                                        {translate('pos.users.no_users')}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -193,11 +194,11 @@ const GestorUsuarios = () => {
                                     <TableCell sx={{ fontWeight: 600 }}>{u.Username}</TableCell>
                                     <TableCell>{u.Email}</TableCell>
                                     <TableCell>
-                                        <Chip label={u.Rol || '—'} size="small" color={ROL_COLOR[u.Rol] || 'default'} sx={{ fontWeight: 700 }} />
+                                        <Chip label={translate(`pos.users.roles.${u.Rol}`) || '—'} size="small" color={ROL_COLOR[u.Rol] || 'default'} sx={{ fontWeight: 700 }} />
                                     </TableCell>
                                     <TableCell>
                                         <Chip
-                                            label={u.deletedAt ? 'Inactivo' : 'Activo'}
+                                            label={u.deletedAt ? translate('pos.users.inactive') : translate('pos.users.active')}
                                             size="small"
                                             color={u.deletedAt ? 'default' : 'success'}
                                             variant={u.deletedAt ? 'outlined' : 'filled'}
@@ -212,13 +213,13 @@ const GestorUsuarios = () => {
                                     </TableCell>
                                     <TableCell align="center">
                                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
-                                            <Tooltip title={u.id === currentUserId ? 'Cambiar mi clave' : 'Cambiar clave'}>
+                                            <Tooltip title={u.id === currentUserId ? translate('pos.users.change_my_password') : translate('pos.users.change_password')}>
                                                 <IconButton size="small" color="primary" onClick={() => openEditDialog(u)}>
                                                     <PencilLine size={16} />
                                                 </IconButton>
                                             </Tooltip>
                                             {u.id !== currentUserId && (
-                                                <Tooltip title="Eliminar usuario">
+                                                <Tooltip title={translate('pos.users.delete_user')}>
                                                     <IconButton size="small" color="error" onClick={() => handleDelete(u.id)}>
                                                         <Trash2 size={16} />
                                                     </IconButton>
@@ -235,19 +236,19 @@ const GestorUsuarios = () => {
 
             <Dialog open={openCreate} onClose={() => setOpenCreate(false)} maxWidth="sm" fullWidth
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
-                <DialogTitle sx={{ fontWeight: 800 }}>Nuevo Usuario</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 800 }}>{translate('pos.users.new_user')}</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-                    <TextField label="Nombre de usuario *" value={form.Username}
+                    <TextField label={translate('pos.users.username_label')} value={form.Username}
                         onChange={e => setForm(f => ({ ...f, Username: e.target.value }))} fullWidth />
-                    <TextField label="Email *" type="email" value={form.Email}
+                    <TextField label={translate('pos.users.email_label')} type="email" value={form.Email}
                         onChange={e => setForm(f => ({ ...f, Email: e.target.value }))} fullWidth />
-                    <TextField label="Contraseña *" type="password" value={form.Password}
+                    <TextField label={translate('pos.users.password_label')} type="password" value={form.Password}
                         onChange={e => setForm(f => ({ ...f, Password: e.target.value }))} fullWidth />
-                    <TextField label="Rol" select value={form.Rol}
+                    <TextField label={translate('pos.users.role')} select value={form.Rol}
                         onChange={e => setForm(f => ({ ...f, Rol: e.target.value }))} fullWidth>
-                        {ROLES.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+                        {ROLES.map(r => <MenuItem key={r} value={r}>{translate(`pos.users.roles.${r}`)}</MenuItem>)}
                     </TextField>
-                    <TextField label="Motel *" select value={form.motelId}
+                    <TextField label={translate('pos.users.motel_label')} select value={form.motelId}
                         onChange={e => setForm(f => ({ ...f, motelId: e.target.value }))} fullWidth>
                         {availableMoteles.map(m => (
                             <MenuItem key={m.id} value={m.id}>{m.nombre || m.Nombre}</MenuItem>
@@ -255,11 +256,11 @@ const GestorUsuarios = () => {
                     </TextField>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
-                    <Button onClick={() => setOpenCreate(false)} color="inherit">Cancelar</Button>
+                    <Button onClick={() => setOpenCreate(false)} color="inherit">{translate('ra.action.cancel')}</Button>
                     <Button variant="contained" onClick={handleCreate} disabled={saving}
                         startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <UserPlus size={16} />}
                         sx={{ borderRadius: '10px', fontWeight: 700 }}>
-                        {saving ? 'Creando...' : 'Crear Usuario'}
+                        {saving ? translate('pos.users.creating') : translate('pos.users.create_user')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -267,15 +268,15 @@ const GestorUsuarios = () => {
             <Dialog open={openEdit} onClose={() => setOpenEdit(false)} maxWidth="xs" fullWidth
                 PaperProps={{ sx: { borderRadius: '16px' } }}>
                 <DialogTitle sx={{ fontWeight: 800 }}>
-                    {editTarget?.id === currentUserId ? 'Cambiar mi contraseña' : `Editar — ${editTarget?.Username}`}
+                    {editTarget?.id === currentUserId ? translate('pos.users.change_my_password') : translate('pos.users.edit_user', { name: editTarget?.Username })}
                 </DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
                     <TextField
-                        label="Nueva contraseña"
+                        label={translate('pos.users.new_password')}
                         type={showPassword ? 'text' : 'password'}
                         value={editForm.newPassword}
                         onChange={e => setEditForm(f => ({ ...f, newPassword: e.target.value }))}
-                        helperText="Mínimo 6 caracteres"
+                        helperText={translate('pos.users.min_6_chars')}
                         fullWidth
                         InputProps={{
                             endAdornment: (
@@ -289,11 +290,11 @@ const GestorUsuarios = () => {
                     />
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>
-                    <Button onClick={() => setOpenEdit(false)} color="inherit">Cancelar</Button>
+                    <Button onClick={() => setOpenEdit(false)} color="inherit">{translate('ra.action.cancel')}</Button>
                     <Button variant="contained" onClick={handleEdit} disabled={saving}
                         startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <KeyRound size={16} />}
                         sx={{ borderRadius: '10px', fontWeight: 700 }}>
-                        {saving ? 'Guardando...' : 'Guardar'}
+                        {saving ? translate('pos.users.saving') : translate('ra.action.save')}
                     </Button>
                 </DialogActions>
             </Dialog>

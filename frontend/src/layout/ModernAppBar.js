@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AppBar, UserMenu, useDataProvider } from 'react-admin';
+import { AppBar, UserMenu, useDataProvider, useTranslate } from 'react-admin';
 import { Typography, Box, useMediaQuery, IconButton, Tooltip, Badge, Menu, MenuItem, ListItemIcon, ListItemText, Divider, CircularProgress } from '@mui/material';
 import { Bell, Search, Settings, Sparkles, Wrench, Package, Clock, AlertTriangle, CheckCircle2, X, ChevronDown, Building2, Languages } from 'lucide-react';
 import { Cookies } from '../helpers/Utils';
@@ -8,6 +8,7 @@ import { useMotel } from '../context/MotelContext';
 import LanguageSwitcher from './LanguageSwitcher';
 
 const ModernAppBar = (props) => {
+    const translate = useTranslate();
     const isSmall = useMediaQuery(theme => theme.breakpoints.down('sm'));
     const { currentMotelId, availableMoteles, changeMotel } = useMotel();
 
@@ -172,13 +173,13 @@ const ModernAppBar = (props) => {
                             alignItems: 'center',
                         }}
                     >
-                        Gestor de Moteles
+                        {translate('pos.app_title')}
                     </Typography>
                 )}
 
                 {/* Selector de Motel */}
                 <Box sx={{ display: 'flex', alignItems: 'center', ml: isSmall ? 0 : 1 }}>
-                    <Tooltip title={availableMoteles.length > 1 ? "Cambiar Motel" : ""}>
+                    <Tooltip title={availableMoteles.length > 1 ? translate('pos.change_motel') : ""}>
                         <Box
                             ref={motelButtonRef}
                             onClick={(e) => availableMoteles.length > 1 && setMotelAnchorEl(e.currentTarget)}
@@ -211,7 +212,7 @@ const ModernAppBar = (props) => {
                                     whiteSpace: 'nowrap'
                                 }}
                             >
-                            {getMotelNombre(currentMotel) !== '—' ? getMotelNombre(currentMotel) : 'Seleccionar Motel'}
+                            {getMotelNombre(currentMotel) !== '—' ? getMotelNombre(currentMotel) : translate('pos.select_motel')}
                             </Typography>
                             {availableMoteles.length > 1 && (
                                 <ChevronDown size={14} style={{ marginLeft: 4, opacity: 0.5 }} />
@@ -275,8 +276,7 @@ const ModernAppBar = (props) => {
             </Box>
 
             <Box display="flex" alignItems="center" gap={0.5}>
-                <LanguageSwitcher />
-                <Tooltip title="Notificaciones">
+                <Tooltip title={translate('pos.notifications')}>
                     <IconButton
                         onClick={handleOpen}
                         sx={{ color: '#e0e7ff', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
@@ -305,14 +305,14 @@ const ModernAppBar = (props) => {
                     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                 >
                     <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Notificaciones</Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{translate('pos.notifications')}</Typography>
                         {totalAlerts > 0 && (
                             <Typography
                                 onClick={handleClearAll}
                                 variant="caption"
                                 sx={{ color: 'primary.main', fontWeight: 600, cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                             >
-                                Limpiar todo
+                                {translate('pos.clear_all')}
                             </Typography>
                         )}
                     </Box>
@@ -323,7 +323,7 @@ const ModernAppBar = (props) => {
                     ) : totalAlerts === 0 ? (
                         <Box p={4} textAlign="center">
                             <CheckCircle2 size={32} style={{ color: '#10b981', opacity: 0.5, marginBottom: 8 }} />
-                            <Typography variant="body2" color="text.secondary">Todo al día</Typography>
+                            <Typography variant="body2" color="text.secondary">{translate('pos.all_up_to_date')}</Typography>
                         </Box>
                     ) : (
                         <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
@@ -332,8 +332,8 @@ const ModernAppBar = (props) => {
                                 <MenuItem key={room.id} onClick={() => { handleClose(); window.location.hash = `/habitaciones?filter=${JSON.stringify({ id: room.id || room.id })}&order=DESC&page=1&perPage=10&sort=id`; }}>
                                     <ListItemIcon><Sparkles size={18} color="#f59e0b" /></ListItemIcon>
                                     <ListItemText
-                                        primary={`Limpieza: Hab. ${room.Identificador}`}
-                                        secondary="Pendiente de aseo"
+                                        primary={translate('pos.clean_notification', { id: room.Identificador })}
+                                        secondary={translate('pos.clean_pending')}
                                         primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     />
                                     <IconButton size="small" onClick={(e) => handleDismiss(e, room.id || room.id)}>
@@ -347,7 +347,7 @@ const ModernAppBar = (props) => {
                                 <MenuItem key={m.id} onClick={() => { handleClose(); window.location.hash = '/mantenimientos'; }}>
                                     <ListItemIcon><Wrench size={18} color="#ef4444" /></ListItemIcon>
                                     <ListItemText
-                                        primary={`Reparación: Hab. ${m.habitacion?.Identificador || '---'}`}
+                                        primary={translate('pos.maint_notification', { id: m.habitacion?.Identificador || '---' })}
                                         secondary={m.Observacion?.substring(0, 30) + '...'}
                                         primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     />
@@ -362,8 +362,8 @@ const ModernAppBar = (props) => {
                                 <MenuItem key={s.id} onClick={() => { handleClose(); window.location.hash = '/stocks'; }}>
                                     <ListItemIcon><Package size={18} color="#6366f1" /></ListItemIcon>
                                     <ListItemText
-                                        primary={`Stock Bajo: ${s.producto?.Nombre}`}
-                                        secondary={`Solo quedan ${s.Cantidad} unidades`}
+                                        primary={translate('pos.stock_low', { name: s.producto?.Nombre })}
+                                        secondary={translate('pos.stock_remaining', { count: s.Cantidad })}
                                         primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     />
                                     <IconButton size="small" onClick={(e) => handleDismiss(e, s.id || s.id)}>
@@ -377,8 +377,8 @@ const ModernAppBar = (props) => {
                                 <MenuItem key={t.id} onClick={() => { handleClose(); window.location.hash = `/turnos/${t.id || t.id}`; }}>
                                     <ListItemIcon><Clock size={18} color="#ec4899" /></ListItemIcon>
                                     <ListItemText
-                                        primary={`Vence: Hab. ${t.habitacion?.Identificador}`}
-                                        secondary={`Salida: ${new Date(t.Salida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                        primary={translate('pos.expiry_notification', { id: t.habitacion?.Identificador })}
+                                        secondary={translate('pos.expiry_time', { time: new Date(t.Salida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
                                         primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
                                     />
                                     <IconButton size="small" onClick={(e) => handleDismiss(e, t.id || t.id)}>
@@ -391,11 +391,11 @@ const ModernAppBar = (props) => {
 
                     <Divider />
                     <Box p={1} textAlign="center">
-                        <Typography variant="caption" color="text.secondary">Vista de alertas activas</Typography>
+                        <Typography variant="caption" color="text.secondary">{translate('pos.alerts_footer')}</Typography>
                     </Box>
                 </Menu>
 
-                <Tooltip title="Ajustes">
+                <Tooltip title={translate('pos.settings')}>
                     <IconButton 
                         component={Link}
                         to={`/moteles/${currentMotelId}`}

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useGetList, Title, Loading, Error } from 'react-admin';
+import { useGetList, Title, Loading, Error, useTranslate } from 'react-admin';
 import { 
     Card, 
     CardContent, 
@@ -49,6 +49,7 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 const ReporteIngresos = () => {
+    const translate = useTranslate();
     const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
 
     const { availableMoteles, currentMotelId } = useMotel();
@@ -103,7 +104,7 @@ const ReporteIngresos = () => {
             // Consumos de venta (Productos)
             if (turno.consumos && Array.isArray(turno.consumos)) {
                 turno.consumos.forEach(c => {
-                    const prodName = c.producto?.Nombre || 'Desconocido';
+                    const prodName = c.producto?.Nombre || translate('pos.dashboard.unknown');
                     if (!consumosPorProd[prodName]) {
                         consumosPorProd[prodName] = { cant: 0, total: 0 };
                     }
@@ -114,7 +115,7 @@ const ReporteIngresos = () => {
 
             // Pagos (Relation in Turno is singular: pago)
             if (turno.pago) {
-                const type = turno.pago.formaPago?.Tipo || 'Efectivo';
+                const type = turno.pago.formaPago?.Tipo || translate('pos.reports.cash');
                 const monto = Number(turno.pago.Importe || 0);
                 if (!pagosPorForma[type]) {
                     pagosPorForma[type] = 0;
@@ -128,7 +129,7 @@ const ReporteIngresos = () => {
         const insumosAgrupados = {};
         if (insumosConsumidosData) {
             insumosConsumidosData.forEach(inv => {
-                const prodName = inv.producto?.Nombre || 'Sin nombre';
+                const prodName = inv.producto?.Nombre || translate('pos.dashboard.no_name');
                 if (!insumosAgrupados[prodName]) {
                     insumosAgrupados[prodName] = 0;
                 }
@@ -163,11 +164,12 @@ const ReporteIngresos = () => {
     }, [data, insumosConsumidosData]);
 
     const PaymentDistributionCard = ({ distribution, total }) => {
+        const translate = useTranslate();
         return (
             <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', height: '100%' }}>
                 <Box p={3} display="flex" alignItems="center">
                     <Wallet size={20} style={{ marginRight: '10px' }} />
-                    <Typography variant="h6" fontWeight="700">Distribución de Pagos</Typography>
+                    <Typography variant="h6" fontWeight="700">{translate('pos.reports.strategic_report')}</Typography>
                 </Box>
                 <Divider />
                 <Box p={3} display="flex" flexDirection="column" gap={2}>
@@ -196,7 +198,7 @@ const ReporteIngresos = () => {
                     })}
                     {distribution.length === 0 && (
                         <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                            Sin datos registrados
+                            {translate('pos.dashboard.no_data')}
                         </Typography>
                     )}
                 </Box>
@@ -209,14 +211,14 @@ const ReporteIngresos = () => {
 
     return (
         <Box sx={{ p: 3, maxWidth: '1200px', margin: '0 auto' }}>
-            <Title title="Reporte de Ingresos" />
+            <Title title={translate('pos.reports.revenue')} />
             
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Typography variant="h4" fontWeight="800" color="primary.main">
-                    Reporte Operacional
+                    {translate('pos.reports.operational_report')}
                 </Typography>
                 <TextField
-                    label="Fecha de Reporte"
+                    label={translate('pos.reports.date_to')}
                     type="date"
                     value={filterDate}
                     onChange={(e) => setFilterDate(e.target.value)}
@@ -230,7 +232,7 @@ const ReporteIngresos = () => {
             <Grid container spacing={3} mb={4}>
                 <Grid item xs={12} sm={6} md={4}>
                     <StatCard 
-                        title="Total Facturado" 
+                        title={translate('pos.reports.revenue')} 
                         value={`$${stats?.totalFacturado.toLocaleString()}`} 
                         icon={<TrendingUp />} 
                         color="#10b981" 
@@ -238,7 +240,7 @@ const ReporteIngresos = () => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
                     <StatCard 
-                        title="Cantidad de Turnos" 
+                        title={translate('pos.reports.turns')} 
                         value={stats?.cantidadTurnos} 
                         icon={<Calendar />} 
                         color="#3b82f6" 
@@ -246,7 +248,7 @@ const ReporteIngresos = () => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={4}>
                     <StatCard 
-                        title="Promedio por Turno" 
+                        title={translate('pos.reports.average')} 
                         value={`$${stats?.cantidadTurnos > 0 ? (stats.totalFacturado / stats.cantidadTurnos).toFixed(0).toLocaleString() : 0}`} 
                         icon={<Award />} 
                         color="#f59e0b" 
@@ -266,15 +268,15 @@ const ReporteIngresos = () => {
                     <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', height: '100%' }}>
                         <Box p={3} display="flex" alignItems="center">
                             <ShoppingCart size={20} style={{ marginRight: '10px' }} />
-                            <Typography variant="h6" fontWeight="700">Ventas de Bar/Snack</Typography>
+                            <Typography variant="h6" fontWeight="700">{translate('pos.reports.bar_sales')}</Typography>
                         </Box>
                         <Divider />
                         <Table size="small">
                             <TableHead sx={{ backgroundColor: '#f8fafc' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Producto</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>Cant.</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Monto</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>{translate('pos.reports.product')}</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>{translate('pos.reports.quantity')}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>{translate('pos.reports.amount')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -289,7 +291,7 @@ const ReporteIngresos = () => {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={3} align="center" sx={{ py: 2, color: 'text.secondary' }}>
-                                            No hay ventas de bar
+                                            {translate('pos.dashboard.no_data')}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -305,7 +307,7 @@ const ReporteIngresos = () => {
                     <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)' }}>
                         <Box p={3} display="flex" alignItems="center" bgcolor="primary.main" color="white">
                             <Package size={20} style={{ marginRight: '10px' }} />
-                            <Typography variant="h6" fontWeight="700">Insumos y Amenidades Consumidas (Uso Interno)</Typography>
+                            <Typography variant="h6" fontWeight="700">{translate('pos.reports.internal_amenities')}</Typography>
                         </Box>
                         <Divider />
                         <Grid container spacing={0}>
@@ -328,7 +330,7 @@ const ReporteIngresos = () => {
                                 ))
                             ) : (
                                 <Box p={4} textAlign="center" width="100%">
-                                    <Typography variant="body2" color="textSecondary">No se registraron consumos de insumos para esta fecha</Typography>
+                                    <Typography variant="body2" color="textSecondary">{translate('pos.dashboard.no_data')}</Typography>
                                 </Box>
                             )}
                         </Grid>
@@ -342,15 +344,15 @@ const ReporteIngresos = () => {
                     <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', height: '100%' }}>
                         <Box p={3} display="flex" alignItems="center">
                             <Home size={20} style={{ marginRight: '10px' }} />
-                            <Typography variant="h6" fontWeight="700">Ocupación por Habitación</Typography>
+                            <Typography variant="h6" fontWeight="700">{translate('pos.reports.occupancy_by_room')}</Typography>
                         </Box>
                         <Divider />
                         <Table size="small">
                             <TableHead sx={{ backgroundColor: '#f8fafc' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 'bold' }}>Habitación</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>Turnos</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Monto Generado</TableCell>
+                                    <TableCell sx={{ fontWeight: 'bold' }}>{translate('pos.reports.room')}</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>{translate('pos.reports.turns')}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>{translate('pos.reports.amount')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -370,7 +372,7 @@ const ReporteIngresos = () => {
                     <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', height: '100%' }}>
                         <Box p={3} display="flex" alignItems="center">
                             <Award size={20} style={{ marginRight: '10px' }} />
-                            <Typography variant="h6" fontWeight="700">Top 5 Habitaciones</Typography>
+                            <Typography variant="h6" fontWeight="700">{translate('pos.reports.top_5_rooms')}</Typography>
                         </Box>
                         <Divider />
                         <Box p={2}>
@@ -393,8 +395,8 @@ const ReporteIngresos = () => {
                                         {idx + 1}
                                     </Box>
                                     <Box flexGrow={1}>
-                                        <Typography variant="body2" fontWeight="600">Habitación #{hab.name}</Typography>
-                                        <Typography variant="caption" color="textSecondary">{hab.count} turnos realizados</Typography>
+                                        <Typography variant="body2" fontWeight="600">{translate('pos.reports.room')} #{hab.name}</Typography>
+                                        <Typography variant="caption" color="textSecondary">{hab.count} {translate('pos.reports.turns').toLowerCase()}</Typography>
                                     </Box>
                                     <Typography variant="body2" fontWeight="700">${hab.total.toLocaleString()}</Typography>
                                 </Box>

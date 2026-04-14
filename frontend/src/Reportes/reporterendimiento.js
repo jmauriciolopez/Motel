@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-    Title,
-    useGetList,
     Loading,
-    Error
+    Error,
+    useTranslate,
+    useGetList,
+    Title
 } from 'react-admin';
 import {
     Card,
@@ -98,6 +99,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
 );
 
 const ReporteRendimiento = () => {
+    const translate = useTranslate();
     const { currentMotelId } = useMotel();
     const defaultDesde = new Date();
     defaultDesde.setDate(defaultDesde.getDate() - 30);
@@ -123,19 +125,19 @@ const ReporteRendimiento = () => {
         const roomYield = {};
         const hourlyYield = Array.from({ length: 24 }, (_, i) => ({ hour: `${i}:00`, total: 0, count: 0 }));
         const dailyYield = [
-            { name: 'Dom', total: 0, count: 0 },
-            { name: 'Lun', total: 0, count: 0 },
-            { name: 'Mar', total: 0, count: 0 },
-            { name: 'Mié', total: 0, count: 0 },
-            { name: 'Jue', total: 0, count: 0 },
-            { name: 'Vie', total: 0, count: 0 },
-            { name: 'Sáb', total: 0, count: 0 }
+            { name: translate('pos.reports.sun') || 'Dom', total: 0, count: 0 },
+            { name: translate('pos.reports.mon') || 'Lun', total: 0, count: 0 },
+            { name: translate('pos.reports.tue') || 'Mar', total: 0, count: 0 },
+            { name: translate('pos.reports.wed') || 'Mié', total: 0, count: 0 },
+            { name: translate('pos.reports.thu') || 'Jue', total: 0, count: 0 },
+            { name: translate('pos.reports.fri') || 'Vie', total: 0, count: 0 },
+            { name: translate('pos.reports.sat') || 'Sáb', total: 0, count: 0 }
         ];
 
         const promoDataMap = {
-            'Plena': { name: 'Tarifa Plena', value: 0, count: 0 },
-            'Promoción': { name: 'Promocionales', value: 0, count: 0 },
-            'Pernocte': { name: 'Pernoctes', value: 0, count: 0 }
+            'Plena': { name: translate('pos.reports.full_rate'), value: 0, count: 0 },
+            'Promoción': { name: translate('pos.reports.promotions'), value: 0, count: 0 },
+            'Pernocte': { name: translate('pos.reports.overnight'), value: 0, count: 0 }
         };
 
         let totalTotal = 0;
@@ -208,17 +210,17 @@ const ReporteRendimiento = () => {
 
     return (
         <Box sx={{ p: 4, backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-            <Title title="Panel de Rendimiento Estratégico" />
+            <Title title={translate('pos.reports.performance_report')} />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#1e293b' }}>Análisis Operativo</Typography>
-                    <Typography variant="body1" color="textSecondary">Métricas detalladas por habitación, horario y promociones</Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 800, color: '#1e293b' }}>{translate('pos.dashboard.operational_analysis')}</Typography>
+                    <Typography variant="body1" color="textSecondary">{translate('pos.dashboard.operational_subtitle')}</Typography>
                 </Box>
                 <Paper sx={{ p: 1, display: 'flex', gap: 2, borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                     <TextField
                         type="date"
-                        label="Desde"
+                        label={translate('pos.reports.date_from')}
                         value={desde}
                         onChange={(e) => setDesde(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -228,7 +230,7 @@ const ReporteRendimiento = () => {
                     />
                     <TextField
                         type="date"
-                        label="Hasta"
+                        label={translate('pos.reports.date_to')}
                         value={hasta}
                         onChange={(e) => setHasta(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -243,38 +245,38 @@ const ReporteRendimiento = () => {
                 {/* Section 1: KPIs Principales */}
                 <Grid item xs={12} md={3}>
                     <StatCard
-                        title="Facturación Total"
+                        title={translate('pos.reports.billed')}
                         value={formatter.format(stats?.totalTotal)}
                         icon={DollarSign}
                         color="#6366f1"
-                        subtitle="Ingreso neto en periodo"
+                        subtitle={translate('pos.reports.revenue')}
                     />
                 </Grid>
                 <Grid item xs={12} md={3}>
                     <StatCard
-                        title="Total Turnos"
+                        title={translate('pos.reports.total_turns')}
                         value={stats?.totalTurns}
                         icon={Zap}
                         color="#10b981"
-                        subtitle="Movimiento operativo"
+                        subtitle={translate('pos.reports.turns')}
                     />
                 </Grid>
                 <Grid item xs={12} md={3}>
                     <StatCard
-                        title="Ticket Promedio"
+                        title={translate('pos.reports.average_ticket')}
                         value={formatter.format(stats?.avgPerTurn)}
                         icon={Activity}
                         color="#f59e0b"
-                        subtitle="Rendimiento por usuario"
+                        subtitle={translate('pos.reports.performance')}
                     />
                 </Grid>
                 <Grid item xs={12} md={3}>
                     <StatCard
-                        title="Hab. Activas"
+                        title={translate('pos.reports.active_rooms')}
                         value={stats?.roomData.length}
                         icon={MapPin}
                         color="#8b5cf6"
-                        subtitle="Alcance de inventario"
+                        subtitle={translate('pos.reports.room').toLowerCase() + 's'}
                     />
                 </Grid>
 
@@ -284,7 +286,7 @@ const ReporteRendimiento = () => {
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                                 <Clock color="#6366f1" />
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Picos de Rentabilidad por Horario</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{translate('pos.reports.revenue')} {translate('pos.reports.hour').toLowerCase()}</Typography>
                             </Box>
                             <Box sx={{ height: 350 }}>
                                 <ResponsiveContainer width="100%" height="100%">
@@ -302,7 +304,7 @@ const ReporteRendimiento = () => {
                                             contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                             formatter={(value) => formatter.format(value)}
                                         />
-                                        <Area type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorY)" name="Recaudación" />
+                                        <Area type="monotone" dataKey="total" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorY)" name={translate('pos.reports.revenue')} />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </Box>
@@ -315,7 +317,7 @@ const ReporteRendimiento = () => {
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                                 <Calendar color="#10b981" />
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Distribución Semanal</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{translate('pos.reports.week')}</Typography>
                             </Box>
                             <Box sx={{ height: 350 }}>
                                 <ResponsiveContainer width="100%" height="100%">
@@ -324,7 +326,7 @@ const ReporteRendimiento = () => {
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} />
                                         <Tooltip formatter={(value) => formatter.format(value)} cursor={{ fill: '#f1f5f9' }} />
-                                        <Bar dataKey="total" fill="#10b981" radius={[0, 10, 10, 0]} name="Recaudación" />
+                                        <Bar dataKey="total" fill="#10b981" radius={[0, 10, 10, 0]} name={translate('pos.reports.revenue')} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </Box>
@@ -338,16 +340,16 @@ const ReporteRendimiento = () => {
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                                 <TrendingUp color="#f59e0b" />
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Rendimiento por Habitación</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{translate('pos.reports.performance')} {translate('pos.reports.room').toLowerCase()}</Typography>
                             </Box>
                             <TableContainer sx={{ maxHeight: 400 }}>
                                 <Table stickyHeader>
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell sx={{ fontWeight: 700, bgcolor: '#fff' }}>Habitación</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>Turnos</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>Ticket Promedio</TableCell>
-                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>Rendimiento Total</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, bgcolor: '#fff' }}>{translate('pos.reports.room')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>{translate('pos.reports.turns')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>{translate('pos.reports.average_ticket')}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#fff' }}>{translate('pos.reports.billed')}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -385,7 +387,7 @@ const ReporteRendimiento = () => {
                         <CardContent sx={{ p: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
                                 <Tag color="#ef4444" />
-                                <Typography variant="h6" sx={{ fontWeight: 700 }}>Efectividad Comercial</Typography>
+                                <Typography variant="h6" sx={{ fontWeight: 700 }}>{translate('pos.reports.commercial_effectiveness')}</Typography>
                             </Box>
                             <Box sx={{ height: 300 }}>
                                 <ResponsiveContainer width="100%" height="100%">

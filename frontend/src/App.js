@@ -86,15 +86,15 @@ function App() {
               <Resource name="mantenimientos" {...mantenimientos} />
 
 
-              {isSuperAdmin && <Resource name="propietarios" {...propietarios} options={{ label: 'Propietarios' }} />}
+              {isSuperAdmin && <Resource name="propietarios" {...propietarios} />}
               <Resource 
                 name="tarifas" 
                 list={tarifas.list}
                 edit={isAdmin ? tarifas.edit : null}
                 create={isAdmin ? tarifas.create : null}
               />
-              <Resource name="insumos" {...insumos} options={{ label: 'Insumos' }} />
-              <Resource name="insumodetalles" {...insumodetalles} options={{ label: 'Detalle Insumos' }} />
+              <Resource name="insumos" {...insumos} />
+              <Resource name="insumodetalles" {...insumodetalles} />
               <Resource name="productos" {...productos} />
               <Resource name="depositos" {...depositos} />
 
@@ -105,8 +105,8 @@ function App() {
                   <Resource name="gastos" {...gastos} />
                   <Resource name="compras" {...compras} />
                   <Resource name="compradetalles" {...compradetalles} />
-                   <Resource name="transferencias" {...transferencias} options={{ label: 'Mov. Stock' }} />
-                   <Resource name="transferenciadetalles" {...transferenciadetalles} options={{ label: 'Detalle Mov.' }} />
+                   <Resource name="transferencias" {...transferencias} />
+                   <Resource name="transferenciadetalles" {...transferenciadetalles} />
                    <Resource name="rubros" {...rubros} />
                    <Resource name="proveedores" {...proveedores} />
                  </>
@@ -116,13 +116,13 @@ function App() {
               {isAdmin && (
                 <>
                   <Resource name="moteles" {...moteles} />
-                  <Resource name="formapagos" options={{ label: 'Formas de Pago' }} {...formapagos} />
+                  <Resource name="formapagos" {...formapagos} />
                 </>
               )}
 
               {/* Catálogo global — lectura para Supervisor+, CRUD solo SuperAdmin */}
               {isSupervisor && (
-                <Resource name="catalogo-productos" {...catalogoproductos} options={{ label: 'Catálogo' }} />
+                <Resource name="catalogo-productos" {...catalogoproductos} />
               )}
 
               {/* Reportes - Visibles para Supervisor y Admin */}

@@ -18,7 +18,7 @@ import {
     CreditCard,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useGetList, usePermissions } from 'react-admin';
+import { useGetList, usePermissions, useTranslate } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
 import { Cookies } from '../helpers/Utils';
 const StatCard = ({ title, value, icon: Icon, color, loading, subtitle }) => (
@@ -63,6 +63,7 @@ const TimeStatus = ({ ingreso, minutos }) => {
 
     const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
 
+    const translate = useTranslate();
     return (
         <Box sx={{
             px: 1.5,
@@ -76,7 +77,7 @@ const TimeStatus = ({ ingreso, minutos }) => {
         }}>
             {isLate ? <AlertCircle size={16} /> : <Clock size={16} />}
             <Typography variant="caption" sx={{ fontWeight: 800 }}>
-                {isLate ? `VENCIDO +${timeStr}` : `RESTA ${timeStr}`}
+                {isLate ? `${translate('pos.dashboard.overdue')} +${timeStr}` : `${translate('pos.dashboard.remaining')} ${timeStr}`}
             </Typography>
         </Box>
     );
@@ -140,34 +141,36 @@ const OperatorDashboard = () => {
     const ocupacionPct = totalRooms ? Math.round((activeCount / totalRooms) * 100) : 0;
     const libresCount = (totalRooms || 0) - activeCount - dirtyCount - maintCount;
 
+    const translate = useTranslate();
+
     return (
         <Box sx={{ p: 4 }}>
             <Box mb={6} display="flex" justifyContent="space-between" alignItems="flex-end">
                 <Box>
-                    <Typography variant="h3" sx={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: '#0f172a', mb: 1 }}>Panel Operativo</Typography>
-                    <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>Resumen de tareas y estado actual.</Typography>
+                    <Typography variant="h3" sx={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: '#0f172a', mb: 1 }}>{translate('pos.dashboard.operational_panel')}</Typography>
+                    <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>{translate('pos.dashboard.operational_subtitle')}</Typography>
                 </Box>
                 <Box sx={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Activity size={20} /><Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Turno en Curso</Typography>
+                    <Activity size={20} /><Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>{translate('pos.dashboard.active_shift')}</Typography>
                 </Box>
             </Box>
 
             <Grid container spacing={4}>
                 {/* Metrics Row */}
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Ocupadas" value={activeCount} icon={Calendar} color="#6366f1" subtitle={`${ocupacionPct}% ocupación`} loading={loadingShifts} /></Grid>
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Para Limpiar" value={dirtyCount} icon={Sparkles} color="#f59e0b" subtitle="Tareas pendientes" loading={loadingDirty} /></Grid>
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Libres" value={libresCount > 0 ? libresCount : 0} icon={BedDouble} color="#10b981" subtitle="Listas para ingreso" /></Grid>
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Limpiezas Hoy" value={todayLimpiezas?.length || 0} icon={Coffee} color="#ec4899" loading={loadingLimpiezas} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.occupied')} value={activeCount} icon={Calendar} color="#6366f1" subtitle={translate('pos.dashboard.occupancy_trend', { pct: ocupacionPct })} loading={loadingShifts} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.to_clean')} value={dirtyCount} icon={Sparkles} color="#f59e0b" subtitle={translate('pos.dashboard.operational_subtitle')} loading={loadingDirty} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.free')} value={libresCount > 0 ? libresCount : 0} icon={BedDouble} color="#10b981" subtitle={translate('pos.dashboard.free_subtitle', { defaultValue: 'Listas para ingreso' })} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.cleanings_today')} value={todayLimpiezas?.length || 0} icon={Coffee} color="#ec4899" loading={loadingLimpiezas} /></Grid>
 
                 {/* Secondary Metrics Row */}
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Stock Bajo" value={lowStockCount} icon={Package} color="#ef4444" loading={loadingStock} /></Grid>
-                <Grid item xs={12} sm={6} md={3}><StatCard title="Mantenimiento" value={maintCount} icon={Wrench} color="#64748b" loading={loadingMaint} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.stock_low_alert')} value={lowStockCount} icon={Package} color="#ef4444" loading={loadingStock} /></Grid>
+                <Grid item xs={12} sm={6} md={3}><StatCard title={translate('pos.dashboard.maintenance')} value={maintCount} icon={Wrench} color="#64748b" loading={loadingMaint} /></Grid>
                 <Grid item xs={12} md={6}>
                     <Card sx={{
                         borderRadius: '24px', height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
                         background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: 'white', px: 3
                     }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>{ocupacionPct}% Ocupación</Typography>
+                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>{translate('pos.dashboard.occupancy_trend', { pct: ocupacionPct })}</Typography>
                         <Box sx={{ width: '100%', height: '8px', bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
                             <motion.div initial={{ width: 0 }} animate={{ width: `${ocupacionPct}%` }} transition={{ duration: 1 }} style={{ height: '100%', background: '#6366f1' }} />
                         </Box>
@@ -176,7 +179,7 @@ const OperatorDashboard = () => {
 
                 {/* Left Side: Active Turns */}
                 <Grid item xs={12} md={8}>
-                    <SectionHeader title="Ocupación Actual" icon={Clock} color="#6366f1" />
+                    <SectionHeader title={translate('pos.dashboard.actual_occupancy')} icon={Clock} color="#6366f1" />
                     <Stack spacing={2}>
                         {activeShifts?.map((turno) => {
                             const isExpired = (new Date(turno.Ingreso).getTime() + (turno.Minutos || 0) * 60000) < new Date().getTime();
@@ -207,17 +210,17 @@ const OperatorDashboard = () => {
                                     </Box>
                                     <Box flexGrow={1}>
                                         <Typography variant="body1" sx={{ fontWeight: 700, color: '#1e293b' }}>
-                                            {turno.cliente ? `${turno.cliente.Marca || 'S/Marca'} ${turno.cliente.Color || ''}` : 'Cliente S/N'}
+                                            {turno.cliente ? `${turno.cliente.Marca || translate('pos.dashboard.no_brand')} ${turno.cliente.Color || ''}` : translate('pos.dashboard.no_client')}
                                         </Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600 }}>{turno.cliente?.Patente || 'S/D'}</Typography>
+                                            <Typography variant="caption" sx={{ color: '#94a3b8', fontWeight: 600 }}>{turno.cliente?.Patente || translate('pos.dashboard.no_data')}</Typography>
                                             <Typography variant="caption" sx={{ color: '#cbd5e1' }}>•</Typography>
-                                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Ingreso: {new Date(turno.Ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
+                                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>{translate('pos.dashboard.checkin')}: {new Date(turno.Ingreso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
                                         </Box>
                                     </Box>
                                     <TimeStatus ingreso={turno.Ingreso} minutos={turno.Minutos} />
                                     <Chip 
-                                        label={isExpired ? "EXCEDIDO" : "OCUPADO"} 
+                                        label={isExpired ? translate('pos.dashboard.exceeded') : translate('pos.dashboard.occupied_status')} 
                                         size="small" 
                                         sx={{ 
                                             bgcolor: isExpired ? '#ef4444' : '#eef2ff', 
@@ -228,34 +231,34 @@ const OperatorDashboard = () => {
                                 </Box>
                             );
                         })}
-                        {(!activeShifts || activeShifts.length === 0) && !loadingShifts && <Typography variant="body2" sx={{ textAlign: 'center', py: 4, color: '#94a3b8' }}>No hay habitaciones ocupadas en este momento.</Typography>}
+                        {(!activeShifts || activeShifts.length === 0) && !loadingShifts && <Typography variant="body2" sx={{ textAlign: 'center', py: 4, color: '#94a3b8' }}>{translate('pos.dashboard.no_occupied_rooms')}</Typography>}
                     </Stack>
                 </Grid>
 
                 {/* Right Side: Tasks & Stock Alerts */}
                 <Grid item xs={12} md={4}>
-                    <SectionHeader title="Panel Administrativo" icon={ClipboardList} color="#f59e0b" />
+                    <SectionHeader title={translate('pos.dashboard.admin_panel')} icon={ClipboardList} color="#f59e0b" />
                     <Stack spacing={2}>
                          <Card sx={{ p: 2.5, borderRadius: '24px', border: dirtyCount > 0 ? '1px solid #fef3c7' : 'none', bgcolor: dirtyCount > 0 ? '#fffbeb' : '#f8fafc' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, color: '#d97706' }}><Sparkles size={16}/> Limpiezas Pendientes ({dirtyCount})</Typography>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, color: '#d97706' }}><Sparkles size={16}/> {translate('pos.dashboard.pending_cleanings')} ({dirtyCount})</Typography>
                             {dirtyRooms?.slice(0, 3).map(room => (
                                 <Box key={room.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>Habitación {room.Identificador}</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{translate('pos.dashboard.room')} {room.Identificador}</Typography>
                                     <ArrowRightCircle size={18} color="#f59e0b" />
                                 </Box>
                             ))}
-                            {dirtyCount === 0 && <Typography variant="caption" sx={{ color: '#94a3b8' }}>No hay habitaciones por limpiar.</Typography>}
+                            {dirtyCount === 0 && <Typography variant="caption" sx={{ color: '#94a3b8' }}>{translate('pos.dashboard.no_rooms_to_clean')}</Typography>}
                          </Card>
 
                          <Card sx={{ p: 2.5, borderRadius: '24px', border: lowStockCount > 0 ? '1px solid #fee2e2' : 'none', bgcolor: lowStockCount > 0 ? '#fffafb' : '#f8fafc' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, color: '#ef4444' }}><Package size={16}/> Alertas de Reposición ({lowStockCount})</Typography>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1, color: '#ef4444' }}><Package size={16}/> {translate('pos.dashboard.restock_alerts')} ({lowStockCount})</Typography>
                              {lowStockCount > 0 && lowStock?.slice(0, 3).map(item => (
                                 <Box key={item.id} sx={{ py: 0.5 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{item.producto?.Nombre}</Typography>
-                                    <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 700 }}>Solo {item.Cantidad} unid.</Typography>
+                                    <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 700 }}>{translate('pos.stock_remaining', { count: item.Cantidad })}</Typography>
                                 </Box>
                             ))}
-                            {lowStockCount === 0 && !loadingStock && <Typography variant="caption" sx={{ color: '#94a3b8' }}>Stock suficiente.</Typography>}
+                            {lowStockCount === 0 && !loadingStock && <Typography variant="caption" sx={{ color: '#94a3b8' }}>{translate('pos.dashboard.stock_sufficient')}</Typography>}
                          </Card>
                     </Stack>
                 </Grid>
@@ -265,43 +268,43 @@ const OperatorDashboard = () => {
             <Grid container spacing={4} mt={1}>
                 {/* Total de Caja */}
                 <Grid item xs={12} md={4}>
-                    <SectionHeader title="Caja Activa" icon={Wallet} color="#10b981" />
+                    <SectionHeader title={translate('pos.dashboard.active_cash')} icon={Wallet} color="#10b981" />
                     <Card sx={{ p: 3, borderRadius: '24px', background: ultimaCaja ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)' : '#f8fafc', border: '1px solid #a7f3d0' }}>
                         {loadingCaja ? <CircularProgress size={24} /> : ultimaCaja ? (
                             <>
                                 <Typography variant="h4" sx={{ fontWeight: 800, color: '#065f46' }}>{fmt(Number(ultimaCaja.Saldo ?? 0))}</Typography>
-                                <Typography variant="caption" sx={{ color: '#6b7280' }}>Último movimiento: {ultimaCaja.Concepto}</Typography>
+                                <Typography variant="caption" sx={{ color: '#6b7280' }}>{translate('pos.dashboard.last_movement')}: {ultimaCaja.Concepto}</Typography>
                                 <Typography variant="body2" sx={{ mt: 1, color: '#374151', fontWeight: 600 }}>
                                     {new Date(ultimaCaja.updatedAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                 </Typography>
                             </>
                         ) : (
-                            <Typography variant="body2" color="text.secondary">Sin movimientos de caja.</Typography>
+                            <Typography variant="body2" color="text.secondary">{translate('pos.dashboard.no_cash_movements')}</Typography>
                         )}
                     </Card>
                 </Grid>
 
                 {/* Mis Pagos de Hoy */}
                 <Grid item xs={12} md={8}>
-                    <SectionHeader title="Mis Cobros de Hoy" icon={CreditCard} color="#6366f1" />
+                    <SectionHeader title={translate('pos.dashboard.my_payments_today')} icon={CreditCard} color="#6366f1" />
                     <Card sx={{ borderRadius: '24px', overflow: 'hidden' }}>
                         <Box sx={{ p: 2, bgcolor: '#eef2ff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#4338ca' }}>
-                                {misPagos?.length || 0} cobros
+                                {misPagos?.length || 0} {translate('resources.pagos.name', { smart_count: misPagos?.length || 0 }).toLowerCase()}
                             </Typography>
                             <Typography variant="h6" sx={{ fontWeight: 800, color: '#4338ca' }}>{fmt(totalMisPagos)}</Typography>
                         </Box>
                         {loadingPagos ? (
                             <Box p={3} display="flex" justifyContent="center"><CircularProgress size={24} /></Box>
                         ) : (!misPagos || misPagos.length === 0) ? (
-                            <Box p={3}><Typography variant="body2" color="text.secondary">Sin cobros registrados hoy.</Typography></Box>
+                            <Box p={3}><Typography variant="body2" color="text.secondary">{translate('pos.dashboard.no_payments_today')}</Typography></Box>
                         ) : (
                             <Table size="small">
                                 <TableHead>
                                     <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Habitación</TableCell>
-                                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Forma de Pago</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>Importe</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>{translate('pos.dashboard.room')}</TableCell>
+                                        <TableCell sx={{ fontWeight: 700, fontSize: '0.75rem' }}>{translate('pos.dashboard.payment_method')}</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700, fontSize: '0.75rem' }}>{translate('pos.dashboard.amount')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>

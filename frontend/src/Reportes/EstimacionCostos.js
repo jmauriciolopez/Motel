@@ -3,7 +3,8 @@ import {
     Title,
     useGetList,
     Loading,
-    Error
+    Error,
+    useTranslate
 } from 'react-admin';
 import {
     Card,
@@ -103,6 +104,7 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
 );
 
 const EstimacionCostos = () => {
+    const translate = useTranslate();
     const { currentMotelId: motelId } = useMotel();
     // 1. Fechas
     const defaultDesde = new Date();
@@ -241,7 +243,7 @@ const EstimacionCostos = () => {
                 <Paper sx={{ p: 2, display: 'flex', gap: 3, borderRadius: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                     <TextField
                         type="date"
-                        label="Inicio Período"
+                        label={translate('pos.reports.date_from')}
                         value={desde}
                         onChange={(e) => setDesde(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -250,7 +252,7 @@ const EstimacionCostos = () => {
                     />
                     <TextField
                         type="date"
-                        label="Fin Período"
+                        label={translate('pos.reports.date_to')}
                         value={hasta}
                         onChange={(e) => setHasta(e.target.value)}
                         InputLabelProps={{ shrink: true }}
@@ -287,7 +289,7 @@ const EstimacionCostos = () => {
 
                         <Box sx={{ mb: 4 }}>
                             <Typography variant="body2" fontWeight={600} gutterBottom sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Mant. Fijo / Habitación</span>
+                                <span>{translate('pos.reports.fixed_costs')} / {translate('pos.reports.room')}</span>
                                 <span style={{ color: '#10b981' }}>{formatter.format(costoMantenimientoHab)}</span>
                             </Typography>
                             <Slider
@@ -336,29 +338,29 @@ const EstimacionCostos = () => {
                         {/* KPIs Superiores */}
                         <Grid item xs={12} md={4}>
                             <StatCard
-                                title="Ingreso Real Bruto"
+                                title={translate('pos.reports.revenue')}
                                 value={formatter.format(stats?.totalIngreso)}
                                 icon={DollarSign}
                                 color="#6366f1"
-                                subtitle={`${stats?.totalTurnos} turnos procesados`}
+                                subtitle={`${stats?.totalTurnos} ${translate('pos.reports.turns').toLowerCase()}`}
                             />
                         </Grid>
                         <Grid item xs={12} md={4}>
                             <StatCard
-                                title="Costo Total Estimado"
+                                title={translate('pos.reports.total')}
                                 value={formatter.format(stats?.costoTotalEstimado)}
                                 icon={TrendingDown}
                                 color="#ef4444"
-                                subtitle="Suma de fijos, variables y CMV"
+                                subtitle={translate('pos.reports.strategic_report')}
                             />
                         </Grid>
                         <Grid item xs={12} md={4}>
                             <StatCard
-                                title="Utilidad Estimada"
+                                title={translate('pos.dashboard.efficiency')}
                                 value={formatter.format(stats?.margenNeto)}
                                 icon={Activity}
                                 color="#10b981"
-                                subtitle={`Margen sobre ingresos: ${stats?.porcentajeMargen}%`}
+                                subtitle={`${translate('pos.reports.average')}: ${stats?.porcentajeMargen}%`}
                             />
                         </Grid>
 
@@ -383,8 +385,8 @@ const EstimacionCostos = () => {
                                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                                                     formatter={(v) => formatter.format(v)}
                                                 />
-                                                <Area type="monotone" dataKey="ingresos" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIng)" name="Ingresos" />
-                                                <Area type="monotone" dataKey="cmv" stroke="#ef4444" strokeWidth={2} fill="transparent" name="Costo Mercadería" />
+                                                <Area type="monotone" dataKey="ingresos" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorIng)" name={translate('pos.reports.revenue')} />
+                                                <Area type="monotone" dataKey="cmv" stroke="#ef4444" strokeWidth={2} fill="transparent" name={translate('pos.reports.variable_costs')} />
                                             </AreaChart>
                                         </ResponsiveContainer>
                                     </Box>
@@ -434,8 +436,8 @@ const EstimacionCostos = () => {
                                             <Home size={24} />
                                         </Box>
                                         <Typography variant="h5" fontWeight={800}>{formatter.format(stats?.costoFijoHabitaciones)}</Typography>
-                                        <Typography variant="body2" color="textSecondary">Infraestructura (Habitaciones)</Typography>
-                                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>{stats?.totalHabs} habitaciones activas</Typography>
+                                        <Typography variant="body2" color="textSecondary">{translate('pos.reports.fixed_costs')} ({translate('pos.reports.room')}s)</Typography>
+                                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>{stats?.totalHabs} {translate('pos.reports.room')}s</Typography>
                                     </Grid>
                                     <Grid item xs={12} md={3} sx={{ p: 4, borderRight: '1px solid #f1f5f9', textAlign: 'center' }}>
                                         <Box sx={{ mb: 2, display: 'inline-flex', p: 1.5, borderRadius: 3, bgcolor: '#e0f2fe', color: '#0ea5e9' }}>

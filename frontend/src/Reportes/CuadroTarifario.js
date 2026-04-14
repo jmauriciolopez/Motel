@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useGetList, useGetOne, Loading } from 'react-admin';
+import { useGetList, useGetOne, Loading, useTranslate } from 'react-admin';
 import {
     Box,
     Typography,
@@ -18,6 +18,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import { useMotel } from '../context/MotelContext';
 
 const CuadroTarifario = () => {
+    const translate = useTranslate();
     const { currentMotelId, availableMoteles } = useMotel();
     
     // Buscar el nombre del motel en la lista de moteles disponibles o usar el data del fetch
@@ -75,13 +76,13 @@ const CuadroTarifario = () => {
     };
 
     if (isLoading || isLoadingMotel) return <Loading />;
-    if (error) return <Typography color="error">Error cargando las tarifas</Typography>;
+    if (error) return <Typography color="error">{translate('pos.dashboard.error')}</Typography>;
 
     return (
         <Box p={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Box>
-                    <Typography variant="h4" fontWeight="800">Cuadro Tarifario</Typography>
+                    <Typography variant="h4" fontWeight="800">{translate('pos.reports.pricing_grid')}</Typography>
                     <Typography variant="subtitle1" color="textSecondary">{currentMotelName}</Typography>
                 </Box>
                 <Button
@@ -90,26 +91,26 @@ const CuadroTarifario = () => {
                     onClick={handlePrint}
                     sx={{ borderRadius: '12px', px: 3, py: 1, textTransform: 'none', fontWeight: 600 }}
                 >
-                    Imprimir Tarifario
+                    {translate('pos.reports.print')} {translate('pos.reports.pricing_grid')}
                 </Button>
             </Box>
 
             <Paper ref={printRef} elevation={0} sx={{ p: 4, borderRadius: '24px', border: '1px solid #e2e8f0' }}>
                 <Box mb={4} textAlign="center" className="no-print" sx={{ display: 'none' }}>
                     <Typography variant="h3" fontWeight={800}>{currentMotelName}</Typography>
-                    <Typography variant="h6" color="primary">TARIFAS VIGENTES</Typography>
+                    <Typography variant="h6" color="primary">{translate('pos.reports.current_rates')}</Typography>
                 </Box>
 
                 <TableContainer>
                     <Table sx={{ minWidth: 650 }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                                <TableCell sx={{ fontWeight: 800 }}>Categoría / Servicio</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 800 }}>Precio Turno</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 800 }}>Promocional</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 800 }}>Diario (Hospedaje)</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 800 }}>Exc. Turno</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 800 }}>Exc. Noche</TableCell>
+                                <TableCell sx={{ fontWeight: 800 }}>{translate('pos.reports.category')}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 800 }}>{translate('pos.dashboard.turn_price')}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 800 }}>{translate('pos.reports.promotional')}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 800 }}>{translate('pos.reports.daily_price')}</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 800 }}>{translate('pos.reports.exceed_price')} D</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 800 }}>{translate('pos.reports.exceed_price')} N</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -143,23 +144,23 @@ const CuadroTarifario = () => {
                     <Box mt={4} p={2} sx={{ bgcolor: '#f1f5f9', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <Grid container spacing={2}>
                             <Grid item xs={3}>
-                                <Typography variant="body2" fontWeight={700}>Inicio Día:</Typography>
+                                <Typography variant="body2" fontWeight={700}>{translate('pos.reports.checkin')} {translate('pos.reports.day_mode')}:</Typography>
                                 <Typography variant="h6">{formatTime(motelConfig.InicioDia)} hs</Typography>
                             </Grid>
                             <Grid item xs={3}>
-                                <Typography variant="body2" fontWeight={700}>Inicio Noche:</Typography>
+                                <Typography variant="body2" fontWeight={700}>{translate('pos.reports.checkin')} {translate('pos.reports.night_mode')}:</Typography>
                                 <Typography variant="h6">{formatTime(motelConfig.InicioNoche)} hs</Typography>
                             </Grid>
                             <Grid item xs={2}>
-                                <Typography variant="body2" fontWeight={700}>Duración:</Typography>
+                                <Typography variant="body2" fontWeight={700}>{translate('pos.reports.duration_short')}:</Typography>
                                 <Typography variant="body2">{motelConfig.DuracionDiaria}h D / {motelConfig.DuracionNocturna}h N</Typography>
                             </Grid>
                             <Grid item xs={2}>
-                                <Typography variant="body2" fontWeight={700}>Tolerancia:</Typography>
+                                <Typography variant="body2" fontWeight={700}>{translate('pos.reports.tolerance')}:</Typography>
                                 <Typography variant="h6">{motelConfig.Tolerancia} min</Typography>
                             </Grid>
                             <Grid item xs={2}>
-                                <Typography variant="body2" fontWeight={700}>Salida Día:</Typography>
+                                <Typography variant="body2" fontWeight={700}>{translate('pos.reports.checkout')} {translate('pos.reports.day_mode')}:</Typography>
                                 <Typography variant="h6">{formatTime(motelConfig.CheckOutDia)} hs</Typography>
                             </Grid>
                         </Grid>
@@ -168,16 +169,16 @@ const CuadroTarifario = () => {
 
                 <Box mt={6}>
                     <Typography variant="caption" color="textSecondary" display="block" textAlign="center">
-                        * Precios sujetos a cambios. Consultar el Tarifario.
+                        {translate('pos.reports.price_note')}
                         <br />
-                        Generado el {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
+                        {translate('pos.reports.generated_on')} {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}
                     </Typography>
                 </Box>
             </Paper>
 
             {/* Visual preview as cards for a "Premium" feel when not printing */}
             <Box mt={6}>
-                <Typography variant="h5" fontWeight={700} mb={3}>Vista Previa Digital</Typography>
+                <Typography variant="h5" fontWeight={700} mb={3}>{translate('pos.reports.digital_preview')}</Typography>
                 <Grid container spacing={3}>
                     {tarifas.map((tarifa) => (
                         <Grid item xs={12} md={6} lg={4} key={tarifa.id}>

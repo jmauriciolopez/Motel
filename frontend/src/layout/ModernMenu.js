@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, MenuItemLink, useSidebarState, usePermissions } from 'react-admin';
+import { Menu, MenuItemLink, useSidebarState, usePermissions, useTranslate } from 'react-admin';
 import {
     LayoutDashboard,
     Users,
@@ -30,6 +30,7 @@ const ModernMenu = (props) => {
     const [open] = useSidebarState();
     const { permissions, isPending } = usePermissions();
     const [activeMenu, setActiveMenu] = useState('');
+    const translate = useTranslate();
 
     const role = permissions || '';
     const isSuperAdmin = role === 'SuperAdmin';
@@ -93,7 +94,7 @@ const ModernMenu = (props) => {
         >
             <MenuItemLink
                 to="/"
-                primaryText="Dashboard"
+                primaryText={translate('ra.page.dashboard')}
                 leftIcon={<LayoutDashboard size={20} />}
                 className="group"
             />
@@ -103,14 +104,14 @@ const ModernMenu = (props) => {
                 <SubMenu
                     handleToggle={() => handleToggle('operaciones')}
                     isOpen={activeMenu === 'operaciones'}
-                    name="Operaciones"
+                    name={translate('resources.operaciones.name', { defaultValue: 'Operaciones' })}
                     icon={<Briefcase size={20} />}
                 >
-                    <MenuItemLink to="/turnos" primaryText="Turnos" leftIcon={<Calendar size={20} />} />
-                    <MenuItemLink to="/clientes" primaryText="Clientes" leftIcon={<Users size={20} />} />
-                    <MenuItemLink to="/limpiezas" primaryText="Limpieza" leftIcon={<Trash2 size={20} />} />
-                    <MenuItemLink to="/mantenimientos" primaryText="Mantenimiento" leftIcon={<Wrench size={20} />} />
-                    <MenuItemLink to="/insumos" primaryText="Insumos" leftIcon={<Sparkles size={20} />} />
+                    <MenuItemLink to="/turnos" primaryText={translate('resources.turnos.name')} leftIcon={<Calendar size={20} />} />
+                    <MenuItemLink to="/clientes" primaryText={translate('resources.clientes.name')} leftIcon={<Users size={20} />} />
+                    <MenuItemLink to="/limpiezas" primaryText={translate('resources.limpiezas.name')} leftIcon={<Trash2 size={20} />} />
+                    <MenuItemLink to="/mantenimientos" primaryText={translate('resources.mantenimientos.name')} leftIcon={<Wrench size={20} />} />
+                    <MenuItemLink to="/insumos" primaryText={translate('resources.insumos.name')} leftIcon={<Sparkles size={20} />} />
                 </SubMenu>
             )}
 
@@ -119,12 +120,11 @@ const ModernMenu = (props) => {
                 <SubMenu
                     handleToggle={() => handleToggle('finanzas')}
                     isOpen={activeMenu === 'finanzas'}
-                    name="Finanzas"
+                    name={translate('resources.finanzas.name', { defaultValue: 'Finanzas' })}
                     icon={<Wallet size={20} />}
                 >
-                    <MenuItemLink to="/cajas" primaryText="Cajas" leftIcon={<Wallet size={20} />} />
-                    <MenuItemLink to="/gastos" primaryText="Gastos" leftIcon={<CreditCard size={20} />} />
-
+                    <MenuItemLink to="/cajas" primaryText={translate('resources.cajas.name')} leftIcon={<Wallet size={20} />} />
+                    <MenuItemLink to="/gastos" primaryText={translate('resources.gastos.name')} leftIcon={<CreditCard size={20} />} />
                 </SubMenu>
             )}
 
@@ -133,17 +133,17 @@ const ModernMenu = (props) => {
                 <SubMenu
                     handleToggle={() => handleToggle('inventario')}
                     isOpen={activeMenu === 'inventario'}
-                    name="Inventario"
+                    name={translate('resources.inventario.name', { defaultValue: 'Inventario' })}
                     icon={<Warehouse size={20} />}
                 >
-                    <MenuItemLink to="/productos" primaryText="Productos" leftIcon={<Package size={20} />} />
-                    <MenuItemLink to="/rubros" primaryText="Rubros" leftIcon={<Activity size={20} />} />
-                    <MenuItemLink to="/proveedores" primaryText="Proveedores" leftIcon={<Users size={20} />} />
-                    <MenuItemLink to="/depositos" primaryText="Depósitos" leftIcon={<Warehouse size={20} />} />
-                    <MenuItemLink to="/catalogo-productos" primaryText="Catálogo" leftIcon={<BookOpen size={20} />} />
-                    <MenuItemLink to="/compras" primaryText="Compras" leftIcon={<ShoppingCart size={20} />} />
-                    <MenuItemLink to="/transferencias" primaryText="Mov. Stock" leftIcon={<ArrowLeftRight size={20} />} />
-                    <MenuItemLink to="/stocks" primaryText="Reporte Stock" leftIcon={<FileText size={20} />} />
+                    <MenuItemLink to="/productos" primaryText={translate('resources.productos.name')} leftIcon={<Package size={20} />} />
+                    <MenuItemLink to="/rubros" primaryText={translate('resources.rubros.name')} leftIcon={<Activity size={20} />} />
+                    <MenuItemLink to="/proveedores" primaryText={translate('resources.proveedores.name')} leftIcon={<Users size={20} />} />
+                    <MenuItemLink to="/depositos" primaryText={translate('resources.depositos.name')} leftIcon={<Warehouse size={20} />} />
+                    <MenuItemLink to="/catalogo-productos" primaryText={translate('resources.catalogo-productos.name')} leftIcon={<BookOpen size={20} />} />
+                    <MenuItemLink to="/compras" primaryText={translate('resources.compras.name')} leftIcon={<ShoppingCart size={20} />} />
+                    <MenuItemLink to="/transferencias" primaryText={translate('resources.transferencias.name')} leftIcon={<ArrowLeftRight size={20} />} />
+                    <MenuItemLink to="/stocks" primaryText={translate('resources.stocks.name')} leftIcon={<FileText size={20} />} />
                 </SubMenu>
             )}
 
@@ -152,19 +152,18 @@ const ModernMenu = (props) => {
                 <SubMenu
                     handleToggle={() => handleToggle('reportes')}
                     isOpen={activeMenu === 'reportes'}
-                    name="Reportes"
+                    name={translate('resources.reportes.name', { defaultValue: 'Reportes' })}
                     icon={<BarChart2 size={20} />}
                 >
-
-                    <MenuItemLink to="/ReporteTurnosCompletados" primaryText="Turnos Completados" leftIcon={<Activity size={20} />} />
-                    <MenuItemLink to="/ReporteIngresos" primaryText="Reporte Ingresos" leftIcon={<Activity size={20} />} />
-                    <MenuItemLink to="/ReporteRendimiento" primaryText="Rendimiento" leftIcon={<TrendingUp size={20} />} />
-                    <MenuItemLink to="/ReporteEstimacion" primaryText="Est. de Costos" leftIcon={<Calculator size={20} />} />
-                    <MenuItemLink to="/ListaCompras" primaryText="Lista de Compras" leftIcon={<ShoppingCart size={20} />} />
-                    <MenuItemLink to="/ReporteClientes" primaryText="Historial Clientes" leftIcon={<Users size={20} />} />
-                    <MenuItemLink to="/ReporteDiscrepancias" primaryText="Discrepancias" leftIcon={<AlertTriangle size={20} />} />
-                    <MenuItemLink to="/ReporteAnalitico" primaryText="Analítico" leftIcon={<BarChart2 size={20} />} />
-                    <MenuItemLink to="/AuditoriaStock" primaryText="Auditoría Stock" leftIcon={<Warehouse size={20} />} />
+                    <MenuItemLink to="/ReporteTurnosCompletados" primaryText={translate('resources.reporte-turnos.name', { defaultValue: 'Turnos Completados' })} leftIcon={<Activity size={20} />} />
+                    <MenuItemLink to="/ReporteIngresos" primaryText={translate('resources.reporte-ingresos.name', { defaultValue: 'Reporte Ingresos' })} leftIcon={<Activity size={20} />} />
+                    <MenuItemLink to="/ReporteRendimiento" primaryText={translate('resources.reporte-rendimiento.name', { defaultValue: 'Rendimiento' })} leftIcon={<TrendingUp size={20} />} />
+                    <MenuItemLink to="/ReporteEstimacion" primaryText={translate('resources.reporte-costos.name', { defaultValue: 'Est. de Costos' })} leftIcon={<Calculator size={20} />} />
+                    <MenuItemLink to="/ListaCompras" primaryText={translate('resources.lista-compras.name', { defaultValue: 'Lista de Compras' })} leftIcon={<ShoppingCart size={20} />} />
+                    <MenuItemLink to="/ReporteClientes" primaryText={translate('resources.reporte-clientes.name', { defaultValue: 'Historial Clientes' })} leftIcon={<Users size={20} />} />
+                    <MenuItemLink to="/ReporteDiscrepancias" primaryText={translate('resources.reporte-discrepancias.name', { defaultValue: 'Discrepancias' })} leftIcon={<AlertTriangle size={20} />} />
+                    <MenuItemLink to="/ReporteAnalitico" primaryText={translate('resources.reporte-analitico.name', { defaultValue: 'Analítico' })} leftIcon={<BarChart2 size={20} />} />
+                    <MenuItemLink to="/AuditoriaStock" primaryText={translate('resources.auditoria-stock.name', { defaultValue: 'Auditoría Stock' })} leftIcon={<Warehouse size={20} />} />
                 </SubMenu>
             )}
 
@@ -173,16 +172,16 @@ const ModernMenu = (props) => {
                 <SubMenu
                     handleToggle={() => handleToggle('configuracion')}
                     isOpen={activeMenu === 'configuracion'}
-                    name="Configuración"
+                    name={translate('resources.configuracion.name', { defaultValue: 'Configuración' })}
                     icon={<Settings size={20} />}
                 >
-                    {effectiveAdmin && <MenuItemLink to="/formapagos" primaryText="Formas de Pago" leftIcon={<CreditCard size={20} />} />}
-                    {effectiveAdmin && <MenuItemLink to="/moteles" primaryText="Moteles" leftIcon={<Settings size={20} />} />}
-                    <MenuItemLink to="/tarifas" primaryText="Tarifas" leftIcon={<Wallet size={20} />} />
-                    {effectiveSupervisor && <MenuItemLink to="/habitaciones" primaryText="Habitaciones" leftIcon={<ClipboardList size={20} />} />}
-                    {effectiveAdmin && <MenuItemLink to="/AjustePrecios" primaryText="Ajuste de Precios" leftIcon={<TrendingUp size={20} />} />}
-                    {effectiveAdmin && <MenuItemLink to="/GestorUsuarios" primaryText="Usuarios" leftIcon={<Users size={20} />} />}
-                    {isSuperAdmin && <MenuItemLink to="/propietarios" primaryText="Propietarios" leftIcon={<Users size={20} />} />}
+                    {effectiveAdmin && <MenuItemLink to="/formapagos" primaryText={translate('resources.formapagos.name')} leftIcon={<CreditCard size={20} />} />}
+                    {effectiveAdmin && <MenuItemLink to="/moteles" primaryText={translate('resources.moteles.name')} leftIcon={<Settings size={20} />} />}
+                    <MenuItemLink to="/tarifas" primaryText={translate('resources.tarifas.name')} leftIcon={<Wallet size={20} />} />
+                    {effectiveSupervisor && <MenuItemLink to="/habitaciones" primaryText={translate('resources.habitaciones.name')} leftIcon={<ClipboardList size={20} />} />}
+                    {effectiveAdmin && <MenuItemLink to="/AjustePrecios" primaryText={translate('resources.ajuste-precios.name', { defaultValue: 'Ajuste de Precios' })} leftIcon={<TrendingUp size={20} />} />}
+                    {effectiveAdmin && <MenuItemLink to="/GestorUsuarios" primaryText={translate('resources.usuarios.name')} leftIcon={<Users size={20} />} />}
+                    {isSuperAdmin && <MenuItemLink to="/propietarios" primaryText={translate('resources.propietarios.name')} leftIcon={<Users size={20} />} />}
                 </SubMenu>
             )}
         </Menu>

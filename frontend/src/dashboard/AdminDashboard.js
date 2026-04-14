@@ -184,10 +184,12 @@ const AdminDashboard = () => {
         return acc;
     }, {}) || {};
 
-    const PaymentDistributionCard = ({ distribution, total }) => (
-        <Card sx={{ borderRadius: '24px', height: '240px', p: 3, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Distribución de Pagos</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, justifyContent: 'center' }}>
+    const PaymentDistributionCard = ({ distribution, total }) => {
+        const translate = useTranslate();
+        return (
+            <Card sx={{ borderRadius: '24px', height: '240px', p: 3, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{translate('pos.dashboard.payment_distribution')}</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, flexGrow: 1, justifyContent: 'center' }}>
                 {Object.entries(distribution).map(([type, amount]) => {
                     const pct = total > 0 ? (amount / total) * 100 : 0;
                     return (
@@ -213,53 +215,56 @@ const AdminDashboard = () => {
                 })}
             </Box>
         </Card>
-    );
+        );
+    };
+
+    const translate = useTranslate();
 
     return (
         <Box sx={{ p: 4 }}>
             <Box mb={6} display="flex" justifyContent="space-between" alignItems="flex-end">
                 <Box>
-                    <Typography variant="h3" sx={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: '#0f172a', mb: 1 }}>Panel Estratégico</Typography>
-                    <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>Resumen detallado de ingresos y rendimiento.</Typography>
+                    <Typography variant="h3" sx={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, color: '#0f172a', mb: 1 }}>{translate('pos.dashboard.strategic_panel')}</Typography>
+                    <Typography variant="h6" sx={{ color: '#64748b', fontWeight: 400 }}>{translate('pos.dashboard.strategic_subtitle')}</Typography>
                 </Box>
                 <Box sx={{ color: 'primary.main', display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Activity size={20} />
-                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>Filtro: Hoy</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase' }}>{translate('pos.dashboard.filter_today')}</Typography>
                 </Box>
             </Box>
 
             <Grid container spacing={4}>
                 {/* Row 1: Key Metrics */}
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Turnos Activos" value={activeCount} icon={Calendar} color="#6366f1" trend={`${ocupacionPct}% ocup.`} loading={loadingShifts} />
+                    <StatCard title={translate('pos.dashboard.active_shift')} value={activeCount} icon={Calendar} color="#6366f1" trend={translate('pos.dashboard.occupancy_trend', { pct: ocupacionPct })} loading={loadingShifts} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Por Limpiar" value={dirtyCount} icon={AlertTriangle} color="#f59e0b" loading={loadingHabitaciones} />
+                    <StatCard title={translate('pos.dashboard.to_clean')} value={dirtyCount} icon={AlertTriangle} color="#f59e0b" loading={loadingHabitaciones} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Recaudación" value={`$ ${totalRevenue.toLocaleString()}`} icon={CreditCard} color="#10b981" loading={loadingTotal} />
+                    <StatCard title={translate('pos.dashboard.revenue')} value={`$ ${totalRevenue.toLocaleString()}`} icon={CreditCard} color="#10b981" loading={loadingTotal} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Consumos" value={`$ ${totalConsumos.toLocaleString()}`} icon={Utensils} color="#f59e0b" loading={loadingConsumosTotal} />
+                    <StatCard title={translate('pos.dashboard.consumptions')} value={`$ ${totalConsumos.toLocaleString()}`} icon={Utensils} color="#f59e0b" loading={loadingConsumosTotal} />
                 </Grid>
 
                 {/* Row 2: Secondary Metrics */}
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Limpiezas Hoy" value={todayLimpiezas?.length || 0} icon={Coffee} color="#ec4899" loading={loadingLimpiezas} />
+                    <StatCard title={translate('pos.dashboard.cleanings_today')} value={todayLimpiezas?.length || 0} icon={Coffee} color="#ec4899" loading={loadingLimpiezas} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Mantenimiento" value={activeMantenimientos?.length || 0} icon={Wrench} color="#64748b" loading={loadingMaint} />
+                    <StatCard title={translate('pos.dashboard.maintenance')} value={activeMantenimientos?.length || 0} icon={Wrench} color="#64748b" loading={loadingMaint} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Stock Bajo" value={lowStockCount} icon={Package} color="#ef4444" loading={loadingStock} />
+                    <StatCard title={translate('pos.dashboard.stock_low_alert')} value={lowStockCount} icon={Package} color="#ef4444" loading={loadingStock} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Eficiencia" value={calculateAvgTime()} icon={Clock} color="#8b5cf6" trend="Promedio" />
+                    <StatCard title={translate('pos.dashboard.efficiency')} value={calculateAvgTime()} icon={Clock} color="#8b5cf6" trend={translate('pos.dashboard.average')} />
                 </Grid>
 
                 {/* Charts & Visual Summary */}
                 <Grid item xs={12} md={4}>
-                    <StatCard title="Capacidad" value={`${activeCount}/${totalRooms || '--'}`} icon={BedDouble} color="#3b82f6" />
+                    <StatCard title={translate('pos.dashboard.capacity')} value={`${activeCount}/${totalRooms || '--'}`} icon={BedDouble} color="#3b82f6" />
                 </Grid>
                 <Grid item xs={12} md={4}>
                     <Card sx={{
@@ -267,7 +272,7 @@ const AdminDashboard = () => {
                         justifyContent: 'center', alignItems: 'center',
                         background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: 'white', p: 3
                     }}>
-                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>{ocupacionPct}% Ocupación</Typography>
+                        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>{translate('pos.dashboard.occupancy_trend', { pct: ocupacionPct })}</Typography>
                         <Box sx={{ width: '100%', height: '8px', bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
                             <motion.div initial={{ width: 0 }} animate={{ width: `${ocupacionPct}%` }} transition={{ duration: 1 }} style={{ height: '100%', background: '#6366f1' }} />
                         </Box>
@@ -280,7 +285,7 @@ const AdminDashboard = () => {
                 {/* Lists */}
                 <Grid item xs={12} md={8}>
                      <Card sx={{ borderRadius: '24px', height: '300px', p: 3, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Últimos Cobros</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{translate('pos.dashboard.last_collections')}</Typography>
                         <Stack spacing={2} sx={{ overflowY: 'auto', pr: 1 }}>
                             {recentPayments?.map((pago) => (
                                 <Box key={pago.id} display="flex" alignItems="center" gap={2} sx={{ p: 2, borderRadius: '16px', bgcolor: '#f8fafc' }}>
@@ -288,11 +293,11 @@ const AdminDashboard = () => {
                                         <CheckCircle2 size={18} />
                                     </Box>
                                     <Box flexGrow={1}>
-                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>Hab. {pago.turno?.habitacion?.Identificador || '---'}</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{translate('pos.dashboard.room')} {pago.turno?.habitacion?.Identificador || '---'}</Typography>
                                         <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>
-                                            {pago.turno?.cliente ? `${pago.turno.cliente.Marca || 'S/Marca'} ${pago.turno.cliente.Color || ''}` : 'Cliente S/N'}
+                                            {pago.turno?.cliente ? `${pago.turno.cliente.Marca || translate('pos.dashboard.no_brand')} ${pago.turno.cliente.Color || ''}` : translate('pos.dashboard.no_client')}
                                         </Typography>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>{pago.formaPago?.Tipo || 'Pago'}</Typography>
+                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>{pago.formaPago?.Tipo || translate('pos.dashboard.payment_method')}</Typography>
                                     </Box>
                                     <Typography variant="body2" sx={{ fontWeight: 800 }}>$ {Number(pago.Importe || 0).toLocaleString()}</Typography>
                                 </Box>
@@ -303,16 +308,16 @@ const AdminDashboard = () => {
                 <Grid item xs={12} md={4}>
                     <Card sx={{ borderRadius: '24px', height: '300px', p: 3, boxShadow: '0 4px 20px 0 rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', bgcolor: lowStockCount > 0 ? '#fffafb' : '#f8fafc', border: lowStockCount > 0 ? '1px solid #fee2e2' : 'none' }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: lowStockCount > 0 ? '#ef4444' : '#64748b' }}>
-                            <Package size={20} /> Falta Reponer
+                            <Package size={20} /> {translate('pos.dashboard.need_restock')}
                         </Typography>
                         <Stack spacing={1.5} sx={{ overflowY: 'auto' }}>
                             {lowStock?.map(item => (
                                 <Box key={item.id} sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'white', border: '1px solid #fee2e2' }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>{item.producto?.Nombre}</Typography>
-                                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>Solo {item.Cantidad} unidades</Typography>
+                                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>{translate('pos.stock_remaining', { count: item.Cantidad })}</Typography>
                                 </Box>
                             ))}
-                            {lowStockCount === 0 && <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', mt: 4 }}>Sin alertas de stock.</Typography>}
+                            {lowStockCount === 0 && <Typography variant="body2" sx={{ color: '#94a3b8', textAlign: 'center', mt: 4 }}>{translate('pos.dashboard.no_stock_alerts')}</Typography>}
                         </Stack>
                     </Card>
                 </Grid>

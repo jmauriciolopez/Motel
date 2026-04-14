@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
 import { Activity, BarChart2 } from 'lucide-react';
-import { usePermissions } from 'react-admin';
+import { usePermissions, useTranslate } from 'react-admin';
 import AdminDashboard from './AdminDashboard';
 import OperatorDashboard from './OperatorDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import { useMotel } from '../context/MotelContext';
 
 const Dashboard = () => {
     const { permissions } = usePermissions();
+    const translate = useTranslate();
     const { currentMotelId, availableMoteles } = useMotel();
     const [viewMode, setViewMode] = useState('operational');
 
@@ -68,7 +69,7 @@ const Dashboard = () => {
                                 '&:hover': { bgcolor: viewMode === 'operational' ? 'white' : '#cbd5e1' }
                             }}
                         >
-                            Vista Operativa
+                            {translate('pos.dashboard.operational_view')}
                         </Button>
                         <Button
                             size="small"
@@ -86,7 +87,7 @@ const Dashboard = () => {
                                 '&:hover': { bgcolor: viewMode === 'strategic' ? 'white' : '#cbd5e1' }
                             }}
                         >
-                            Vista Estratégica
+                            {translate('pos.dashboard.strategic_view')}
                         </Button>
                     </Paper>
                 </Box>

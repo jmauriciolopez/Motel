@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Title, useGetList } from 'react-admin';
+import { Title, useGetList, useTranslate } from 'react-admin';
 import {
     Box, Typography, Paper, ToggleButton, ToggleButtonGroup,
     CircularProgress, Chip, Grid,
@@ -25,15 +25,6 @@ const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const startOfDay = (d) => { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; };
 const startOfHour = (d) => { const r = new Date(d); r.setMinutes(0, 0, 0); return r; };
 
-const MONTHS_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-const fmtLabel = {
-    hour: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}h`; },
-    day: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
-    week: (iso) => { const d = new Date(iso); return `S ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
-    month: (iso) => { const d = new Date(iso); return `${MONTHS_ES[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`; },
-};
-
 const bucketKey = {
     hour: (iso) => startOfHour(new Date(iso)).toISOString(),
     day: (iso) => startOfDay(new Date(iso)).toISOString(),
@@ -43,34 +34,43 @@ const bucketKey = {
 
 const fmtMoney = (v) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v}`;
 
-// ── Constantes ────────────────────────────────────────────────────────────────
-
-const METRICS = [
-    { key: 'turnos', label: 'Turnos', color: '#6366f1' },
-    { key: 'limpiezas', label: 'Limpiezas', color: '#10b981' },
-    { key: 'facturado', label: 'Facturado', color: '#f59e0b' },
-    { key: 'consumos', label: 'Consumos', color: '#ef4444' },
-];
-
-const RANGES = [
-    { key: '1D', label: '1D' },
-    { key: '1W', label: '1S' },
-    { key: '1M', label: '1M' },
-    { key: 'YTD', label: 'YTD' },
-    { key: 'custom', label: 'Custom' },
-];
-
-const GRANULARITIES = [
-    { key: 'hour', label: 'Hora' },
-    { key: 'day', label: 'Día' },
-    { key: 'week', label: 'Semana' },
-    { key: 'month', label: 'Mes' },
-];
-
 // ── Componente ────────────────────────────────────────────────────────────────
 
 const ReporteAnalitico = () => {
+    const translate = useTranslate();
     const { currentMotelId } = useMotel();
+
+    const METRICS = useMemo(() => [
+        { key: 'turnos', label: translate('pos.reports.turns'), color: '#6366f1' },
+        { key: 'limpiezas', label: translate('pos.reports.cleaning'), color: '#10b981' },
+        { key: 'facturado', label: translate('pos.reports.billed'), color: '#f59e0b' },
+        { key: 'consumos', label: translate('pos.reports.consumptions'), color: '#ef4444' },
+    ], [translate]);
+
+    const RANGES = [
+        { key: '1D', label: '1D' },
+        { key: '1W', label: '1S' },
+        { key: '1M', label: '1M' },
+        { key: 'YTD', label: 'YTD' },
+        { key: 'custom', label: translate('pos.dashboard.custom') },
+    ];
+
+    const GRANULARITIES = [
+        { key: 'hour', label: translate('pos.reports.hour') },
+        { key: 'day', label: translate('pos.reports.day') },
+        { key: 'week', label: translate('pos.reports.week') },
+        { key: 'month', label: translate('pos.reports.month') },
+    ];
+
+    const fmtLabel = {
+        hour: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}h`; },
+        day: (iso) => { const d = new Date(iso); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
+        week: (iso) => { const d = new Date(iso); return `S ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; },
+        month: (iso) => { 
+            const d = new Date(iso); 
+            return d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+        },
+    };
 
     const [range, setRange] = useState('1W');
     const [granularity, setGranularity] = useState('day');
@@ -162,7 +162,7 @@ const ReporteAnalitico = () => {
         return Object.values(buckets)
             .sort((a, b) => a._ts.localeCompare(b._ts))
             .map(b => ({ ...b, label: fmtLabel[granularity](b._ts) }));
-    }, [turnos, limpiezas, consumos, granularity]);
+    }, [turnos, limpiezas, consumos, granularity, fmtLabel]);
 
     // ── Totales ───────────────────────────────────────────────────────────────
     const totals = useMemo(() => ({
@@ -179,15 +179,15 @@ const ReporteAnalitico = () => {
     // ── Render ────────────────────────────────────────────────────────────────
     return (
         <Box sx={{ mt: 2, maxWidth: 1200, mx: 'auto', px: 1 }}>
-            <Title title="Reporte Analítico" />
+            <Title title={translate('pos.reports.analytic_report')} />
             <Typography variant="h6" fontWeight={800} sx={{ color: '#1e1b4b', mb: 3 }}>
-                Reporte Analítico
+                {translate('pos.reports.analytic_report')}
             </Typography>
 
             {/* Controles */}
             <Paper sx={{ p: 2, borderRadius: 3, mb: 3, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
                 <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Rango</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{translate('pos.reports.range')}</Typography>
                     <ToggleButtonGroup value={range} exclusive onChange={(_, v) => v && setRange(v)} size="small">
                         {RANGES.map(r => (
                             <ToggleButton key={r.key} value={r.key} sx={{ fontWeight: 700, px: 1.5 }}>{r.label}</ToggleButton>
@@ -206,7 +206,7 @@ const ReporteAnalitico = () => {
                 )}
 
                 <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Agregación</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{translate('pos.reports.aggregation')}</Typography>
                     <ToggleButtonGroup value={granularity} exclusive onChange={(_, v) => v && setGranularity(v)} size="small">
                         {GRANULARITIES.map(g => (
                             <ToggleButton key={g.key} value={g.key} sx={{ fontWeight: 700, px: 1.5 }}>{g.label}</ToggleButton>
@@ -215,7 +215,7 @@ const ReporteAnalitico = () => {
                 </Box>
 
                 <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>Métricas</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>{translate('pos.reports.metrics')}</Typography>
                     <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                         {METRICS.map(m => (
                             <Chip key={m.key} label={m.label} size="small" onClick={() => toggleMetric(m.key)}
@@ -256,7 +256,7 @@ const ReporteAnalitico = () => {
                     </Box>
                 ) : chartData.length === 0 ? (
                     <Box display="flex" justifyContent="center" alignItems="center" height={400}>
-                        <Typography color="text.secondary">Sin datos para el período seleccionado</Typography>
+                        <Typography color="text.secondary">{translate('pos.reports.no_data')}</Typography>
                     </Box>
                 ) : (
                     <ResponsiveContainer width="100%" height={440}>
@@ -265,7 +265,7 @@ const ReporteAnalitico = () => {
                             <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                             <YAxis yAxisId="count" orientation="left" tick={{ fontSize: 11 }}
                                 allowDecimals={false}
-                                label={{ value: 'Cantidad', angle: -90, position: 'insideLeft', offset: 15, style: { fontSize: 11 } }}
+                                label={{ value: translate('pos.reports.quantity'), angle: -90, position: 'insideLeft', offset: 15, style: { fontSize: 11 } }}
                             />
                             <YAxis yAxisId="money" orientation="right"
                                 tickFormatter={v => `$${(v / 1000).toFixed(0)}k`}

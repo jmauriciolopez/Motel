@@ -4,7 +4,7 @@ import {
     TableBody, CircularProgress, TextField, Grid, Chip, TableSortLabel,
     TableFooter, MenuItem,
 } from '@mui/material';
-import { Title } from 'react-admin';
+import { Title, useTranslate } from 'react-admin';
 import { useMotel } from '../context/MotelContext';
 import { http } from '../shared/api/HttpClient';
 
@@ -12,6 +12,7 @@ const fmtN = (n) => Number(n || 0).toLocaleString('es-AR');
 const fmtM = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(n ?? 0);
 
 const AuditoriaStock = () => {
+    const translate = useTranslate();
     const hoy = new Date().toISOString().split('T')[0];
     const primerDiaMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
@@ -94,25 +95,25 @@ const AuditoriaStock = () => {
 
     return (
         <Box sx={{ mt: 2, maxWidth: 1400, mx: 'auto' }}>
-            <Title title="Auditoría de Stock" />
-            <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5, color: '#1e1b4b' }}>Auditoría de Stock</Typography>
+            <Title title={translate('pos.reports.stock_audit')} />
+            <Typography variant="h6" fontWeight={800} sx={{ mb: 0.5, color: '#1e1b4b' }}>{translate('pos.reports.stock_audit')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Movimientos de stock por producto en el período seleccionado.
+                {translate('pos.dashboard.operational_subtitle')}
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 3 }}>
                 <Grid item xs={6} md={3}>
-                    <TextField label="Desde" type="date" size="small" fullWidth value={desde}
+                    <TextField label={translate('pos.reports.date_from')} type="date" size="small" fullWidth value={desde}
                         onChange={e => setDesde(e.target.value)} InputLabelProps={{ shrink: true }} />
                 </Grid>
                 <Grid item xs={6} md={3}>
-                    <TextField label="Hasta" type="date" size="small" fullWidth value={hasta}
+                    <TextField label={translate('pos.reports.date_to')} type="date" size="small" fullWidth value={hasta}
                         onChange={e => setHasta(e.target.value)} InputLabelProps={{ shrink: true }} />
                 </Grid>
                 <Grid item xs={6} md={3}>
-                    <TextField select label="Rubro" size="small" fullWidth value={rubroFiltro}
+                    <TextField select label={translate('pos.reports.category')} size="small" fullWidth value={rubroFiltro}
                         onChange={e => setRubroFiltro(e.target.value)}>
-                        <MenuItem value="">Todos</MenuItem>
+                        <MenuItem value="">{translate('pos.dashboard.all')}</MenuItem>
                         {rubros.map(r => <MenuItem key={r} value={r}>{r}</MenuItem>)}
                     </TextField>
                 </Grid>
@@ -122,7 +123,7 @@ const AuditoriaStock = () => {
 
             {!loading && data.length === 0 && (
                 <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-                    <Typography variant="body1" color="text.secondary">Sin movimientos en el período</Typography>
+                    <Typography variant="body1" color="text.secondary">{translate('pos.reports.no_movements')}</Typography>
                 </Paper>
             )}
 
@@ -131,14 +132,14 @@ const AuditoriaStock = () => {
                     <Table size="small" stickyHeader sx={{ tableLayout: 'fixed', width: '100%' }}>
                         <TableHead>
                             <TableRow>
-                                <SortCell col="Nombre" label="Producto" align="left" width="160px" />
-                                <SortCell col="Rubro" label="Rubro" align="left" width="110px" />
-                                <SortCell col="Comprado" label="Comprado" width="80px" />
-                                <SortCell col="StockPrincipal" label="Principal" width="80px" />
-                                <SortCell col="Transferido" label="Transfer." width="80px" />
-                                <SortCell col="Egresado" label="Egresado" width="80px" />
-                                <SortCell col="Faltante" label="Faltante" width="80px" />
-                                <SortCell col="FaltanteImporte" label="Faltante $" width="100px" />
+                                <SortCell col="Nombre" label={translate('pos.reports.product')} align="left" width="160px" />
+                                <SortCell col="Rubro" label={translate('pos.reports.category')} align="left" width="110px" />
+                                <SortCell col="Comprado" label={translate('pos.reports.bought')} width="80px" />
+                                <SortCell col="StockPrincipal" label={translate('pos.reports.principal')} width="80px" />
+                                <SortCell col="Transferido" label={translate('pos.reports.transferred')} width="80px" />
+                                <SortCell col="Egresado" label={translate('pos.reports.egress')} width="80px" />
+                                <SortCell col="Faltante" label={translate('pos.reports.missing')} width="80px" />
+                                <SortCell col="FaltanteImporte" label={`${translate('pos.reports.missing')} $`} width="100px" />
                                 {depositoCols.map(d => (
                                     <SortCell key={d.id} col={d.id} label={d.nombre} width="90px" />
                                 ))}
@@ -177,7 +178,7 @@ const AuditoriaStock = () => {
                         </TableBody>
                         <TableFooter>
                             <TableRow sx={{ bgcolor: '#f1f5f9' }}>
-                                <TableCell sx={{ fontWeight: 800 }}>TOTAL</TableCell>
+                                <TableCell sx={{ fontWeight: 800 }}>{translate('pos.reports.total').toUpperCase()}</TableCell>
                                 <TableCell />
                                 <TableCell align="right" sx={{ fontWeight: 700 }}>{fmtN(totals.Comprado)}</TableCell>
                                 <TableCell align="right" sx={{ fontWeight: 700 }}>{fmtN(totals.StockPrincipal)}</TableCell>

@@ -11,6 +11,7 @@ import {
     Toolbar,
     useGetList,
     usePermissions,
+    useTranslate,
 } from 'react-admin';
 import { useFormContext } from 'react-hook-form';
 import {
@@ -29,6 +30,7 @@ import CloseIcon from '@mui/icons-material/Close';
 const Requerido = [required()];
 
 const QuickCreateCliente = () => {
+    const translate = useTranslate();
     const { permissions } = usePermissions();
     const isAdmin = permissions === 'Administrador' || permissions === 'SuperAdmin';
     const canCreate = isAdmin || permissions === 'Supervisor' || permissions === 'Recepcionista';
@@ -58,7 +60,7 @@ const QuickCreateCliente = () => {
                     setShowDialog(false);
                     // Actualizar el valor del campo 'cliente' en el formulario padre
                     setValue('cliente', data.id, { shouldDirty: true, shouldValidate: true });
-                    notify('Cliente creado correctamente', { type: 'info' });
+                    notify('pos.quick_create_cliente.created', { type: 'info' });
                 },
                 onError: (error) => {
                     notify(`Error: ${error.message}`, { type: 'warning' });
@@ -71,7 +73,7 @@ const QuickCreateCliente = () => {
 
     return (
         <>
-            <Tooltip title="Nuevo Cliente">
+            <Tooltip title={translate('pos.quick_create_cliente.tooltip')}>
                 <IconButton
                     onClick={handleClick}
                     size="small"
@@ -94,7 +96,7 @@ const QuickCreateCliente = () => {
                 maxWidth="sm"
             >
                 <DialogTitle id="form-dialog-title" sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Crear Nuevo Cliente
+                    {translate('pos.quick_create_cliente.title')}
                     <IconButton
                         aria-label="close"
                         onClick={handleClose}
@@ -106,17 +108,17 @@ const QuickCreateCliente = () => {
                 <DialogContent dividers>
                     <SimpleForm
                         onSubmit={handleSubmit}
-                        toolbar={<Toolbar><SaveButton label="Guardar Cliente" disabled={isLoading} /></Toolbar>}
+                        toolbar={<Toolbar><SaveButton label={translate('pos.quick_create_cliente.save')} disabled={isLoading} /></Toolbar>}
                     >
                         <Grid container spacing={2} sx={{ mt: 1 }}>
                             <Grid item xs={6}>
-                                <TextInput source="Patente" label="Patente / Matrícula" validate={Requerido} fullWidth />
+                                <TextInput source="Patente" label={translate('pos.quick_create_cliente.patente')} validate={Requerido} fullWidth />
                                 <TextInput source="Color" fullWidth />
                             </Grid>
                             <Grid item xs={6}>
                                 <TextInput source="Marca" fullWidth />
                                 <ReferenceInput source="movilidadId" reference="movilidads" defaultValue={defaultMovilidadId} sort={{ field: 'Tipo', order: 'ASC' }}>
-                                    <AutocompleteInput label='Tipo de Movilidad' optionText='Tipo' fullWidth />
+                                    <AutocompleteInput label={translate('pos.quick_create_cliente.movilidad')} optionText='Tipo' fullWidth />
                                 </ReferenceInput>
                             </Grid>
                         </Grid>
@@ -124,7 +126,7 @@ const QuickCreateCliente = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose} color="inherit">
-                        Cancelar
+                        {translate('ra.action.cancel')}
                     </Button>
                 </DialogActions>
             </Dialog>

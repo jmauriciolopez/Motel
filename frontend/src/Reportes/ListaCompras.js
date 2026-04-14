@@ -5,7 +5,8 @@ import {
     Loading,
     Error,
     ExportButton,
-    TopToolbar
+    TopToolbar,
+    useTranslate
 } from 'react-admin';
 import {
     Card,
@@ -40,6 +41,7 @@ import {
 import { useMotel } from '../context/MotelContext';
 
 const ListaCompras = () => {
+    const translate = useTranslate();
     const [search, setSearch] = useState('');
     const [diasCobertura, setDiasCobertura] = useState(15);
 
@@ -132,15 +134,15 @@ const ListaCompras = () => {
 
     return (
         <Box sx={{ p: 4, backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-            <Title title="Lista de Compras Optimizada" />
+            <Title title={translate('pos.reports.shopping_list')} />
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }} className="no-print">
                 <Box>
                     <Typography variant="h4" fontWeight={800} color="#1e293b">
-                        Lista de Compras Inteligente
+                        {translate('pos.reports.shopping_list')}
                     </Typography>
                     <Typography variant="body1" color="textSecondary">
-                        Sugerencias de reposición basadas en rotación real de los últimos 30 días
+                        {translate('pos.dashboard.operational_subtitle')}
                     </Typography>
                 </Box>
                 
@@ -160,25 +162,24 @@ const ListaCompras = () => {
                     <Card sx={{ borderRadius: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                         <CardContent>
                             <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                                Configurar Cobertura
+                                {translate('pos.reports.suggested_purchase')}
                             </Typography>
                             <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <Calendar size={20} color="#6366f1" />
                                 <TextField
-                                    label="Días de Stock deseados"
+                                    label={translate('pos.reports.coverage_days')}
                                     type="number"
                                     variant="outlined"
                                     size="small"
                                     value={diasCobertura}
                                     onChange={(e) => setDiasCobertura(Number(e.target.value))}
-                                    helperText="Días de operación que quieres cubrir con esta compra"
                                     fullWidth
                                 />
                             </Box>
                             
                             <TextField
                                 fullWidth
-                                label="Buscar Producto"
+                                label={translate('pos.dashboard.all')}
                                 variant="outlined"
                                 size="small"
                                 value={search}
@@ -196,12 +197,12 @@ const ListaCompras = () => {
 
                     <Card sx={{ mt: 2, borderRadius: 4, bgcolor: '#6366f1', color: '#fff' }}>
                         <CardContent>
-                            <Typography variant="overline" sx={{ opacity: 0.8 }}>Inversión Estimada</Typography>
+                            <Typography variant="overline" sx={{ opacity: 0.8 }}>{translate('pos.reports.investment')}</Typography>
                             <Typography variant="h4" fontWeight={800}>
                                 {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(totalInversion)}
                             </Typography>
                             <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
-                                Basado en precios actuales de {shoppingList.length} productos
+                                {shoppingList.length} {translate('pos.reports.product').toLowerCase()}s
                             </Typography>
                         </CardContent>
                     </Card>
@@ -213,11 +214,11 @@ const ListaCompras = () => {
                         <Table>
                             <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 700 }}>Producto</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 700 }}>Stock Act.</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 700 }}>Stock Mín.</TableCell>
-                                    <TableCell align="center" sx={{ fontWeight: 700 }}>Rotación (30d)</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#e0f2fe' }}>Comprar</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>{translate('pos.reports.product')}</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 700 }}>{translate('pos.reports.current_stock')}</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 700 }}>{translate('pos.reports.min_stock')}</TableCell>
+                                    <TableCell align="center" sx={{ fontWeight: 700 }}>{translate('pos.reports.rotation_30d')}</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700, bgcolor: '#e0f2fe' }}>{translate('pos.reports.buy')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -262,7 +263,7 @@ const ListaCompras = () => {
                                         <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                                             <Package size={48} color="#cbd5e1" style={{ marginBottom: '16px' }} />
                                             <Typography variant="h6" color="textSecondary">
-                                                Todo está en orden. No hay compras sugeridas.
+                                                {translate('pos.reports.no_data')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
