@@ -58,7 +58,23 @@ async function main() {
   });
   console.log(`✅ SuperAdmin: ${superAdmin.Email}`);
 
-  // 2. Formas de pago
+  // 2. Movilidades
+  const movilidades = [
+    'Automovil',
+    'Moto',
+    'Peaton',
+  ];
+  for (const tipo of movilidades) {
+    const id = `mov-${tipo}`;
+    await prisma.movilidad.upsert({
+      where:  { id },
+      update: {},
+      create: { id, Tipo: tipo },
+    });
+  }
+  console.log(`✅ Movilidades: ${movilidades.length}`);
+
+  // 3. Formas de pago
   for (const tipo of FORMAS_PAGO) {
     const id = `fp-${tipo.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')}`;
     await prisma.formaPago.upsert({
