@@ -7,10 +7,12 @@ import { Public } from '../../compartido/decorators/public.decorator';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AllowGlobal } from '../../compartido/decorators/allow-global.decorator';
 
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: isProduction,
+  sameSite: isProduction ? ('none' as const) : ('lax' as const),
   maxAge: 24 * 60 * 60 * 1000, // 1 día
   path: '/',
 };
@@ -48,12 +50,11 @@ export class AutenticacionController {
     return { usuario: result.usuario };
   }
 
-  @AllowGlobal()
-  @UseGuards(JwtAuthGuard)
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token', { path: '/' });
+    res.clearCookie('token', { path: '/', sameSite: 'none', secure: true });
     return { message: 'Sesión cerrada' };
   }
 }
