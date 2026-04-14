@@ -62,6 +62,11 @@ const logout = async () => {
 };
 
 const checkAuth = async () => {
+    // Rutas públicas no necesitan verificar sesión
+    const hash = window.location.hash;
+    if (hash.startsWith('#/signup') || hash.startsWith('#/login')) {
+        return Promise.resolve();
+    }
     // Verificar contra el backend — la cookie HttpOnly se envía automáticamente
     try {
         await http.post('/autenticacion/refresh');
