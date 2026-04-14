@@ -61,20 +61,14 @@ const logout = async () => {
     return Promise.resolve();
 };
 
-const checkAuth = async () => {
-    // Rutas públicas no necesitan verificar sesión
+const checkAuth = () => {
+    // Verificar localmente — los datos de sesión se guardan en login
+    // Si no hay usuario en sessionStorage, la sesión expiró o no existe
     const hash = window.location.hash;
     if (hash.startsWith('#/signup') || hash.startsWith('#/login')) {
         return Promise.resolve();
     }
-    // Verificar contra el backend — la cookie HttpOnly se envía automáticamente
-    try {
-        await http.post('/autenticacion/refresh');
-        return Promise.resolve();
-    } catch {
-        sessionStorage.clear();
-        return Promise.reject();
-    }
+    return sessionStorage.getItem('user') ? Promise.resolve() : Promise.reject();
 };
 
 const checkError = (error) => {
