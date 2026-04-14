@@ -478,9 +478,9 @@ const OnboardingWizard = ({ onFinish, mode = 'full' }) => {
                                     <Box key={p.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <CheckCircle2 size={14} color="#10b981" />
-                                            <Typography variant="body2">{p.nombre}</Typography>
+                                            <Typography variant="body2">{p.Nombre || p.nombre}</Typography>
                                         </Box>
-                                        <Chip label={p.rubro?.nombre || '—'} size="small" sx={{ fontSize: '0.7rem' }} />
+                                        <Chip label={p.rubro?.Nombre || p.rubro?.nombre || '—'} size="small" sx={{ fontSize: '0.7rem' }} />
                                     </Box>
                                 ))}
                                 {catalogoItems.length === 8 && (
