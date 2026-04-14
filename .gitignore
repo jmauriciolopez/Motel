@@ -59,3 +59,5 @@ frontend/terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/5.10
 frontend/terraform/.terraform.tfstate.lock.info
 frontend/terraform/terraform.tfstate
 frontend/terraform/terraform.tfstate.backup
+favicon_io.zip
+stitch.zip

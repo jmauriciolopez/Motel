@@ -7,6 +7,16 @@ import helmet from 'helmet';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const port = process.env.PORT ?? 3000;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3002';
+  const apiPrefix = process.env.API_PREFIX || 'api/v1';
+
+  console.log('=== CONFIG ===');
+  console.log(`FRONTEND_URL : ${frontendUrl}`);
+  console.log(`API_PREFIX   : ${apiPrefix}`);
+  console.log(`PORT         : ${port}`);
+  console.log('==============');
+
   app.use(cookieParser());
 
   app.use(helmet({
@@ -18,30 +28,28 @@ async function bootstrap() {
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
+        connectSrc: ["'self'", frontendUrl],
       },
     },
   }));
 
-  // CORS restringido al origen del frontend
-  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3002')
-    .split(',')
-    .map(o => o.trim());
+  const allowedOrigins = frontendUrl.split(',').map(o => o.trim());
 
   app.enableCors({
     origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-  // Configurar prefijo global para coincidir con el frontend
-  app.setGlobalPrefix(process.env.API_PREFIX || 'api/v1');
+
+  app.setGlobalPrefix(apiPrefix);
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
   }));
-  await app.listen(process.env.PORT ?? 3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+
+  await app.listen(port);
+  console.log(`Application is running on: ${await app.getUrl()}/${apiPrefix}`);
 }
 bootstrap();
