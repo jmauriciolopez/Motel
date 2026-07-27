@@ -82,7 +82,9 @@ const checkError = (error) => {
 
 const getPermissions = () => {
     const role = sessionStorage.getItem('role');
-    return role ? Promise.resolve(normalizeRole(role)) : Promise.reject();
+    const user = sessionStorage.getItem('user');
+    console.log('[DEBUG authProvider] getPermissions called -> role in sessionStorage:', role, 'user exists:', !!user);
+    return role ? Promise.resolve(normalizeRole(role)) : Promise.reject('No role in sessionStorage');
 };
 
 const getIdentity = () => {

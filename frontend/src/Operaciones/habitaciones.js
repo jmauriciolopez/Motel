@@ -204,10 +204,12 @@ const postFilters = [
 ];
 
 export const HabitacionList = () => {
-    const { permissions } = usePermissions();
-    const isAdmin = permissions === 'Administrador';
+    const { permissions, isPending } = usePermissions();
+    const isAdmin = permissions === 'Administrador' || permissions === 'SuperAdmin' || permissions === 'SUPERADMIN' || permissions === 'ADMINISTRADOR';
     const { currentMotelId: motelId } = useMotel();
     const filter = motelId ? { motelId: motelId } : {};
+
+    console.log('[DEBUG habitaciones.js] HabitacionList render -> permissions:', permissions, 'isPending:', isPending, 'motelId:', motelId, 'filter:', filter);
 
     return (
         <List filters={postFilters} filter={filter} sx={{ '& .RaList-main': { marginTop: 2 } }}

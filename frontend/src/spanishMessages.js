@@ -239,7 +239,8 @@ const spanishMessages = {
       error: 'Error',
       closed_by: 'Cerrado por',
       turn_price: 'Precio Turno',
-      rate: 'Tarifa'
+      rate: 'Tarifa',
+      free_subtitle: 'Habitaciones sin ocupación'
     },
     reports: {
       date_from: 'Fecha Desde',

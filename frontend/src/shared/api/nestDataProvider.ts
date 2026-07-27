@@ -307,12 +307,18 @@ export const nestDataProvider: DataProvider = {
             query.include = typeof finalInclude === 'object' ? JSON.stringify(finalInclude) : finalInclude;
         }
 
-        const response = await http.get<{ data: any[], total: number }>(`/${mappedResource}`, { params: query });
-
-        return {
-            data: response.data || [],
-            total: response.total || 0,
-        };
+        console.log(`[DEBUG nestDataProvider] getList START for "${resource}"`, { params, mappedResource });
+        try {
+            const response = await http.get<{ data: any[], total: number }>(`/${mappedResource}`, { params: query });
+            console.log(`[DEBUG nestDataProvider] getList SUCCESS for "${resource}"`, response);
+            return {
+                data: response.data || [],
+                total: response.total || 0,
+            };
+        } catch (err: any) {
+            console.error(`[DEBUG nestDataProvider] getList ERROR for "${resource}"`, err);
+            throw err;
+        }
     },
 
     getOne: async (resource, params: GetOneParams) => {

@@ -13,8 +13,11 @@ export class HabitacionesService extends BaseService<Habitacion> {
   async crear(crearHabitacionDto: CrearHabitacionDto) {
     const data = { ...crearHabitacionDto };
 
-    // Mapear estados del frontend a los del enum de NestJS
-    if (data.Estado === 'Libre') {
+    // Mapear estados del frontend a los valores del enum de Prisma
+    if (!data.Estado) {
+      // Si no se envía Estado, por defecto DISPONIBLE
+      data.Estado = 'DISPONIBLE' as any;
+    } else if (data.Estado === 'Libre' || data.Estado === 'libre') {
       data.Estado = 'DISPONIBLE' as any;
     } else if (typeof data.Estado === 'string') {
       data.Estado = data.Estado.toUpperCase() as any;

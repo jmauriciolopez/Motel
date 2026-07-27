@@ -32,11 +32,12 @@ const ModernMenu = (props) => {
     const [activeMenu, setActiveMenu] = useState('');
     const translate = useTranslate();
 
-    const role = permissions || '';
-    const isSuperAdmin = role === 'SuperAdmin';
-    const isAdmin = isSuperAdmin || role === 'Administrador';
-    const isSupervisor = isAdmin || role === 'Supervisor';
-    const isRecepcionist = isSupervisor || role === 'Recepcionista';
+    const rawRole = typeof permissions === 'string' ? permissions : (permissions?.role || sessionStorage.getItem('role') || '');
+    const roleStr = String(rawRole).toUpperCase();
+    const isSuperAdmin = roleStr === 'SUPERADMIN';
+    const isAdmin = isSuperAdmin || roleStr === 'ADMINISTRADOR';
+    const isSupervisor = isAdmin || roleStr === 'SUPERVISOR';
+    const isRecepcionist = isSupervisor || roleStr === 'RECEPCIONISTA';
 
     const effectiveAdmin = isAdmin;
     const effectiveSupervisor = isSupervisor;
@@ -178,7 +179,7 @@ const ModernMenu = (props) => {
                     {effectiveAdmin && <MenuItemLink to="/formapagos" primaryText={translate('resources.formapagos.name')} leftIcon={<CreditCard size={20} />} />}
                     {effectiveAdmin && <MenuItemLink to="/moteles" primaryText={translate('resources.moteles.name')} leftIcon={<Settings size={20} />} />}
                     <MenuItemLink to="/tarifas" primaryText={translate('resources.tarifas.name')} leftIcon={<Wallet size={20} />} />
-                    {effectiveSupervisor && <MenuItemLink to="/habitaciones" primaryText={translate('resources.habitaciones.name')} leftIcon={<ClipboardList size={20} />} />}
+                    <MenuItemLink to="/habitaciones" primaryText={translate('resources.habitaciones.name')} leftIcon={<ClipboardList size={20} />} />
                     {effectiveAdmin && <MenuItemLink to="/AjustePrecios" primaryText={translate('resources.ajuste-precios.name', { defaultValue: 'Ajuste de Precios' })} leftIcon={<TrendingUp size={20} />} />}
                     {effectiveAdmin && <MenuItemLink to="/GestorUsuarios" primaryText={translate('resources.usuarios.name')} leftIcon={<Users size={20} />} />}
                     {isSuperAdmin && <MenuItemLink to="/propietarios" primaryText={translate('resources.propietarios.name')} leftIcon={<Users size={20} />} />}

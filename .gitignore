@@ -14,7 +14,7 @@ build/
 **/.next/
 out/
 **/out/
-
+scratch/
 # Environment variables (SENSITIVE - SHOULD NEVER BE COMMITTED)
 .env
 .env.local

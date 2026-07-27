@@ -239,7 +239,8 @@ const portugueseMessages = {
       error: 'Erro',
       closed_by: 'Fechado por',
       turn_price: 'Preço Turno',
-      rate: 'Tarifa'
+      rate: 'Tarifa',
+      free_subtitle: 'Quartos sem ocupação'
     },
     reports: {
       date_from: 'Data Inicial',
