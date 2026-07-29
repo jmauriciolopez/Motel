@@ -73,13 +73,13 @@ function App() {
                     i18nProvider={i18nProvider}
                 >
                     {permissions => {
-                        console.log('[DEBUG App.jsx] permissions received from React-Admin:', permissions);
+                      //  console.log('[DEBUG App.jsx] permissions received from React-Admin:', permissions);
                         const rawRole = typeof permissions === 'string' ? permissions : (permissions?.role || sessionStorage.getItem('role') || '');
                         const role = String(rawRole).toUpperCase();
                         const isSuperAdmin = role === 'SUPERADMIN';
                         const isAdmin = isSuperAdmin || role === 'ADMINISTRADOR';
                         const isSupervisor = isAdmin || role === 'SUPERVISOR';
-                        console.log('[DEBUG App.jsx] Computed roles -> rawRole:', rawRole, 'role:', role, 'isAdmin:', isAdmin, 'isSupervisor:', isSupervisor);
+                     //   console.log('[DEBUG App.jsx] Computed roles -> rawRole:', rawRole, 'role:', role, 'isAdmin:', isAdmin, 'isSupervisor:', isSupervisor);
 
                         return (
                             <>

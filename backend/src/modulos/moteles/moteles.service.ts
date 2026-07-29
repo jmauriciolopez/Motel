@@ -28,6 +28,9 @@ export class MotelesService extends BaseService<Motel> {
         DuracionDiaria: rest.DuracionDiaria ?? 2,
         DuracionNocturna: rest.DuracionNocturna ?? 2,
         HoraCierreCaja: rest.HoraCierreCaja,
+        DiasEspeciales: rest.DiasEspeciales ?? [],
+        HorasExtraEspeciales: rest.HorasExtraEspeciales ?? 0,
+        CobroAlInicio: rest.CobroAlInicio ?? false,
         propietarioId: rest.propietarioId,
         ...(userIds && userIds.length > 0 && {
           usuarios: {

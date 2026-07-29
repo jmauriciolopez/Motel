@@ -5,6 +5,11 @@ import { Pago } from '@prisma/client';
 import { CajasService } from '../cajas/cajas.service';
 import { CrearPagoDto } from './dto/crear-pago.dto';
 
+/** Devuelve true si aún hay saldo por cobrar */
+function sincronizarPagoPendiente(saldo: number): boolean {
+  return saldo > 0;
+}
+
 @Injectable()
 export class PagosService extends BaseService<Pago> {
   constructor(
@@ -15,67 +20,95 @@ export class PagosService extends BaseService<Pago> {
   }
 
   async crear(crearPagoDto: CrearPagoDto): Promise<Pago> {
+    if (crearPagoDto.Importe <= 0) {
+      throw new BadRequestException('El importe debe ser mayor a cero.');
+    }
+
     const turno = await this.prisma.turno.findUnique({
       where: { id: crearPagoDto.turnoId },
+      include: {
+        pagos: true,
+        habitacion: true,
+      },
     });
 
     if (!turno) throw new NotFoundException('Turno no encontrado');
-    // Estado calculado: CERRADO = tiene Salida y PagoPendiente true
-    if (!turno.Salida || !turno.PagoPendiente) {
-      throw new BadRequestException('El turno debe estar cerrado y con pago pendiente para registrar el pago.');
+
+    // Acepta turno abierto o cerrado, siempre que tenga saldo pendiente
+    const saldoActual = Number(turno.SaldoPendiente);
+    if (!sincronizarPagoPendiente(saldoActual)) {
+      throw new BadRequestException('El turno no tiene saldo pendiente.');
     }
 
-    // Verificar si ya existe un pago para este turno
-    const pagoExistente = await this.prisma.pago.findUnique({
-      where: { turnoId: crearPagoDto.turnoId },
-    });
-
-    if (pagoExistente) {
-      throw new BadRequestException('El turno ya tiene un pago registrado.');
+    if (crearPagoDto.Importe > saldoActual + 0.001) {
+      throw new BadRequestException(
+        `El importe ($${crearPagoDto.Importe.toFixed(2)}) supera el saldo pendiente ($${saldoActual.toFixed(2)}).`,
+      );
     }
 
-    const pago = await this.prisma.pago.create({
-      data: crearPagoDto,
+    const nuevoSaldo = Math.max(0, saldoActual - crearPagoDto.Importe);
+    const quedaSaldo = sincronizarPagoPendiente(nuevoSaldo);
+
+    const pago = await this.prisma.$transaction(async (tx) => {
+      const nuevoPago = await tx.pago.create({
+        data: crearPagoDto,
+      });
+
+      await tx.turno.update({
+        where: { id: crearPagoDto.turnoId },
+        data: {
+          SaldoPendiente: nuevoSaldo,
+          PagoPendiente: quedaSaldo,
+        },
+      });
+
+      return nuevoPago;
     });
 
-    // Marcar turno como pagado
-    await this.prisma.turno.update({
-      where: { id: crearPagoDto.turnoId },
-      data: { PagoPendiente: false },
-    });
-
-    // Registro automático en Caja
+    // Concepto de caja:
+    // - turno abierto + saldo queda → cobro inicial (anticipo)
+    // - turno cerrado + saldo queda → cobro parcial
+    // - saldo = 0                   → cobro completo / cierre
     const format = (d: Date): string => {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  
-  const day = pad(d.getDate());
-  const month = pad(d.getMonth() + 1);
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${pad(d.getDate())}-${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
 
-  return `${day}-${month} ${hours}:${minutes}`;
-};
+    const hab = (turno as any).habitacion?.Identificador ?? '?';
+
+    let concepto: string;
+    if (!turno.Salida && quedaSaldo) {
+      concepto = `Anticipo Hab.${hab} #${format(turno.Ingreso)}`;
+    } else if (quedaSaldo) {
+      concepto = `Cobro Parcial Hab.${hab} #${format(turno.Salida!)}`;
+    } else {
+      concepto = `Cobro Hab.${hab} #${format(turno.Salida ?? turno.Ingreso)}`;
+    }
+
     await this.cajasService.crear({
-        Concepto: `Cobro Turno #${format(turno.Salida)}`,
-        Importe: Number(pago.Importe),
-        motelId: pago.motelId,
-        conceptoCaja: 'INGRESO', // Aseguramos que se identifique como ingreso si fuera necesario
+      Concepto: concepto,
+      Importe: Number(pago.Importe),
+      motelId: pago.motelId,
+      conceptoCaja: 'INGRESO',
     } as any);
 
     return pago;
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {
-    return super.obtenerTodos({
-      ...options,
-      include: {
-        formaPago: true,
-        turno: {
-          include: { habitacion: true, cliente: true },
+    return super.obtenerTodos(
+      {
+        ...options,
+        include: {
+          formaPago: true,
+          turno: {
+            include: { habitacion: true, cliente: true },
+          },
         },
+        orderBy: options.sort ? undefined : { createdAt: 'desc' },
       },
-      orderBy: options.sort ? undefined : { createdAt: 'desc' },
-    }, extraWhere);
+      extraWhere,
+    );
   }
 
   async obtenerUno(
@@ -130,7 +163,10 @@ export class PagosService extends BaseService<Pago> {
       orderBy: { createdAt: 'desc' },
     });
 
-    const discrepancias = data.filter((p) => Number(p.turno?.Total || 0) !== Number(p.Importe || 0));
+    // Discrepancia: suma de pagos del turno != Total del turno
+    const discrepancias = data.filter(
+      (p) => Number(p.turno?.Total || 0) !== Number(p.Importe || 0),
+    );
     return { data: discrepancias, total: discrepancias.length };
   }
 }

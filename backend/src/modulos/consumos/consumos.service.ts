@@ -8,6 +8,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { BaseService } from '../../compartido/bases/base.service';
 import { StockService } from '../stock/stock.service';
 
+/** Devuelve true si aún hay saldo por cobrar */
+function sincronizarPagoPendiente(saldo: number): boolean {
+  return saldo > 0;
+}
+
 @Injectable()
 export class ConsumosService extends BaseService<Consumo> {
   constructor(
@@ -122,9 +127,16 @@ export class ConsumosService extends BaseService<Consumo> {
       // El total del turno es: Precio base + consumos
       const nuevoTotal = Number(turno.Precio) + totalConsumos;
 
+      // SaldoPendiente: reflejar el importe del consumo recién agregado
+      const nuevoSaldo = Math.max(0, Number(turno.SaldoPendiente) + importe);
+
       await tx.turno.update({
         where: { id: turnoId },
-        data: { Total: nuevoTotal },
+        data: {
+          Total: nuevoTotal,
+          SaldoPendiente: nuevoSaldo,
+          PagoPendiente: sincronizarPagoPendiente(nuevoSaldo),
+        },
       });
 
       return consumo;
@@ -209,9 +221,16 @@ export class ConsumosService extends BaseService<Consumo> {
       // El total del turno es: Precio base + consumos activos
       const nuevoTotal = Number(turno.Precio) + totalConsumos;
 
+      // SaldoPendiente: restar el importe del consumo eliminado
+      const nuevoSaldo = Math.max(0, Number(turno.SaldoPendiente) - Number(consumo.Importe));
+
       await tx.turno.update({
         where: { id: consumo.turnoId },
-        data: { Total: nuevoTotal },
+        data: {
+          Total: nuevoTotal,
+          SaldoPendiente: nuevoSaldo,
+          PagoPendiente: sincronizarPagoPendiente(nuevoSaldo),
+        },
       });
 
       return consumoEliminado;

@@ -16,16 +16,35 @@ function motelIdRequerido(tenant: TenantContext): string {
   return tenant.motelId;
 }
 
-/** Estado calculado — no persiste en DB */
-function calcularEstado(turno: { Salida?: Date | null; PagoPendiente?: boolean | null; limpieza?: { Finalizado?: boolean } | null }): string {
+/** Devuelve true si aún hay saldo por cobrar */
+function sincronizarPagoPendiente(saldo: number): boolean {
+  return saldo > 0;
+}
+
+/** Estado calculado — no persiste en DB.
+ *  ABIERTO  : sin Salida (puede tener pagos parciales anticipados)
+ *  CERRADO  : con Salida y SaldoPendiente > 0
+ *  COBRADO  : con Salida y SaldoPendiente === 0
+ */
+function calcularEstado(turno: {
+  Salida?: Date | null;
+  SaldoPendiente?: any;
+  PagoPendiente?: boolean | null;
+  limpieza?: { Finalizado?: boolean } | null;
+}): string {
   if (!turno.Salida) return 'ABIERTO';
-  if (turno.PagoPendiente) return 'CERRADO';
-  if (turno.limpieza) return 'LIBRE';
+  const saldo = Number(turno.SaldoPendiente ?? 0);
+  if (saldo > 0) return 'CERRADO';
   return 'COBRADO';
 }
 
-/** Inyecta el estado calculado en el turno o lista de turnos */
-function conEstado<T extends { Salida?: Date | null; PagoPendiente?: boolean | null; limpieza?: { Finalizado?: boolean } | null }>(turno: T): T & { Estado: string } {
+/** Inyecta el estado calculado en el turno */
+function conEstado<T extends {
+  Salida?: Date | null;
+  SaldoPendiente?: any;
+  PagoPendiente?: boolean | null;
+  limpieza?: { Finalizado?: boolean } | null;
+}>(turno: T): T & { Estado: string } {
   return { ...turno, Estado: calcularEstado(turno) };
 }
 
@@ -42,17 +61,18 @@ export class TurnosService extends BaseService<Turno> {
   async abrirTurno(crearTurnoDto: CrearTurnoDto, tenant: TenantContext) {
     const motelIdActivo = motelIdRequerido(tenant);
 
-    return this.prisma.$transaction(async (tx) => {
-      const habitacion = await tx.habitacion.findFirst({
-        where: {
-          id: crearTurnoDto.habitacionId,
-          motelId: motelIdActivo,
-          deletedAt: null,
-        },
-        include: {
-          motel: true,
-        },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const habitacion = await tx.habitacion.findFirst({
+          where: {
+            id: crearTurnoDto.habitacionId,
+            motelId: motelIdActivo,
+            deletedAt: null,
+          },
+          include: {
+            motel: true,
+          },
+        });
 
       if (!habitacion || habitacion.Estado !== EstadoHabitacion.DISPONIBLE) {
         throw new BadRequestException(
@@ -102,7 +122,8 @@ export class TurnosService extends BaseService<Turno> {
           Total: initialValues.Total,
           Precio: initialValues.Precio,
           Minutos: initialValues.Minutos,
-          PagoPendiente: true,
+          SaldoPendiente: initialValues.Precio,   // saldo inicial = precio base del turno
+          PagoPendiente: true,                     // derivado: SaldoPendiente > 0
           TipoEstadia: crearTurnoDto.TipoEstadia,
           Observacion: crearTurnoDto.Observacion,
           ObservacionSecundaria: crearTurnoDto.ObservacionSecundaria,
@@ -115,7 +136,9 @@ export class TurnosService extends BaseService<Turno> {
       });
 
       return turno;
-    });
+    },
+    { timeout: 10000 },
+  );
   }
 
   async cerrarTurno(
@@ -125,21 +148,22 @@ export class TurnosService extends BaseService<Turno> {
   ) {
     const motelIdActivo = motelIdRequerido(tenant);
 
-    return this.prisma.$transaction(async (tx) => {
-      const turno = await tx.turno.findFirst({
-        where: {
-          id,
-          deletedAt: null,
-          habitacion: { motelId: motelIdActivo },
-        },
-        include: {
-          tarifa: true,
-          consumos: true,
-          habitacion: {
-            include: { motel: true },
+    return this.prisma.$transaction(
+      async (tx) => {
+        const turno = await tx.turno.findFirst({
+          where: {
+            id,
+            deletedAt: null,
+            habitacion: { motelId: motelIdActivo },
           },
-        },
-      });
+          include: {
+            tarifa: true,
+            consumos: true,
+            habitacion: {
+              include: { motel: true },
+            },
+          },
+        });
 
       if (!turno) throw new NotFoundException('Turno no encontrado');
       if (turno.Salida) {
@@ -152,13 +176,18 @@ export class TurnosService extends BaseService<Turno> {
         { motel: turno.habitacion.motel as any, tarifa: turno.tarifa as any },
       );
 
+      // Propagar el delta de extras al SaldoPendiente
+      const deltaExtra = closingValues.Total - Number(turno.Total);
+      const nuevoSaldo = Number(turno.SaldoPendiente) + deltaExtra;
+
       let turnoResult = await tx.turno.update({
         where: { id },
         data: {
           Salida: closingValues.Salida,
           Total: closingValues.Total,
+          SaldoPendiente: nuevoSaldo,
+          PagoPendiente: sincronizarPagoPendiente(nuevoSaldo),
           usuarioCierreId,
-          PagoPendiente: true,
         },
       });
 
@@ -168,7 +197,9 @@ export class TurnosService extends BaseService<Turno> {
       });
 
       return turnoResult;
-    });
+    },
+    { timeout: 10000 },
+  );
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {
@@ -213,11 +244,11 @@ export class TurnosService extends BaseService<Turno> {
     };
 
     if (finalMostrarCerrados !== true && finalMostrarCerrados !== 'true') {
-      // Vista operativa: excluye solo los LIBRE (limpieza registrada)
+      // Vista operativa: excluye los COBRADOS con limpieza registrada
       where.NOT = {
         AND: [
           { Salida: { not: null } },
-          { PagoPendiente: false },
+          { SaldoPendiente: 0 },
           { limpieza: { isNot: null } },
         ],
       };
@@ -225,9 +256,15 @@ export class TurnosService extends BaseService<Turno> {
 
     // Si el front filtra por Estado calculado, traducirlo a condición real
     if (estadoFiltro) {
-      if (estadoFiltro === 'ABIERTO') where.Salida = null;
-      else if (estadoFiltro === 'CERRADO') { where.Salida = { not: null }; where.PagoPendiente = true; }
-      else if (estadoFiltro === 'COBRADO') { where.Salida = { not: null }; where.PagoPendiente = false; }
+      if (estadoFiltro === 'ABIERTO') {
+        where.Salida = null;
+      } else if (estadoFiltro === 'CERRADO') {
+        where.Salida = { not: null };
+        where.SaldoPendiente = { gt: 0 };
+      } else if (estadoFiltro === 'COBRADO') {
+        where.Salida = { not: null };
+        where.SaldoPendiente = 0;
+      }
     }
 
     if (finalSalidaDesde || finalSalidaHasta) {
@@ -268,7 +305,7 @@ export class TurnosService extends BaseService<Turno> {
           consumos: {
             include: { producto: true },
           },
-          pago: {
+          pagos: {
             include: { formaPago: true },
           },
           limpieza: true,
@@ -298,7 +335,7 @@ export class TurnosService extends BaseService<Turno> {
         consumos: {
           include: { producto: true },
         },
-        pago: true,
+        pagos: true,
         ...(include || {}),
       },
       extraWhere,
@@ -355,7 +392,7 @@ export class TurnosService extends BaseService<Turno> {
           consumos: {
             include: { producto: true },
           },
-          pago: {
+          pagos: {
             include: { formaPago: true },
           },
           limpieza: true,

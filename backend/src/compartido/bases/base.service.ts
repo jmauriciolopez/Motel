@@ -100,6 +100,16 @@ export abstract class BaseService<T> {
     const sort = options.sort || 'createdAt';
     const order = options.order?.toLowerCase() === 'desc' ? 'desc' : 'asc';
 
+    // Convertir notación punto ("tarifa.Nombre") a objeto anidado ({ tarifa: { Nombre: "asc" } })
+    const buildOrderBy = (field: string, dir: 'asc' | 'desc'): any => {
+      const parts = field.split('.');
+      if (parts.length === 1) return { [field]: dir };
+      // anidado: reduce de adentro hacia afuera
+      return parts.reduceRight<any>((acc, part) => ({ [part]: acc }), dir);
+    };
+
+    const orderBy = buildOrderBy(sort, order);
+
     const extraWhereNormalizado = normalizarFiltroParaPrisma(extraWhere ?? {});
     const where: any = { ...extraWhereNormalizado };
 
@@ -134,7 +144,7 @@ export abstract class BaseService<T> {
           where,
           skip,
           take: limit,
-          orderBy: { [sort]: order },
+          orderBy,
           include,
         }),
         this.model.count({ where }),

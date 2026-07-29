@@ -253,6 +253,9 @@ const sanitizePayload = (data: any) => {
             // Objeto relacional: motel: { id: "x" } → motelId: "x", delete motel
             sanitized[`${key}Id`] = val.id;
             delete sanitized[key];
+        } else if (Array.isArray(val)) {
+            // Arrays (ej: DiasEspeciales) — preservar tal cual, son valores escalares JSON
+            // no tocar
         } else if (val && typeof val === 'object' && !(val instanceof Date)) {
             delete sanitized[key];
         }
@@ -307,10 +310,10 @@ export const nestDataProvider: DataProvider = {
             query.include = typeof finalInclude === 'object' ? JSON.stringify(finalInclude) : finalInclude;
         }
 
-        console.log(`[DEBUG nestDataProvider] getList START for "${resource}"`, { params, mappedResource });
+   //     console.log(`[DEBUG nestDataProvider] getList START for "${resource}"`, { params, mappedResource });
         try {
             const response = await http.get<{ data: any[], total: number }>(`/${mappedResource}`, { params: query });
-            console.log(`[DEBUG nestDataProvider] getList SUCCESS for "${resource}"`, response);
+    //        console.log(`[DEBUG nestDataProvider] getList SUCCESS for "${resource}"`, response);
             return {
                 data: response.data || [],
                 total: response.total || 0,

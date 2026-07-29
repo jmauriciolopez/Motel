@@ -11,7 +11,7 @@ export class CajasService extends BaseService<Caja> {
   }
 
   async crear(data: CrearCajaDto): Promise<Caja> {
-    console.log('[CajasService.crear] data recibido:', JSON.stringify(data));
+  //  console.log('[CajasService.crear] data recibido:', JSON.stringify(data));
     const { motelId, Importe, Concepto, createdAt } = data;
 
     if (!motelId) throw new Error('motelId requerido');

@@ -72,10 +72,10 @@ const SyncCatalogoDialog = ({ open, onClose }) => {
         setSyncing(true);
         try {
             const payload = { motelId, catalogoIds: selected };
-            console.log('[SyncCatalogo] Payload:', payload);
+     //       console.log('[SyncCatalogo] Payload:', payload);
 
             const data = await http.post('/productos/sync-catalogo', payload);
-            console.log('[SyncCatalogo] Success:', data);
+         //   console.log('[SyncCatalogo] Success:', data);
             
             notify(`${data.length ?? selected.length} productos sincronizados`, { type: 'success' });
             refresh();

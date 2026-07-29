@@ -170,9 +170,8 @@ const PagoCreate = () => {
         pagination: { page: 1, perPage: 100 }
     });
 
-    // Buscar "Efectivo" en las formas de pago
-    const recordEfectivo = formasPago?.find(f => 
-        f.Tipo?.toLowerCase().includes('efectivo') || 
+    const recordEfectivo = formasPago?.find(f =>
+        f.Tipo?.toLowerCase().includes('efectivo') ||
         f.Tipo?.toLowerCase() === 'efectivo'
     );
     const defaultFormaPago = recordEfectivo?.id;
@@ -188,29 +187,66 @@ const PagoCreate = () => {
 
     const location = useLocation();
     const initialRecord = location.state?.record || {};
-    const initialImporte = initialRecord.Importe;
     const initialTurnoId = initialRecord.turnoId;
+    const turnoData = initialRecord.turno || null;
+
+    // SaldoPendiente puede llegar como number, string o Decimal — normalizar siempre
+    const saldoRaw = turnoData?.SaldoPendiente ?? turnoData?.Total ?? initialRecord.Importe ?? 0;
+    const saldo = Math.max(0, Number(saldoRaw) || 0);
+    const totalTurno = Number(turnoData?.Total ?? 0);
+    const totalPagado = Math.max(0, totalTurno - saldo);
 
     const validateCreation = (values) => {
         const errors = {};
         if (!values.formaPagoId) errors.formaPagoId = 'Por favor, seleccione un método de pago';
-        if (!values.turnoId) errors.turnoId = 'Debe seleccionar un turno/habitación';
-        if (!values.Importe) errors.Importe = 'Debe ingresar el importe a cobrar';
+        if (!values.turnoId)     errors.turnoId     = 'Debe seleccionar un turno/habitación';
+        if (!values.Importe || Number(values.Importe) <= 0) errors.Importe = 'Debe ingresar el importe a cobrar';
+        // Solo validar límite de saldo si tenemos saldo confiable del turno
+        if (saldo > 0 && Number(values.Importe) > saldo + 0.01) {
+            errors.Importe = `No puede superar el saldo pendiente ($${saldo.toFixed(2)})`;
+        }
         return errors;
     };
 
     return (
         <Create redirect="/turnos" transform={transform} sx={{ mt: 2 }}>
-            <SimpleForm 
-                validate={validateCreation} 
-                defaultValues={{ 
-                    Importe: initialImporte, 
+            <SimpleForm
+                validate={validateCreation}
+                defaultValues={{
+                    Importe: saldo || undefined,
                     turnoId: initialTurnoId,
-                    formaPagoId: defaultFormaPago 
-                }} 
+                    formaPagoId: defaultFormaPago
+                }}
                 toolbar={<CustomToolbar backTo="/turnos" />}
             >
                 <SectionHeader icon={PaymentsIcon} title="Nuevo Comprobante de Pago" />
+
+                {/* Desglose financiero del turno */}
+                {turnoData && (
+                    <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
+                        <Grid container spacing={1} alignItems="center">
+                            <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="text.secondary" display="block">Total del turno</Typography>
+                                <Typography variant="h6" fontWeight={800} color="text.primary">
+                                    ${totalTurno.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="text.secondary" display="block">Ya pagado</Typography>
+                                <Typography variant="h6" fontWeight={800} color="success.main">
+                                    ${totalPagado > 0 ? totalPagado.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                                </Typography>
+                            </Grid>
+                            <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                                <Typography variant="caption" color="text.secondary" display="block">Saldo pendiente</Typography>
+                                <Typography variant="h6" fontWeight={800} color={saldo > 0 ? 'warning.main' : 'success.main'}>
+                                    ${saldo.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Paper>
+                )}
+
                 <Paper elevation={0} sx={{ p: 4, backgroundColor: 'action.hover', borderRadius: 4, mb: 3 }}>
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={6}>
@@ -252,7 +288,7 @@ const PagoCreate = () => {
                             </ReferenceInput>
                             <Box sx={{ mt: 2 }}>
                                 <NumberInput
-                                    label="Importe a Cobrar"
+                                    label={saldo > 0 ? `Importe a Cobrar (máx. $${saldo.toFixed(2)})` : 'Importe a Cobrar'}
                                     source='Importe'
                                     fullWidth
                                     validate={Requerido}
@@ -261,6 +297,11 @@ const PagoCreate = () => {
                                         sx: { fontWeight: 800, fontSize: '1.4rem', color: 'success.main' }
                                     }}
                                 />
+                                {saldo > 0 && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                        Podés ingresar un importe parcial ≤ ${saldo.toFixed(2)}
+                                    </Typography>
+                                )}
                             </Box>
                         </Grid>
                     </Grid>

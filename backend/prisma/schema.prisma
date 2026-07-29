@@ -106,9 +106,12 @@ model Motel {
   DuracionDiaria   Int       @map("duracionDiaria")
   DuracionNocturna Int       @map("duracionNocturna")
   MaxHrAdicional   Int       @map("maxHrAdicional")
-  HoraCierreCaja   String?   @map("horaCierreCaja")
-  OnboardingCompleto Boolean @default(false) @map("onboardingCompleto")
-  deletedAt        DateTime?
+  HoraCierreCaja       String?   @map("horaCierreCaja")
+  DiasEspeciales       Json      @default("[]") @map("diasEspeciales")
+  HorasExtraEspeciales Int       @default(0) @map("horasExtraEspeciales")
+  CobroAlInicio        Boolean   @default(false) @map("cobroAlInicio")
+  OnboardingCompleto   Boolean   @default(false) @map("onboardingCompleto")
+  deletedAt            DateTime?
 
   propietarioId String
   propietario   Propietario @relation(fields: [propietarioId], references: [id])
@@ -263,9 +266,10 @@ model Turno {
   Minutos     Int         @default(0)
 
   // Financiero
-  Total         Decimal
-  Precio        Int     @default(0)
-  PagoPendiente Boolean @default(true)
+  Total          Decimal
+  Precio         Int     @default(0)
+  PagoPendiente  Boolean @default(true)
+  SaldoPendiente Decimal @default(0) @map("saldoPendiente")
 
   // Personal
   usuarioAperturaId String
@@ -284,7 +288,7 @@ model Turno {
 
   // Relaciones
   consumos Consumo[]
-  pago     Pago?
+  pagos    Pago[]
   limpieza Limpieza?
 }
 
@@ -333,7 +337,7 @@ model Pago {
   Referencia String?   @map("referencia")
   deletedAt  DateTime?
 
-  turnoId String @unique
+  turnoId String
   turno   Turno  @relation(fields: [turnoId], references: [id])
 
   formaPagoId String

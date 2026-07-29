@@ -155,7 +155,7 @@ const AdminDashboard = () => {
         pagination: { page: 1, perPage: 50 }
     });
     
-    console.log('[AdminDashboard] historicalTurns:', historicalTurns?.length, historicalTurns);
+  //  console.log('[AdminDashboard] historicalTurns:', historicalTurns?.length, historicalTurns);
 
     // Recent Payments List
     const { data: recentPayments, isLoading: loadingPayments } = useGetList('pagos', {

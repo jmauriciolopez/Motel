@@ -408,9 +408,16 @@ const LimpiezaButton = ({ label }) => {
 const PagoButton = ({ label }) => {
     const record = useRecordContext();
     const translate = useTranslate();
-    const isCerrado = !!record.Salida;
-    const isPaid = record.PagoPendiente === false;
-    const canPay = isCerrado && !isPaid;
+
+    const saldo = Number(record?.SaldoPendiente ?? 0);
+    const isCerrado = !!record?.Salida;
+
+    // CobroAlInicio: si el campo no está disponible en el record (include parcial),
+    // fallback conservador = false (solo cobrar tras cerrar)
+    const cobroAlInicio = record?.habitacion?.motel?.CobroAlInicio === true;
+    // Si el motel no se cargó en el include, permitir cobro si el turno está cerrado
+    const motelCargado = record?.habitacion?.motel != null;
+    const canPay = saldo > 0 && ((!motelCargado || cobroAlInicio) ? true : isCerrado);
 
     return (
         <span onClick={e => e.stopPropagation()}>
@@ -421,7 +428,7 @@ const PagoButton = ({ label }) => {
                     padding: '6px 12px',
                     fontSize: '0.75rem',
                     borderRadius: '8px',
-                    color: '#4CAF50', // Verde semántico suave
+                    color: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.04)',
                     '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.08)' },
                     fontWeight: 700,
@@ -430,9 +437,17 @@ const PagoButton = ({ label }) => {
                 startIcon={<PaymentIcon />}
                 component={Link}
                 to={{ pathname: '/pagos/create' }}
-                state={{ record: { turnoId: record.id, turno: record, Importe: Number(record.Total) } }}
+                state={{ record: { turnoId: record.id, turno: record, Importe: saldo } }}
             >
                 {label ? translate(label) : translate('pos.turnos.pago')}
+                {canPay && (
+                    <Chip
+                        label={`$${saldo.toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+                        size="small"
+                        color="success"
+                        sx={{ ml: 0.5, height: 16, fontSize: '0.6rem', fontWeight: 900 }}
+                    />
+                )}
             </Button>
         </span>
     );
@@ -508,15 +523,34 @@ const StatusField = () => {
     const record = useRecordContext();
     const translate = useTranslate();
     if (!record) return null;
-    const estado = record.Estado || (record.Salida ? (record.PagoPendiente ? 'CERRADO' : 'COBRADO') : 'ABIERTO');
+    // Estado calculado por el backend; fallback local usando SaldoPendiente
+    const saldo = Number(record.SaldoPendiente ?? 0);
+    const estado = record.Estado || (
+        !record.Salida ? 'ABIERTO'
+        : saldo > 0 ? 'CERRADO'
+        : 'COBRADO'
+    );
     const config = {
-        ABIERTO:  { label: translate('pos.turnos.active'),   color: 'success' },
+        ABIERTO:  { label: translate('pos.turnos.active'),  color: 'success' },
         CERRADO:  { label: translate('pos.turnos.closed'),  color: 'warning' },
-        COBRADO:  { label: translate('pos.turnos.paid'),  color: 'info' },
+        COBRADO:  { label: translate('pos.turnos.paid'),    color: 'info' },
         LIBRE:    { label: translate('pos.turnos.free'),    color: 'default' },
     };
     const { label, color } = config[estado] || { label: estado, color: 'default' };
-    return <Chip label={label} color={color} variant={estado === 'ABIERTO' ? 'filled' : 'outlined'} size="small" sx={{ fontWeight: 'bold' }} />;
+    return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Chip label={label} color={color} variant={estado === 'ABIERTO' ? 'filled' : 'outlined'} size="small" sx={{ fontWeight: 'bold' }} />
+            {saldo > 0 && (
+                <Chip
+                    label={`Saldo $${saldo.toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }}
+                />
+            )}
+        </Box>
+    );
 };
 
 const TurnoFilter = (props) => (
@@ -670,10 +704,19 @@ const TurnoCard = ({ record }) => {
                 {!isReserva ? (
                     <Box sx={{ px: 2, py: 1.5, display: 'flex', flexDirection: 'column' }}>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: '0.65rem', textTransform: 'uppercase' }}>{translate('pos.turnos.total_accumulated')}</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'baseline' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                             <Typography variant="h5" sx={{ color: AZURE_BLUE, fontWeight: 900, mt: -0.5 }}>
                                 ${record.Total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </Typography>
+                            {Number(record.SaldoPendiente) > 0 && (
+                                <Chip
+                                    label={`Saldo $${Number(record.SaldoPendiente).toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+                                    size="small"
+                                    color="warning"
+                                    variant="outlined"
+                                    sx={{ height: 18, fontSize: '0.6rem', fontWeight: 800 }}
+                                />
+                            )}
                         </Box>
                     </Box>
                 ) : (
@@ -752,6 +795,7 @@ const TurnoCard = ({ record }) => {
                                 <>
                                     <DashboardButton showLabel={false} />
                                     <CreateConsumoButton showLabel={false} />
+                                    {Number(record.SaldoPendiente) > 0 && <PagoButton label={false} />}
                                     <CerrarTurnoButton showLabel={false} />
                                 </>
                             )
@@ -1039,6 +1083,7 @@ const TurnoCreate = () => {
     const prefilledData = location.state?.record || {};
     const notify = useNotify();
     const [update] = useUpdate();
+    const { currentMotelId } = useMotel();
 
     // Si viene de una reserva, permitimos seleccionar esa habitación aunque esté 'Reservada'
     const filterHabitacion = {
@@ -1056,25 +1101,20 @@ const TurnoCreate = () => {
                 'reservas',
                 { id: prefilledData.reservaReference, data: { Estado: 'Finalizada' } },
                 {
-                    onSuccess: () => {
-                        notify('pos.turnos.turno_creado_reserva_ok', { type: 'success' });
-                    },
-                    onError: () => {
-                        notify('pos.turnos.turno_creado_reserva_err', { type: 'warning' });
-                    }
+                    onSuccess: () => notify('pos.turnos.turno_creado_reserva_ok', { type: 'success' }),
+                    onError:   () => notify('pos.turnos.turno_creado_reserva_err', { type: 'warning' })
                 }
             );
         }
+
         navigate('/turnos');
     };
 
     const transform = (data) => {
-        // Extraer IDs: soportar tanto habitacionId directo como objeto anidado (legacy)
         const habitacionId = data.habitacionId || (typeof data.habitacion === 'object' ? data.habitacion?.id : data.habitacion);
-        const clienteId = data.clienteId || (typeof data.cliente === 'object' ? data.cliente?.id : data.cliente);
-        const tarifaId = data.tarifaId || (typeof data.tarifa === 'object' ? data.tarifa?.id : data.tarifa);
+        const clienteId    = data.clienteId    || (typeof data.cliente    === 'object' ? data.cliente?.id    : data.cliente);
+        const tarifaId     = data.tarifaId     || (typeof data.tarifa     === 'object' ? data.tarifa?.id     : data.tarifa);
 
-        // userId del usuario logueado
         let usuarioAperturaId = null;
         try {
             const u = JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -1113,11 +1153,7 @@ const TurnoCreate = () => {
                         </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <ReferenceInput
-                            source="habitacionId"
-                            reference="habitaciones"
-                            filter={filterHabitacion}
-                        >
+                        <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion}>
                             <AutocompleteInput label={translate('pos.turnos.habitacion')} optionText='Identificador' validate={Requerido} fullWidth />
                         </ReferenceInput>
                         <FormDataConsumer>
@@ -1153,6 +1189,7 @@ const TurnoCreate = () => {
                     <Grid item xs={12} md={4}>
                         <DateTimeInput source="Ingreso" label={translate('resources.turnos.fields.Ingreso')} defaultValue={new Date()} readOnly fullWidth />
                     </Grid>
+
                     <Grid item xs={12} md={12}>
                         <TextInput source="Observacion" label={translate('pos.turnos.notas_ingreso')} multiline fullWidth />
                     </Grid>

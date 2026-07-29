@@ -386,7 +386,7 @@ const portugueseMessages = {
       new_user: 'Novo Usuário',
       username: 'Usuário',
       email: 'Email',
-      role: 'Papel',
+      role: 'Rol',
       status: 'Status',
       motels: 'Motéis',
       actions: 'Ações',
@@ -416,10 +416,10 @@ const portugueseMessages = {
       delete_error: 'Erro ao excluir',
       password_updated: 'Senha atualizada',
       roles: {
-        Recepcionista: 'Recepcionista',
-        Administrador: 'Administrador',
-        Supervisor: 'Supervisor',
-        SuperAdmin: 'Super Administrador'
+        RECEPCIONISTA: 'Recepcionista',
+        ADMINISTRADOR: 'Administrador',
+        SUPERVISOR: 'Supervisor',
+        SUPERADMIN: 'Super Administrador'
       }
     },
     turnos: {
@@ -468,6 +468,7 @@ const portugueseMessages = {
       turno_creado_reserva_err: 'Turno criado, mas houve um erro ao finalizar a reserva',
       habitacion: 'Quarto',
       cliente_patente: 'Cliente (Placa)',
+      cobro_al_inicio: 'Cobrar tarifa do turno agora',
     },
     quick_create_cliente: {
       title: 'Criar Novo Cliente',
@@ -476,6 +477,17 @@ const portugueseMessages = {
       created: 'Cliente criado corretamente',
       patente: 'Placa / Matrícula',
       movilidad: 'Tipo de Mobilidade',
+    },
+    moteles: {
+      dias_especiales_title: 'Dias Especiais',
+      dias_especiales_hint: 'Dias com duração de turno estendida. Não se aplica a Pernoite.',
+      horas_extra: 'Horas extras',
+      horas_extra_hint: 'Horas adicionais nos dias selecionados',
+      cobro_al_inicio: 'Permitir cobrança ao abrir turno',
+      dias: {
+        lun: 'Seg', mar: 'Ter', mie: 'Qua', jue: 'Qui',
+        vie: 'Sex', sab: 'Sáb', dom: 'Dom',
+      },
     },
     cajas: {
       current_balance: 'SALDO ATUAL EM CAIXA',
@@ -523,6 +535,9 @@ const portugueseMessages = {
     clientes: { name: 'Clientes' },
     turnos: {
       name: 'Turnos',
+       actions:{
+        cerrar:'Fechar'
+      },
       fields: {
         mostrar_cerrados: 'Ver Fechados',
         PagoPendiente: 'Pago',
@@ -536,6 +551,7 @@ const portugueseMessages = {
         Total: 'Total',
         Acciones: 'Ações',
         Otros: 'Outros',
+         Pagado:'Pago'
       },
       empty: 'Não há turnos ativos ou pendentes.',
     },

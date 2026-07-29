@@ -406,10 +406,10 @@ const spanishMessages = {
       delete_error: 'Error al eliminar',
       password_updated: 'Contraseña actualizada',
       roles: {
-        Recepcionista: 'Recepcionista',
-        Administrador: 'Administrador',
-        Supervisor: 'Supervisor',
-        SuperAdmin: 'Super Administrador'
+        RECEPCIONISTA: 'Recepcionista',
+        ADMINISTRADOR: 'Administrador',
+        SUPERVISOR: 'Supervisor',
+        SUPERADMIN: 'Super Administrador'
       }
     },
     turnos: {
@@ -458,6 +458,7 @@ const spanishMessages = {
       turno_creado_reserva_err: 'Turno creado, pero hubo un error al finalizar la reserva',
       habitacion: 'Habitación',
       cliente_patente: 'Cliente (Patente)',
+      cobro_al_inicio: 'Cobrar tarifa del turno ahora',
     },
     quick_create_cliente: {
       title: 'Crear Nuevo Cliente',
@@ -466,6 +467,17 @@ const spanishMessages = {
       created: 'Cliente creado correctamente',
       patente: 'Patente / Matrícula',
       movilidad: 'Tipo de Movilidad',
+    },
+    moteles: {
+      dias_especiales_title: 'Días Especiales',
+      dias_especiales_hint: 'Días con duración de turno extendida. No aplica a Pernocte.',
+      horas_extra: 'Horas extra',
+      horas_extra_hint: 'Horas adicionales en días seleccionados',
+      cobro_al_inicio: 'Permitir cobro al abrir turno',
+      dias: {
+        lun: 'Lun', mar: 'Mar', mie: 'Mié', jue: 'Jue',
+        vie: 'Vie', sab: 'Sáb', dom: 'Dom',
+      },
     },
     cajas: {
       current_balance: 'SALDO ACTUAL EN CAJA',
@@ -513,6 +525,9 @@ const spanishMessages = {
     clientes: { name: 'Clientes' },
     turnos: {
       name: 'Turnos',
+      actions:{
+        cerrar:'cerrar'
+      },
       fields: {
         mostrar_cerrados: 'Ver Cerrados',
         PagoPendiente: 'Pagado',
@@ -526,6 +541,7 @@ const spanishMessages = {
         Total: 'Total',
         Acciones: 'Acciones',
         Otros: 'Otros',
+        Pagado:'Pagado'
       },
       empty: 'No hay turnos activos o pendientes.',
     },

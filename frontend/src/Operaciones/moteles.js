@@ -2,9 +2,10 @@ import {
     BooleanField, BooleanInput, Create, Datagrid, DateField,
     DateTimeInput, Edit, EditButton, FormDataConsumer, List, NumberField,
     NumberInput, SimpleForm, TextField, TextInput, TimeInput,
-    useRecordContext, required, usePermissions, ReferenceInput, AutocompleteInput, TopToolbar, CreateButton
+    useRecordContext, required, usePermissions, ReferenceInput, AutocompleteInput, TopToolbar, CreateButton,
+    useInput
 } from 'react-admin';
-import { Divider, Typography, Box, Grid, Paper, Chip, TextField as MuiTextField, Button, Tooltip } from '@mui/material';
+import { Divider, Typography, Box, Grid, Paper, Chip, TextField as MuiTextField, Button, Tooltip, FormGroup, FormControlLabel, Checkbox, FormLabel } from '@mui/material';
 import CustomToolbar from '../layout/CustomToolbar';
 import { useTrial } from '../helpers/useTrial';
 import { useDeletedRowSx } from '../helpers/deletedRowSx';
@@ -13,21 +14,52 @@ import {
     Settings as SettingsIcon,
     AccessTime as AccessTimeIcon,
     VerifiedUser as VerifiedIcon,
-    Stars as PremiumIcon
+    Stars as PremiumIcon,
+    CalendarMonth as CalendarIcon,
 } from '@mui/icons-material';
 
 // -- Formats & Helpers --
+
+/**
+ * Offset en minutos del timezone local (positivo = detrás de UTC, ej. UTC-3 → 180).
+ * Se calcula una vez al cargar.
+ */
+const TZ_OFFSET_MIN = new Date().getTimezoneOffset(); // ej: 180 para UTC-3
+
+/**
+ * Convierte un valor DateTime ISO UTC del servidor a "HH:mm" para el TimeInput.
+ * Compensa el offset local para que "1970-01-01T11:00:00.000Z" muestre "11:00"
+ * en lugar de "08:00" en UTC-3.
+ */
 const formatTime = (value) => {
     if (!value) return '';
-    if (value.includes('T')) return value.split('T')[1].substring(0, 5);
-    if (value.includes(':')) return value.substring(0, 5);
-    return value;
+    // Ya es "HH:mm" puro
+    if (!value.includes('T') && value.includes(':')) return value.substring(0, 5);
+    // Es ISO: construir Date y extraer la hora UTC manualmente (sin conversión local)
+    const iso = value.endsWith('Z') ? value : value + 'Z';
+    const d = new Date(iso);
+    // getUTC* da la hora real almacenada, sin offset local
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mm = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
 };
 
+/**
+ * Convierte "HH:mm" (valor del TimeInput) a ISO UTC.
+ * El TimeInput puede devolver "HH:mm" o "YYYY-MM-DDTHH:mm" (local sin Z).
+ * En ambos casos tomamos la hora tal como fue ingresada y la tratamos como UTC.
+ */
 const parseTime = (value) => {
     if (!value) return null;
-    const time = value.split(':').slice(0, 2).join(':');
-    return `1970-01-01T${time}:00.000Z`;
+    let hh, mm;
+    if (value.includes('T')) {
+        // React-admin TimeInput devuelve ISO local "1970-01-01T11:00" — tomar solo la hora
+        const timePart = value.split('T')[1].substring(0, 5);
+        [hh, mm] = timePart.split(':');
+    } else {
+        [hh, mm] = value.split(':');
+    }
+    return `1970-01-01T${(hh || '00').padStart(2, '0')}:${(mm || '00').padStart(2, '0')}:00.000Z`;
 };
 
 // HoraCierreCaja se guarda como "HH:mm" puro — no necesita conversión ISO
@@ -38,6 +70,69 @@ const formatHora = (value) => {
     return value;
 };
 const parseHora = (value) => value || null;
+
+// Días de la semana: índice 0=domingo, pero mostramos Lun–Dom como convención visual
+const DIAS_SEMANA = [
+    { value: 1, labelEs: 'Lun', labelPt: 'Seg' },
+    { value: 2, labelEs: 'Mar', labelPt: 'Ter' },
+    { value: 3, labelEs: 'Mié', labelPt: 'Qua' },
+    { value: 4, labelEs: 'Jue', labelPt: 'Qui' },
+    { value: 5, labelEs: 'Vie', labelPt: 'Sex' },
+    { value: 6, labelEs: 'Sáb', labelPt: 'Sáb' },
+    { value: 0, labelEs: 'Dom', labelPt: 'Dom' },
+];
+
+/**
+ * Input personalizado para DiasEspeciales.
+ * El campo se almacena en el form como array JSON de enteros (0–6).
+ * Se renderiza como 7 checkboxes Lun–Dom.
+ */
+const DiasEspecialesInput = ({ locale = 'es' }) => {
+    const { field } = useInput({ source: 'DiasEspeciales' });
+
+    // Normalizar: puede llegar como string JSON o como array
+    const rawValue = field.value;
+    const selected = Array.isArray(rawValue)
+        ? rawValue.map(Number)
+        : (typeof rawValue === 'string' && rawValue.startsWith('['))
+            ? JSON.parse(rawValue)
+            : [];
+
+    const toggle = (dayValue) => {
+        const current = selected.includes(dayValue)
+            ? selected.filter((d) => d !== dayValue)
+            : [...selected, dayValue];
+        field.onChange(current);
+    };
+
+    return (
+        <Box sx={{ mt: 1 }}>
+            <FormLabel component="legend" sx={{ fontSize: '0.75rem', mb: 0.5, color: 'text.secondary' }}>
+                {locale === 'pt' ? 'Dias especiais' : 'Días especiales'}
+            </FormLabel>
+            <FormGroup row>
+                {DIAS_SEMANA.map((dia) => (
+                    <FormControlLabel
+                        key={dia.value}
+                        control={
+                            <Checkbox
+                                size="small"
+                                checked={selected.includes(dia.value)}
+                                onChange={() => toggle(dia.value)}
+                            />
+                        }
+                        label={
+                            <Typography variant="caption">
+                                {locale === 'pt' ? dia.labelPt : dia.labelEs}
+                            </Typography>
+                        }
+                        sx={{ mr: 0.5 }}
+                    />
+                ))}
+            </FormGroup>
+        </Box>
+    );
+};
 
 const StatusBanner = () => {
     const record = useRecordContext();
@@ -237,6 +332,24 @@ export const MotelCreate = () => (
                     <TimeInput source="HoraCierreCaja" label="Hora Cierre Contable" format={formatHora} parse={parseHora} fullWidth />
                 </Grid>
             </Grid>
+
+            <SectionHeader icon={CalendarIcon} title="Días Especiales" />
+            <Box sx={{ mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                    Los días seleccionados tendrán la duración del turno extendida según las horas indicadas.
+                </Typography>
+            </Box>
+            <Grid container spacing={2} alignItems="flex-start">
+                <Grid item xs={12} md={6}>
+                    <DiasEspecialesInput />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                    <NumberInput source="HorasExtraEspeciales" label="Horas extra" min={0} fullWidth helperText="Horas adicionales en días seleccionados" />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                    <BooleanInput source="CobroAlInicio" label="Permitir cobro al abrir turno" />
+                </Grid>
+            </Grid>
         </SimpleForm>
     </Create>
 );
@@ -288,6 +401,24 @@ export const MotelEdit = () => {
                     <Grid item xs={6} md={3}><NumberInput source="MaxHrAdicional" fullWidth /></Grid>
                     <Grid item xs={6} md={3}>
                         <TimeInput source="HoraCierreCaja" label="Hora Cierre Contable" format={formatHora} parse={parseHora} fullWidth />
+                    </Grid>
+                </Grid>
+
+                <SectionHeader icon={CalendarIcon} title="Días Especiales" />
+                <Box sx={{ mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                        Días con duración de turno extendida. No aplica a Pernocte.
+                    </Typography>
+                </Box>
+                <Grid container spacing={2} alignItems="flex-start">
+                    <Grid item xs={12} md={6}>
+                        <DiasEspecialesInput />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <NumberInput source="HorasExtraEspeciales" label="Horas extra" min={0} fullWidth helperText="Horas adicionales en días seleccionados" />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <BooleanInput source="CobroAlInicio" label="Permitir cobro al abrir turno" />
                     </Grid>
                 </Grid>
 

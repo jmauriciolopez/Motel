@@ -125,7 +125,7 @@ export class ProductosService extends BaseService<Producto> {
         });
 
         if (existe) {
-          console.log(`[syncCatalogo] Producto ya existe: ${item.Nombre} en motel ${motelId}`);
+      //    console.log(`[syncCatalogo] Producto ya existe: ${item.Nombre} en motel ${motelId}`);
           continue;
         }
 

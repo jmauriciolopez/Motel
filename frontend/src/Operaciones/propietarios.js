@@ -74,8 +74,10 @@ const ResetOnboardingButton = () => {
     const dataProvider = useDataProvider();
     const { setAvailableMoteles, setCurrentMotelId } = useMotel();
     const [loading, setLoading] = useState(false);
+    const { permissions } = usePermissions();
 
-    if (!record) return null;
+    // Solo SuperAdmin puede resetear onboarding
+    if (!record || permissions !== 'SuperAdmin') return null;
 
     const handleReset = async (e) => {
         e.stopPropagation();

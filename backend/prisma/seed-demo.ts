@@ -319,7 +319,7 @@ async function main() {
           consumos: {
             create: consumosData,
           },
-          pago: {
+          pagos: {
             create: {
               Importe: precioTurno + totalConsumo,
               formaPagoId: formasPago[Math.floor(Math.random() * formasPago.length)].id,

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsInt, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsDateString, IsArray, ArrayUnique, Min, Max } from 'class-validator';
 
 export class CrearMotelDto {
   @IsString()
@@ -47,6 +47,23 @@ export class CrearMotelDto {
   @IsString()
   @IsOptional()
   HoraCierreCaja?: string;
+
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  @Max(6, { each: true })
+  @IsOptional()
+  DiasEspeciales?: number[];
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  HorasExtraEspeciales?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  CobroAlInicio?: boolean;
 
   @IsBoolean()
   @IsOptional()

@@ -15,6 +15,10 @@ interface Motel {
   DuracionNocturna: number;
   Tolerancia?: number | null;
   MaxHrAdicional?: number | null;
+  /** Array de días de la semana con duración extendida (0=domingo … 6=sábado) */
+  DiasEspeciales?: number[] | null;
+  /** Horas extra a sumar en días especiales (solo aplica a estadías Standard) */
+  HorasExtraEspeciales?: number | null;
 }
 
 interface Tarifa {
@@ -79,6 +83,35 @@ export class TurnoCalculator {
   }
 
   /**
+   * Determina si la fecha de ingreso cae dentro del período especial del motel.
+   *
+   * Reglas:
+   * - Si HorarioUnico: aplica todo el día calendario marcado como especial.
+   * - Si tiene franjas día/noche: el período especial es la franja nocturna
+   *   (desde InicioNoche hasta InicioDia). La madrugada se asigna al día anterior.
+   */
+  private isInPeriodoEspecial(date: Date, motel: Motel): boolean {
+    const diasEspeciales = Array.isArray(motel.DiasEspeciales)
+      ? (motel.DiasEspeciales as number[])
+      : [];
+    if (diasEspeciales.length === 0 || (motel.HorasExtraEspeciales ?? 0) <= 0) return false;
+
+    const hours = date.getHours();
+    const iniciodia = this.getHour(motel.InicioDia);
+    const inicionoche = this.getHour(motel.InicioNoche);
+
+    // Día "efectivo": la madrugada (antes de InicioDia) pertenece al día anterior
+    let diaEfectivo = date.getDay();
+     if (!diasEspeciales.includes(diaEfectivo)) return false;
+
+    if (hours >= iniciodia && hours <= inicionoche) {
+      return true;
+    }
+   
+  return true;
+  }
+
+  /**
    * Calculate initial values for a turno
    */
   calculateInitialValues(
@@ -134,6 +167,12 @@ export class TurnoCalculator {
       basePrice = isDayTime
         ? (this.toNumber(tarifa.PrecioTurnoPromocional) || this.toNumber(tarifa.PrecioTurno))
         : this.toNumber(tarifa.PrecioTurno);
+
+      // Días especiales: agregar horas extra si el ingreso cae en período especial
+      // No aplica a Pernocte (su duración está determinada por CheckOutDia — rama if anterior)
+      if (this.isInPeriodoEspecial(date, motel)) {
+        totalMinutes += (motel.HorasExtraEspeciales as number) * 60;
+      }
 
       if (isDayTime) {
         const checkOutH = this.getHour(motel.CheckOutDia);
