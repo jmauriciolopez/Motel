@@ -97,18 +97,21 @@ export class TurnoCalculator {
     if (diasEspeciales.length === 0 || (motel.HorasExtraEspeciales ?? 0) <= 0) return false;
 
     const hours = date.getHours();
-    const iniciodia = this.getHour(motel.InicioDia);
-    const inicionoche = this.getHour(motel.InicioNoche);
-
+    // const iniciodia = this.getHour(motel.InicioDia);
+    // const inicionoche = this.getHour(motel.InicioNoche);
+const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
+    const iniciodia = inicioDiaDate?.getUTCHours()??0;
+    const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
+    const inicionoche = inicionocheDate?.getUTCHours()??0;
     // Día "efectivo": la madrugada (antes de InicioDia) pertenece al día anterior
     let diaEfectivo = date.getDay();
      if (!diasEspeciales.includes(diaEfectivo)) return false;
 
-    if (hours >= iniciodia && hours <= inicionoche) {
+    if (hours >= iniciodia && hours < inicionoche-1) {
       return true;
     }
    
-  return true;
+  return false;
   }
 
   /**
@@ -122,9 +125,10 @@ export class TurnoCalculator {
     const { motel, tarifa } = habitacion;
     const date = customIngreso ? new Date(customIngreso) : new Date();
     const hours = date.getHours();
-
-    const iniciodia = this.getHour(motel.InicioDia);
-    const inicionoche = this.getHour(motel.InicioNoche);
+const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
+    const iniciodia = inicioDiaDate?.getUTCHours()??0;
+    const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
+    const inicionoche = inicionocheDate?.getUTCHours()??0;
 
     // Determine if it's day or night time for duration
     let isDayTime: boolean;
