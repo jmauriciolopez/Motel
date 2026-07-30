@@ -293,7 +293,8 @@ const CreateConsumoButton = ({ showLabel = true }) => {
     const [anchorEl, setAnchorEl] = useState(null);
 
     if (!record) return null;
-    const isPaid = record.PagoPendiente === false;
+    // Solo bloquear si el turno ya tiene hora de salida (está cerrado)
+    const isClosed = !!record.Salida;
 
     const handleOpen = (event) => {
         event.stopPropagation();
@@ -306,7 +307,7 @@ const CreateConsumoButton = ({ showLabel = true }) => {
     return (
         <>
             <Button
-                disabled={isPaid}
+                disabled={isClosed}
                 variant="text"
                 sx={{
                     padding: showLabel ? '6px 12px' : '6px',
@@ -320,7 +321,7 @@ const CreateConsumoButton = ({ showLabel = true }) => {
                     textTransform: 'none'
                 }}
                 startIcon={<ShoppingCartIcon sx={{ fontSize: '1.2rem', mr: showLabel ? 0 : -0.5 }} />}
-                title={isPaid ? translate('pos.turnos.paid') : translate('pos.turnos.carga_rapida_consumo')}
+                title={isClosed ? translate('pos.turnos.paid') : translate('pos.turnos.carga_rapida_consumo')}
                 onClick={handleOpen}
             >
                 {showLabel ? translate('resources.consumos.name') : null}
