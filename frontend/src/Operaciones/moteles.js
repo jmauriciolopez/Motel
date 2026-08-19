@@ -331,6 +331,9 @@ export const MotelCreate = () => (
                 <Grid item xs={12} md={3}>
                     <TimeInput source="HoraCierreCaja" label="Hora Cierre Contable" format={formatHora} parse={parseHora} fullWidth />
                 </Grid>
+                <Grid item xs={12} md={3}>
+                    <BooleanInput source="AplicaCorteCheckout" label="Aplicar corte automático de checkout" />
+                </Grid>
             </Grid>
 
             <SectionHeader icon={CalendarIcon} title="Días Especiales" />
@@ -401,6 +404,9 @@ export const MotelEdit = () => {
                     <Grid item xs={6} md={3}><NumberInput source="MaxHrAdicional" fullWidth /></Grid>
                     <Grid item xs={6} md={3}>
                         <TimeInput source="HoraCierreCaja" label="Hora Cierre Contable" format={formatHora} parse={parseHora} fullWidth />
+                    </Grid>
+                    <Grid item xs={6} md={4}>
+                        <BooleanInput source="AplicaCorteCheckout" label="Aplicar corte automático de checkout" />
                     </Grid>
                 </Grid>
 

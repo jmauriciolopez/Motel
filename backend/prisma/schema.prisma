@@ -111,6 +111,7 @@ model Motel {
   HorasExtraEspeciales Int       @default(0) @map("horasExtraEspeciales")
   CobroAlInicio        Boolean   @default(false) @map("cobroAlInicio")
   OnboardingCompleto   Boolean   @default(false) @map("onboardingCompleto")
+  AplicaCorteCheckout  Boolean   @default(true) @map("aplicaCorteCheckout")
   deletedAt            DateTime?
 
   propietarioId String

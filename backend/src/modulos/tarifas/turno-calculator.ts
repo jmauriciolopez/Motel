@@ -19,6 +19,7 @@ interface Motel {
   DiasEspeciales?: number[] | null;
   /** Horas extra a sumar en días especiales (solo aplica a estadías Standard) */
   HorasExtraEspeciales?: number | null;
+  AplicaCorteCheckout?: boolean;
 }
 
 interface Tarifa {
@@ -99,19 +100,19 @@ export class TurnoCalculator {
     const hours = date.getHours();
     // const iniciodia = this.getHour(motel.InicioDia);
     // const inicionoche = this.getHour(motel.InicioNoche);
-const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
-    const iniciodia = inicioDiaDate?.getUTCHours()??0;
+    const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
+    const iniciodia = inicioDiaDate?.getUTCHours() ?? 0;
     const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
-    const inicionoche = inicionocheDate?.getUTCHours()??0;
+    const inicionoche = inicionocheDate?.getUTCHours() ?? 0;
     // Día "efectivo": la madrugada (antes de InicioDia) pertenece al día anterior
     let diaEfectivo = date.getDay();
-     if (!diasEspeciales.includes(diaEfectivo)) return false;
+    if (!diasEspeciales.includes(diaEfectivo)) return false;
 
-    if (hours >= iniciodia && hours < inicionoche-1) {
+    if (hours >= iniciodia && hours < inicionoche - 1) {
       return true;
     }
-   
-  return false;
+
+    return false;
   }
 
   /**
@@ -125,10 +126,10 @@ const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
     const { motel, tarifa } = habitacion;
     const date = customIngreso ? new Date(customIngreso) : new Date();
     const hours = date.getHours();
-const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
-    const iniciodia = inicioDiaDate?.getUTCHours()??0;
+    const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
+    const iniciodia = inicioDiaDate?.getUTCHours() ?? 0;
     const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
-    const inicionoche = inicionocheDate?.getUTCHours()??0;
+    const inicionoche = inicionocheDate?.getUTCHours() ?? 0;
 
     // Determine if it's day or night time for duration
     let isDayTime: boolean;
@@ -178,7 +179,7 @@ const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
         totalMinutes += (motel.HorasExtraEspeciales as number) * 60;
       }
 
-      if (isDayTime) {
+      if (isDayTime && motel.AplicaCorteCheckout) {
         const checkOutH = this.getHour(motel.CheckOutDia);
         const checkOutM = this.getMin(motel.CheckOutDia);
 

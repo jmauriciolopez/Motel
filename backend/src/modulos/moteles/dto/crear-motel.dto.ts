@@ -69,6 +69,10 @@ export class CrearMotelDto {
   @IsOptional()
   OnboardingCompleto?: boolean;
 
+  @IsBoolean()
+  @IsOptional()
+  AplicaCorteCheckout?: boolean;
+
   @IsString()
   propietarioId: string;
 
