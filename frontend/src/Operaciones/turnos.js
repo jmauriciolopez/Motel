@@ -1155,7 +1155,7 @@ const TurnoCreate = () => {
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion}>
-                            <AutocompleteInput label={translate('pos.turnos.habitacion')} optionText='Identificador' validate={Requerido} fullWidth />
+                            <AutocompleteInput label={translate('pos.turnos.habitacion')} optionText={(record) => record ? `${record.Identificador} — ${record.tarifa?.Nombre || 'Sin tarifa'}` : ''} validate={Requerido} fullWidth />
                         </ReferenceInput>
                         <FormDataConsumer>
                             {({ formData }) => {
