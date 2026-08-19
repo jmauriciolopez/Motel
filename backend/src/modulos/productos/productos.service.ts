@@ -20,11 +20,21 @@ export class ProductosService extends BaseService<Producto> {
     });
   }
 
+  private filtroNombreLike(nombre?: string) {
+    const valor = nombre?.trim();
+    if (!valor) return undefined;
+    return { contains: valor, mode: 'insensitive' as const };
+  }
+
   async obtenerTodos(options: any, extraWhere: any = {}) {
-    const { include, ...rest } = options;
+    const { include, filtroNombre, ...rest } = options;
+    const nombreFilter = this.filtroNombreLike(
+      typeof filtroNombre === 'string' ? filtroNombre : undefined,
+    );
     return super.obtenerTodos(
       {
       ...rest,
+      ...(nombreFilter ? { Nombre: nombreFilter } : {}),
       include: {
         rubro: true,
         catalogoProducto: true,
@@ -183,8 +193,9 @@ export class ProductosService extends BaseService<Producto> {
     redondeo: number;
     filtroRubroId?: string;
     filtroFacturable?: boolean;
+    filtroNombre?: string;
   }) {
-    const { motelId, campo, porcentaje, redondeo, filtroRubroId, filtroFacturable } = params;
+    const { motelId, campo, porcentaje, redondeo, filtroRubroId, filtroFacturable, filtroNombre } = params;
     if (!motelId) throw new Error('motelId requerido');
 
     const where: any = { motelId, deletedAt: null };
@@ -192,6 +203,8 @@ export class ProductosService extends BaseService<Producto> {
     if (filtroFacturable !== undefined && filtroFacturable !== null) {
       where.Facturable = filtroFacturable;
     }
+    const nombreFilter = this.filtroNombreLike(filtroNombre);
+    if (nombreFilter) where.Nombre = nombreFilter;
 
     const productos = await this.prisma.producto.findMany({ where });
 

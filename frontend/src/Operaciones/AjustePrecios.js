@@ -19,6 +19,7 @@ const AjustePrecios = () => {
     const [redondeo, setRedondeo] = useState(100);
     const [filtroRubroId, setFiltroRubroId] = useState('');
     const [filtroFacturable, setFiltroFacturable] = useState(null);
+    const [filtroNombre, setFiltroNombre] = useState('');
     const [loading, setLoading] = useState(false);
     const [resultado, setResultado] = useState(null);
     const [preview, setPreview] = useState([]);
@@ -36,9 +37,10 @@ const AjustePrecios = () => {
             setLoadingPreview(true);
             try {
                 let url = `/productos`;
-                const params: Record<string, any> = { _limit: 500 };
+                const params = { _limit: 500 };
                 if (filtroRubroId) params.rubroId = filtroRubroId;
                 if (filtroFacturable !== null) params.Facturable = filtroFacturable;
+                if (filtroNombre.trim()) params.filtroNombre = filtroNombre.trim();
 
                 const data = await http.get(url, { params });
                 const productos = data.data || [];
@@ -58,7 +60,7 @@ const AjustePrecios = () => {
             finally { setLoadingPreview(false); }
         }, 600);
         return () => clearTimeout(timer);
-    }, [porcentaje, campo, redondeo, filtroRubroId, filtroFacturable]);
+    }, [porcentaje, campo, redondeo, filtroRubroId, filtroFacturable, filtroNombre]);
 
     const handleAplicar = async () => {
         if (!porcentaje || isNaN(porcentaje)) {
@@ -73,6 +75,7 @@ const AjustePrecios = () => {
                 redondeo,
                 ...(filtroRubroId && { filtroRubroId }),
                 ...(filtroFacturable !== null && { filtroFacturable }),
+                ...(filtroNombre.trim() && { filtroNombre: filtroNombre.trim() }),
             });
             setResultado(data.message);
             notify(data.message, { type: 'success' });
@@ -150,7 +153,7 @@ const AjustePrecios = () => {
                     {translate('pos.pricing_adjustment.filters_optional')}
                 </Typography>
                 <Grid container spacing={2} sx={{ mb: 1 }}>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={12}>
                         <MuiTextField
                             select fullWidth size="small" label={translate('pos.pricing_adjustment.category')}
                             value={filtroRubroId}
@@ -163,7 +166,15 @@ const AjustePrecios = () => {
                             ))}
                         </MuiTextField>
                     </Grid>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} md={12}>
+                        <MuiTextField
+                            fullWidth size="small" label={translate('pos.pricing_adjustment.product_name')}
+                            value={filtroNombre}
+                            onChange={e => setFiltroNombre(e.target.value)}
+                            placeholder={translate('pos.pricing_adjustment.product_name_helper')}
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={12}>
                         <MuiTextField
                             select fullWidth size="small" label={translate('pos.pricing_adjustment.facturable')}
                             value={filtroFacturable === null ? '' : String(filtroFacturable)}

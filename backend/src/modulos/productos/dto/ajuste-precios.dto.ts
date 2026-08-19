@@ -17,4 +17,8 @@ export class AjustePreciosDto {
   @IsOptional()
   @IsBoolean()
   filtroFacturable?: boolean;
+
+  @IsOptional()
+  @IsString()
+  filtroNombre?: string;
 }

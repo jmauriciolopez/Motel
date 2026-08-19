@@ -113,8 +113,8 @@ const EstimacionCostos = () => {
     const [hasta, setHasta] = useState(new Date().toISOString().split('T')[0]);
 
     // 2. Parámetros de Costo (Persistentes)
-    const [costoPorTurno, setCostoPorTurno] = useState(() => Number(localStorage.getItem('est_costo_turno')) || 1500);
-    const [costoMantenimientoHab, setCostoMantenimientoHab] = useState(() => Number(localStorage.getItem('est_costo_hab')) || 5000);
+    const [costoPorTurno, setCostoPorTurno] = useState(() => Number(localStorage.getItem('est_costo_turno')) || 15000);
+    const [costoMantenimientoHab, setCostoMantenimientoHab] = useState(() => Number(localStorage.getItem('est_costo_hab')) || 30000);
     const [otrosCostosFijos, setOtrosCostosFijos] = useState(() => Number(localStorage.getItem('est_costo_fijos')) || 250000);
 
     useEffect(() => {

@@ -363,6 +363,8 @@ const portugueseMessages = {
       round_to: 'Arredondar para múltiplo de',
       filters_optional: 'Filtros (opcional — sem filtro aplica a todos)',
       category: 'Categoria',
+      product_name: 'Nome do produto',
+      product_name_helper: 'Buscar por nome (contém)',
       all_categories: 'Todas as categorias',
       facturable: 'Faturável',
       all: 'Todos',
