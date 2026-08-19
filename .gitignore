@@ -61,3 +61,4 @@ frontend/terraform/terraform.tfstate
 frontend/terraform/terraform.tfstate.backup
 favicon_io.zip
 stitch.zip
+backup.sql
