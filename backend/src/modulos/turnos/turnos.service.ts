@@ -358,6 +358,7 @@ export class TurnosService extends BaseService<Turno> {
     // Formato: "2026-04-11" + "T" + "06:00" + ":00.000Z"
     const salidaDesde = new Date(`${fechaDesde}T${horaCierre}:00.000Z`);
     const salidaHasta = new Date(`${fechaHasta}T${horaCierre}:00.000Z`);
+    salidaHasta.setDate(salidaHasta.getDate() + 1);
 
     const where: any = {
       Salida: {
