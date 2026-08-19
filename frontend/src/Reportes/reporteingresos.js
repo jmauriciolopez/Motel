@@ -113,15 +113,17 @@ const ReporteIngresos = () => {
                 });
             }
 
-            // Pagos (Relation in Turno is singular: pago)
-            if (turno.pago) {
-                const type = turno.pago.formaPago?.Tipo || translate('pos.reports.cash');
-                const monto = Number(turno.pago.Importe || 0);
-                if (!pagosPorForma[type]) {
-                    pagosPorForma[type] = 0;
-                }
-                pagosPorForma[type] += monto;
-                totalPagado += monto;
+            // Pagos (Relation in Turno is array: pagos)
+            if (turno.pagos && Array.isArray(turno.pagos)) {
+                turno.pagos.forEach(p => {
+                    const type = p.formaPago?.Tipo || translate('pos.reports.cash');
+                    const monto = Number(p.Importe || 0);
+                    if (!pagosPorForma[type]) {
+                        pagosPorForma[type] = 0;
+                    }
+                    pagosPorForma[type] += monto;
+                    totalPagado += monto;
+                });
             }
         });
 
