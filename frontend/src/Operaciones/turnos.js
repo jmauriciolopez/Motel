@@ -158,7 +158,7 @@ const QuickConsumoPopover = ({ anchorEl, onClose, open, turnoId }) => {
         setIsLoadingProducts(true);
         http.get('/productos/con-stock-secundario', { params: { facturable: true } })
             .then(d => setProductos(d.data || []))
-            .catch(() => {})
+            .catch(() => { })
             .finally(() => setIsLoadingProducts(false));
     }, [motelId]);
 
@@ -528,14 +528,14 @@ const StatusField = () => {
     const saldo = Number(record.SaldoPendiente ?? 0);
     const estado = record.Estado || (
         !record.Salida ? 'ABIERTO'
-        : saldo > 0 ? 'CERRADO'
-        : 'COBRADO'
+            : saldo > 0 ? 'CERRADO'
+                : 'COBRADO'
     );
     const config = {
-        ABIERTO:  { label: translate('pos.turnos.active'),  color: 'success' },
-        CERRADO:  { label: translate('pos.turnos.closed'),  color: 'warning' },
-        COBRADO:  { label: translate('pos.turnos.paid'),    color: 'info' },
-        LIBRE:    { label: translate('pos.turnos.free'),    color: 'default' },
+        ABIERTO: { label: translate('pos.turnos.active'), color: 'success' },
+        CERRADO: { label: translate('pos.turnos.closed'), color: 'warning' },
+        COBRADO: { label: translate('pos.turnos.paid'), color: 'info' },
+        LIBRE: { label: translate('pos.turnos.free'), color: 'default' },
     };
     const { label, color } = config[estado] || { label: estado, color: 'default' };
     return (
@@ -1103,7 +1103,7 @@ const TurnoCreate = () => {
                 { id: prefilledData.reservaReference, data: { Estado: 'Finalizada' } },
                 {
                     onSuccess: () => notify('pos.turnos.turno_creado_reserva_ok', { type: 'success' }),
-                    onError:   () => notify('pos.turnos.turno_creado_reserva_err', { type: 'warning' })
+                    onError: () => notify('pos.turnos.turno_creado_reserva_err', { type: 'warning' })
                 }
             );
         }
@@ -1113,8 +1113,8 @@ const TurnoCreate = () => {
 
     const transform = (data) => {
         const habitacionId = data.habitacionId || (typeof data.habitacion === 'object' ? data.habitacion?.id : data.habitacion);
-        const clienteId    = data.clienteId    || (typeof data.cliente    === 'object' ? data.cliente?.id    : data.cliente);
-        const tarifaId     = data.tarifaId     || (typeof data.tarifa     === 'object' ? data.tarifa?.id     : data.tarifa);
+        const clienteId = data.clienteId || (typeof data.cliente === 'object' ? data.cliente?.id : data.cliente);
+        const tarifaId = data.tarifaId || (typeof data.tarifa === 'object' ? data.tarifa?.id : data.tarifa);
 
         let usuarioAperturaId = null;
         try {
@@ -1154,7 +1154,7 @@ const TurnoCreate = () => {
                         </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion}>
+                        <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion} sort={{ field: 'Identificador', order: 'ASC' }}>
                             <AutocompleteInput label={translate('pos.turnos.habitacion')} optionText={(record) => record ? `${record.Identificador} — ${record.tarifa?.Nombre || 'Sin tarifa'}` : ''} validate={Requerido} fullWidth />
                         </ReferenceInput>
                         <FormDataConsumer>
