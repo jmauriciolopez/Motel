@@ -112,6 +112,7 @@ model Motel {
   CobroAlInicio        Boolean   @default(false) @map("cobroAlInicio")
   OnboardingCompleto   Boolean   @default(false) @map("onboardingCompleto")
   AplicaCorteCheckout  Boolean   @default(true) @map("aplicaCorteCheckout")
+  DescuentoEfectivo    Float     @default(0) @map("descuentoEfectivo")
   deletedAt            DateTime?
 
   propietarioId String
@@ -176,6 +177,7 @@ model Tarifa {
   PrecioTurnoPromocional Decimal?  @map("precioTurnoPromocional")
   PrecioHrDiaExcede      Decimal   @map("precioHrDiaExcede")
   PrecioHrNocheExcede    Decimal   @map("precioHrNocheExcede")
+  MinutosExtra           Int       @default(0) @map("minutosExtra")
   deletedAt              DateTime?
 
   motelId String

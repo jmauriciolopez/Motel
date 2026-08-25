@@ -5,6 +5,8 @@ import { Pago } from '@prisma/client';
 import { CajasService } from '../cajas/cajas.service';
 import { CrearPagoDto } from './dto/crear-pago.dto';
 
+import { TurnoCalculator } from '../tarifas/turno-calculator';
+
 /** Devuelve true si aún hay saldo por cobrar */
 function sincronizarPagoPendiente(saldo: number): boolean {
   return saldo > 0;
@@ -15,6 +17,7 @@ export class PagosService extends BaseService<Pago> {
   constructor(
     prisma: PrismaService,
     private cajasService: CajasService,
+    private turnoCalculator: TurnoCalculator,
   ) {
     super(prisma, 'pago', { hasMotelId: true });
   }
@@ -24,42 +27,92 @@ export class PagosService extends BaseService<Pago> {
       throw new BadRequestException('El importe debe ser mayor a cero.');
     }
 
+    const { montoDescuento, porcentajeDescuento, ...datosPago } = crearPagoDto;
+    const descuento = Math.max(0, Number(montoDescuento || 0));
+
     const turno = await this.prisma.turno.findUnique({
       where: { id: crearPagoDto.turnoId },
       include: {
         pagos: true,
-        habitacion: true,
+        tarifa: true,
+        habitacion: {
+          include: { motel: true, tarifa: true },
+        },
       },
     });
 
     if (!turno) throw new NotFoundException('Turno no encontrado');
 
-    // Acepta turno abierto o cerrado, siempre que tenga saldo pendiente
-    const saldoActual = Number(turno.SaldoPendiente);
-    if (!sincronizarPagoPendiente(saldoActual)) {
+    let totalCalculado = Number(turno.Total);
+    let saldoCalculado = Number(turno.SaldoPendiente);
+    let precioCalculado = turno.Precio;
+
+    // Si el turno está abierto, calcular posible excedente acumulado en tiempo real
+    if (!turno.Salida && (turno.habitacion?.motel) && (turno.tarifa || turno.habitacion?.tarifa)) {
+      const motel = turno.habitacion.motel;
+      const tarifa = turno.tarifa || turno.habitacion.tarifa;
+      try {
+        const closingValues = this.turnoCalculator.calculateClosingValues(
+          turno as any,
+          { motel: motel as any, tarifa: tarifa as any },
+        );
+        const totalPagado = (turno.pagos || []).reduce(
+          (sum: number, p: any) => sum + Number(p.Importe),
+          0,
+        );
+        totalCalculado = closingValues.Total;
+        saldoCalculado = Math.max(0, totalCalculado - totalPagado);
+        precioCalculado = closingValues.PrecioCalculo;
+      } catch (e) { /* ignore */ }
+    }
+
+    if (!sincronizarPagoPendiente(saldoCalculado)) {
       throw new BadRequestException('El turno no tiene saldo pendiente.');
     }
 
-    if (crearPagoDto.Importe > saldoActual + 0.001) {
+    if (crearPagoDto.Importe + descuento > saldoCalculado + 0.001) {
       throw new BadRequestException(
-        `El importe ($${crearPagoDto.Importe.toFixed(2)}) supera el saldo pendiente ($${saldoActual.toFixed(2)}).`,
+        `El importe ($${crearPagoDto.Importe.toFixed(2)}) más el descuento ($${descuento.toFixed(2)}) supera el saldo pendiente ($${saldoCalculado.toFixed(2)}).`,
       );
     }
 
-    const nuevoSaldo = Math.max(0, saldoActual - crearPagoDto.Importe);
+    const nuevoSaldo = Math.max(0, saldoCalculado - crearPagoDto.Importe - descuento);
     const quedaSaldo = sincronizarPagoPendiente(nuevoSaldo);
+
+    let nuevoTotal = totalCalculado;
+    let nuevaObservacion = turno.Observacion;
+
+    if (descuento > 0) {
+      nuevoTotal = Math.max(0, totalCalculado - descuento);
+      const pctTexto = porcentajeDescuento ? ` ${porcentajeDescuento}%` : '';
+      const totalOrigFormatted = totalCalculado.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const descFormatted = descuento.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const notaDescuento = `[Descuento Efectivo${pctTexto}] Total original: $${totalOrigFormatted} - Descuento: $${descFormatted}`;
+
+      nuevaObservacion = turno.Observacion
+        ? `${turno.Observacion.trim()} | ${notaDescuento}`
+        : notaDescuento;
+    }
 
     const pago = await this.prisma.$transaction(async (tx) => {
       const nuevoPago = await tx.pago.create({
-        data: crearPagoDto,
+        data: datosPago,
       });
+
+      const updateDataTurno: any = {
+        Total: nuevoTotal,
+        Precio: precioCalculado,
+        SaldoPendiente: nuevoSaldo,
+        PagoPendiente: quedaSaldo,
+      };
+
+      if (descuento > 0) {
+        updateDataTurno.Observacion = nuevaObservacion;
+      }
 
       await tx.turno.update({
         where: { id: crearPagoDto.turnoId },
-        data: {
-          SaldoPendiente: nuevoSaldo,
-          PagoPendiente: quedaSaldo,
-        },
+        data: updateDataTurno,
       });
 
       return nuevoPago;

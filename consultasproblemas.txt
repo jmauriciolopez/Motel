@@ -1,0 +1,17 @@
+
+SELECT 
+    h.id,
+    h.estado AS estado_habitacion,
+    ultimo_turno."Ingreso" AS Ingreso,
+	 ultimo_turno."Salida" AS Salida
+FROM "Habitacion" h
+JOIN (
+    SELECT DISTINCT ON ("habitacionId") 
+        "habitacionId", 
+        id, 
+        "Ingreso" ,"Salida"
+    FROM "Turno"
+    ORDER BY "habitacionId" , "Ingreso" DESC -- Trae el más reciente primero
+) ultimo_turno ON h.id  = ultimo_turno."habitacionId"
+WHERE h.estado !='DISPONIBLE'  and "Salida" is not null
+ORDER BY  "Salida";

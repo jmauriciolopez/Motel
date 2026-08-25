@@ -50,4 +50,12 @@ export class CrearTurnoDto {
   @IsString()
   @IsOptional()
   usuarioCierreId?: string;
+
+  @IsOptional()
+  @IsNumber()
+  PrecioCalculo?: number;
+
+  @IsOptional()
+  @IsString()
+  Estado?: string;
 }

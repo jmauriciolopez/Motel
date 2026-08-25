@@ -277,6 +277,7 @@ export const MotelList = () => {
                 <DateField source="CheckOutDia" showTime showDate={false} options={{ hour: '2-digit', minute: '2-digit' }} label="CheckOut" />
                 <NumberField source="Tolerancia" label="Tole." />
                 <NumberField source="MaxHrAdicional" label="Hrs Ext." />
+                <NumberField source="DescuentoEfectivo" label="Desc. Efec. (%)" />
                 <TextField source="HoraCierreCaja" label="Cierre Caja" />
                 {isSuperAdmin && <BooleanField source="OnboardingCompleto" label="Onboarding" />}
                 {isSuperAdmin && <BooleanField source="propietario.PagoActivo" label="Pagado" />}
@@ -333,6 +334,9 @@ export const MotelCreate = () => (
                 </Grid>
                 <Grid item xs={12} md={3}>
                     <BooleanInput source="AplicaCorteCheckout" label="Aplicar corte automático de checkout" />
+                </Grid>
+                <Grid item xs={12} md={3}>
+                    <NumberInput source="DescuentoEfectivo" label="Descuento efectivo (%)" min={0} max={100} step={0.5} fullWidth helperText="0 = Sin descuento" />
                 </Grid>
             </Grid>
 
@@ -407,6 +411,9 @@ export const MotelEdit = () => {
                     </Grid>
                     <Grid item xs={6} md={4}>
                         <BooleanInput source="AplicaCorteCheckout" label="Aplicar corte automático de checkout" />
+                    </Grid>
+                    <Grid item xs={6} md={4}>
+                        <NumberInput source="DescuentoEfectivo" label="Descuento efectivo (%)" min={0} max={100} step={0.5} fullWidth helperText="0 = Sin descuento" />
                     </Grid>
                 </Grid>
 

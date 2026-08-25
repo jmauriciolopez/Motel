@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsInt, IsDateString, IsArray, ArrayUnique, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsDateString, IsArray, ArrayUnique, Min, Max, IsNumber } from 'class-validator';
 
 export class CrearMotelDto {
   @IsString()
@@ -72,6 +72,12 @@ export class CrearMotelDto {
   @IsBoolean()
   @IsOptional()
   AplicaCorteCheckout?: boolean;
+
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  DescuentoEfectivo?: number;
 
   @IsString()
   propietarioId: string;

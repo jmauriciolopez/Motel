@@ -46,7 +46,7 @@ export interface InitialValues {
 interface Turno {
   Ingreso: Date | string;
   Minutos?: number;
-  PrecioCalculo?: number;
+  Precio?: number;
   Total: number;
 }
 
@@ -54,6 +54,28 @@ export interface ClosingValues {
   Salida: Date;
   PrecioCalculo: number;
   Total: number;
+}
+
+/**
+ * Extrae descuentos en efectivo persistidos en Observacion.
+ * Formato generado: `[Descuento Efectivo 10%] Total original: $80.000 - Descuento: $8.000`
+ */
+export function extraerMontoDescuentoDeObservacion(obs?: string | null): number {
+  if (!obs) return 0;
+  const re = /Descuento:\s*\$?\s*([\d.]+(?:,\d+)?)/gi;
+  let total = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(obs)) !== null) {
+    const raw = match[1];
+    const partes = raw.split('.');
+    const normalized = raw.includes(',')
+      ? raw.replace(/\./g, '').replace(',', '.')
+      : partes.length === 2 && partes[1].length <= 2
+        ? raw
+        : raw.replace(/\./g, '');
+    total += Number(normalized) || 0;
+  }
+  return total;
 }
 
 @Injectable()
@@ -77,10 +99,15 @@ export class TurnoCalculator {
   /**
    * Convert Decimal to number
    */
-  private toNumber(value: number | Decimal | null | undefined): number {
+  private toNumber(value: number | Decimal | string | null | undefined): number {
     if (value === null || value === undefined) return 0;
-    if (typeof value === 'number') return value;
-    return value.toNumber();
+    if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+    if (typeof value === 'string') return Number(value) || 0;
+    if (typeof (value as Decimal).toNumber === 'function') {
+      return (value as Decimal).toNumber();
+    }
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
   }
 
   /**
@@ -179,6 +206,11 @@ export class TurnoCalculator {
         totalMinutes += (motel.HorasExtraEspeciales as number) * 60;
       }
 
+      // Minutos extra asignados directamente a la tarifa
+      if ((tarifa as any).MinutosExtra && Number((tarifa as any).MinutosExtra) > 0) {
+        totalMinutes += Number((tarifa as any).MinutosExtra);
+      }
+
       if (isDayTime && motel.AplicaCorteCheckout) {
         const checkOutH = this.getHour(motel.CheckOutDia);
         const checkOutM = this.getMin(motel.CheckOutDia);
@@ -233,34 +265,58 @@ export class TurnoCalculator {
 
     const permanencia = salida.getTime() - new Date(elturno.Ingreso).getTime();
     const minutosPermanencia = Math.floor(permanencia / 60000);
-    const turnoMinutos = elturno.Minutos || 0;
+    const turnoMinutos = elturno.Minutos || (motel.DuracionDiaria ? motel.DuracionDiaria * 60 : 120);
     const demora = minutosPermanencia - turnoMinutos;
     const tolerancia = motel.Tolerancia || 0;
     const maxdemora = (motel.MaxHrAdicional || 0) * 60;
 
     let extra = 0;
-    let newPrecioCalculo = elturno.PrecioCalculo || this.toNumber(tarifa.PrecioTurno);
-    let newTotal = this.toNumber(elturno.Total);
+    const precioBase = this.toNumber(tarifa.PrecioTurno) || elturno.Precio || 0;
+    let newPrecioCalculo = precioBase;
 
-    // Only charge extra if delay exceeds tolerance
+    // Sumar consumos si existen
+    const totalConsumos = ((elturno as any).consumos || []).reduce(
+      (sum: number, c: any) => sum + this.toNumber(c.Importe),
+      0,
+    );
+
+    // Dynamic extra calculation
     if (demora > tolerancia) {
       if (maxdemora > 0 && demora > maxdemora) {
-        // Exceeds maximum additional hours allowed -> Switch to Daily/Full price
-        newPrecioCalculo = this.toNumber(tarifa.PrecioDiario) || this.toNumber(tarifa.PrecioTurno);
-        newTotal = newTotal - (elturno.PrecioCalculo || 0) + newPrecioCalculo;
+        newPrecioCalculo = this.toNumber(tarifa.PrecioDiario) || precioBase;
+        extra = newPrecioCalculo - precioBase;
       } else {
-        // Charge per Full Hour (Any fraction of hour counts as full hour)
-        const hourlyRate = isDayTime
+        const configuredRate = isDayTime
           ? this.toNumber(tarifa.PrecioHrDiaExcede)
           : (this.toNumber(tarifa.PrecioHrNocheExcede) || this.toNumber(tarifa.PrecioHrDiaExcede));
 
-        const cantHorasExtra = Math.ceil(demora / 60);
-        extra = hourlyRate * cantHorasExtra;
+        if (configuredRate > 0) {
+          const cantHorasExtra = Math.ceil(demora / 60);
+          extra = configuredRate * cantHorasExtra;
+        } else {
+          const baseDuration = turnoMinutos > 0 ? turnoMinutos : 60;
+          const cantTurnosExtra = Math.ceil(demora / baseDuration);
+          extra = precioBase * cantTurnosExtra;
+        }
 
-        newPrecioCalculo = newPrecioCalculo + extra;
-        newTotal = newTotal + extra;
+        newPrecioCalculo = precioBase + extra;
       }
     }
+
+    const totalSinDescuentos = precioBase + totalConsumos + extra;
+    const totalDb = this.toNumber(elturno.Total);
+    const descuentoObs = extraerMontoDescuentoDeObservacion((elturno as any).Observacion);
+
+    // Si el total persistido ya incluye extras (es mayor al precio base + consumos)
+    // y es menor al bruto actual, la diferencia es un descuento ya aplicado.
+    const baseMasConsumos = precioBase + totalConsumos;
+    const descuentoInferido =
+      totalDb > baseMasConsumos + 0.001
+        ? Math.max(0, totalSinDescuentos - totalDb)
+        : 0;
+
+    const descuento = Math.max(descuentoObs, descuentoInferido);
+    const newTotal = Math.max(0, totalSinDescuentos - descuento);
 
     return {
       Salida: salida,

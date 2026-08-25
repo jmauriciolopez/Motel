@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    AutocompleteInput, Create, Datagrid, DateField, DateTimeInput, Edit, EditButton, List, NumberField, NumberInput, ReferenceInput, required, SimpleForm, TextField, TextInput, useDataProvider, useNotify, useRecordContext, useGetList,
-    TopToolbar, CreateButton, usePermissions, FunctionField
+    AutocompleteInput, Create, Datagrid, DateField, DateTimeInput, Edit, EditButton, List, NumberField, NumberInput, ReferenceInput, required, SimpleForm, TextField, TextInput, useDataProvider, useNotify, useRecordContext, useGetList, useGetOne,
+    TopToolbar, CreateButton, usePermissions, FunctionField, Loading
 } from 'react-admin';
 import { useDeletedRowSx } from '../helpers/deletedRowSx';
 import { useMotel } from '../context/MotelContext';
 import { useFormContext } from 'react-hook-form';
-import { Grid, Box, Typography, Paper, InputAdornment, Chip } from '@mui/material';
+import { Grid, Box, Typography, Paper, InputAdornment, Chip, FormControlLabel, Checkbox } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import {
     Payments as PaymentsIcon,
@@ -15,11 +15,97 @@ import {
     MeetingRoom as RoomIcon,
     Event as EventIcon,
     CheckCircle as CheckIcon,
-    AttachMoney as MoneyIcon
+    AttachMoney as MoneyIcon,
+    LocalOffer as DiscountIcon
 } from '@mui/icons-material';
 import CustomToolbar from '../layout/CustomToolbar';
 
 const Requerido = [required()];
+
+// -- Helper Components --
+const DescuentoEfectivoSection = ({ formasPago, porcentajeDescuentoEfectivo, saldo }) => {
+    const { watch, setValue } = useFormContext();
+    const selectedFormaPagoId = watch('formaPagoId');
+    const actualFormaId = typeof selectedFormaPagoId === 'object' ? selectedFormaPagoId?.id : selectedFormaPagoId;
+    const selectedForma = formasPago?.find(f => f.id === actualFormaId);
+
+    const esEfectivo = selectedForma?.Tipo?.toLowerCase().includes('efectivo') || selectedForma?.Tipo?.toLowerCase() === 'efectivo';
+    const tieneDescuento = porcentajeDescuentoEfectivo > 0 && esEfectivo;
+
+    const [aplicarDescuento, setAplicarDescuento] = useState(true);
+
+    const montoDescuento = tieneDescuento && aplicarDescuento
+        ? Math.round((saldo * porcentajeDescuentoEfectivo) / 100 * 100) / 100
+        : 0;
+    const montoACobrar = Math.max(0, saldo - montoDescuento);
+
+    useEffect(() => {
+        if (tieneDescuento && aplicarDescuento) {
+            setValue('Importe', montoACobrar, { shouldValidate: true, shouldDirty: true });
+            setValue('montoDescuento', montoDescuento);
+            setValue('porcentajeDescuento', porcentajeDescuentoEfectivo);
+        } else {
+            setValue('Importe', saldo, { shouldValidate: true, shouldDirty: true });
+            setValue('montoDescuento', 0);
+            setValue('porcentajeDescuento', 0);
+        }
+    }, [tieneDescuento, aplicarDescuento, saldo, porcentajeDescuentoEfectivo, setValue, montoACobrar, montoDescuento]);
+
+    if (!tieneDescuento) return null;
+
+    return (
+        <Paper
+            elevation={0}
+            sx={{
+                p: 2,
+                mt: 2,
+                mb: 2,
+                borderRadius: 3,
+                border: '1px solid',
+                borderColor: 'success.main',
+                bgcolor: 'rgba(76, 175, 80, 0.05)'
+            }}
+        >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <DiscountIcon color="success" />
+                    <Typography variant="subtitle2" fontWeight={700} color="success.main">
+                        Descuento por Pago en Efectivo ({porcentajeDescuentoEfectivo}%)
+                    </Typography>
+                </Box>
+                <FormControlLabel
+                    control={
+                        <Checkbox
+                            checked={aplicarDescuento}
+                            onChange={(e) => {
+                                const checked = e.target.checked;
+                                setAplicarDescuento(checked);
+                                if (!checked) {
+                                    setValue('Importe', saldo);
+                                }
+                            }}
+                            color="success"
+                        />
+                    }
+                    label={<Typography variant="body2" fontWeight={600}>Aplicar Descuento</Typography>}
+                />
+            </Box>
+            {aplicarDescuento && (
+                <Box sx={{ mt: 1, pl: 4, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    <Typography variant="caption" color="text.secondary">
+                        Total original: <strong>${saldo.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                    </Typography>
+                    <Typography variant="caption" color="success.main">
+                        Descuento ({porcentajeDescuentoEfectivo}%): <strong>-${montoDescuento.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                    </Typography>
+                    <Typography variant="caption" color="primary.main">
+                        Total a cobrar: <strong>${montoACobrar.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                    </Typography>
+                </Box>
+            )}
+        </Paper>
+    );
+};
 
 // -- Helper Components --
 const SectionHeader = ({ icon: Icon, title }) => (
@@ -166,23 +252,31 @@ export const PagoEdit = () => (
 );
 
 const PagoCreate = () => {
-    const { data: formasPago, isLoading } = useGetList('formapagos', {
+    const { data: formasPago, isLoading: isLoadingFormas } = useGetList('formapagos', {
         pagination: { page: 1, perPage: 100 }
     });
+
+    const { currentMotelId } = useMotel();
+    const { data: motelData, isLoading: isLoadingMotel } = useGetOne('moteles', { id: currentMotelId }, { enabled: !!currentMotelId });
+
+    if (isLoadingFormas || isLoadingMotel) {
+        return <Loading />;
+    }
 
     const recordEfectivo = formasPago?.find(f =>
         f.Tipo?.toLowerCase().includes('efectivo') ||
         f.Tipo?.toLowerCase() === 'efectivo'
     );
     const defaultFormaPago = recordEfectivo?.id;
-
-    const { currentMotelId } = useMotel();
+    const porcentajeDescuentoEfectivo = Number(motelData?.DescuentoEfectivo || 0);
 
     const transform = data => ({
         ...data,
         motelId: currentMotelId,
         turnoId: typeof data.turnoId === 'object' ? data.turnoId?.id : data.turnoId,
         formaPagoId: typeof data.formaPagoId === 'object' ? data.formaPagoId?.id : data.formaPagoId,
+        montoDescuento: data.montoDescuento || undefined,
+        porcentajeDescuento: data.porcentajeDescuento || undefined,
     });
 
     const location = useLocation();
@@ -195,6 +289,11 @@ const PagoCreate = () => {
     const saldo = Math.max(0, Number(saldoRaw) || 0);
     const totalTurno = Number(turnoData?.Total ?? 0);
     const totalPagado = Math.max(0, totalTurno - saldo);
+
+    const descuentoInicial = (porcentajeDescuentoEfectivo > 0 && defaultFormaPago)
+        ? Math.round((saldo * porcentajeDescuentoEfectivo) / 100 * 100) / 100
+        : 0;
+    const importeInicial = Math.max(0, saldo - descuentoInicial);
 
     const validateCreation = (values) => {
         const errors = {};
@@ -209,13 +308,26 @@ const PagoCreate = () => {
     };
 
     return (
-        <Create redirect="/turnos" transform={transform} sx={{ mt: 2 }}>
+        <Create
+            redirect="/turnos"
+            transform={transform}
+            record={{
+                ...initialRecord,
+                Importe: importeInicial || undefined,
+                formaPagoId: defaultFormaPago,
+                montoDescuento: descuentoInicial || undefined,
+                porcentajeDescuento: porcentajeDescuentoEfectivo || undefined
+            }}
+            sx={{ mt: 2 }}
+        >
             <SimpleForm
                 validate={validateCreation}
                 defaultValues={{
-                    Importe: saldo || undefined,
+                    Importe: importeInicial || undefined,
                     turnoId: initialTurnoId,
-                    formaPagoId: defaultFormaPago
+                    formaPagoId: defaultFormaPago,
+                    montoDescuento: descuentoInicial || undefined,
+                    porcentajeDescuento: porcentajeDescuentoEfectivo || undefined
                 }}
                 toolbar={<CustomToolbar backTo="/turnos" />}
             >
@@ -246,6 +358,12 @@ const PagoCreate = () => {
                         </Grid>
                     </Paper>
                 )}
+
+                <DescuentoEfectivoSection
+                    formasPago={formasPago}
+                    porcentajeDescuentoEfectivo={porcentajeDescuentoEfectivo}
+                    saldo={saldo}
+                />
 
                 <Paper elevation={0} sx={{ p: 4, backgroundColor: 'action.hover', borderRadius: 4, mb: 3 }}>
                     <Grid container spacing={3}>

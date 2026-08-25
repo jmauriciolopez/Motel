@@ -5,7 +5,7 @@ import { Turno, EstadoHabitacion } from '@prisma/client';
 import { CrearTurnoDto } from './dto/crear-turno.dto';
 import { TenantContext } from '../../compartido/interfaces/tenant-context.interface';
 import { MotorTarifarioService } from '../tarifas/motor-tarifario.service';
-import { TurnoCalculator } from '../tarifas/turno-calculator';
+import { extraerMontoDescuentoDeObservacion, TurnoCalculator } from '../tarifas/turno-calculator';
 
 function motelIdRequerido(tenant: TenantContext): string {
   if (!tenant?.motelId) {
@@ -159,8 +159,9 @@ export class TurnosService extends BaseService<Turno> {
           include: {
             tarifa: true,
             consumos: true,
+            pagos: true,
             habitacion: {
-              include: { motel: true },
+              include: { motel: true, tarifa: true },
             },
           },
         });
@@ -170,21 +171,27 @@ export class TurnosService extends BaseService<Turno> {
         throw new BadRequestException('El turno ya fue cerrado');
       }
 
+      const tarifa = turno.tarifa || turno.habitacion?.tarifa;
+
       // Calculate closing values using TurnoCalculator
       const closingValues = this.turnoCalculator.calculateClosingValues(
         turno as any,
-        { motel: turno.habitacion.motel as any, tarifa: turno.tarifa as any },
+        { motel: turno.habitacion.motel as any, tarifa: tarifa as any },
       );
 
-      // Propagar el delta de extras al SaldoPendiente
-      const deltaExtra = closingValues.Total - Number(turno.Total);
-      const nuevoSaldo = Number(turno.SaldoPendiente) + deltaExtra;
+      const totalPagado = (turno.pagos || []).reduce(
+        (sum: number, p: any) => sum + Number(p.Importe),
+        0,
+      );
+
+      const nuevoSaldo = Math.max(0, closingValues.Total - totalPagado);
 
       let turnoResult = await tx.turno.update({
         where: { id },
         data: {
           Salida: closingValues.Salida,
           Total: closingValues.Total,
+          Precio: closingValues.PrecioCalculo,
           SaldoPendiente: nuevoSaldo,
           PagoPendiente: sincronizarPagoPendiente(nuevoSaldo),
           usuarioCierreId,
@@ -200,6 +207,64 @@ export class TurnosService extends BaseService<Turno> {
     },
     { timeout: 10000 },
   );
+  }
+
+  /** Inyecta el estado calculado y ajusta dynamic Total/SaldoPendiente para turnos abiertos con excedente */
+  private calcularTurnoConExcedente(turno: any): any {
+    if (!turno) return turno;
+
+    let total = Number(turno.Total ?? 0);
+    let saldoPendiente = Number(turno.SaldoPendiente ?? 0);
+    let pagoPendiente = Boolean(turno.PagoPendiente);
+
+    const descuentoObs = extraerMontoDescuentoDeObservacion(turno.Observacion);
+    const totalPagadoPersistido = (turno.pagos || []).reduce(
+      (sum: number, p: any) => sum + Number(p.Importe || 0),
+      0,
+    );
+    // Cierre que recalculó el bruto y dejó el descuento como "saldo"
+    if (
+      turno.Salida &&
+      descuentoObs > 0 &&
+      Math.abs(saldoPendiente - descuentoObs) < 0.05 &&
+      Math.abs(totalPagadoPersistido + saldoPendiente - total) < 0.05
+    ) {
+      total = Math.max(0, total - descuentoObs);
+      saldoPendiente = 0;
+      pagoPendiente = false;
+    }
+
+    if (!turno.Salida && (turno.habitacion?.motel) && (turno.tarifa || turno.habitacion?.tarifa)) {
+      const motel = turno.habitacion.motel;
+      const tarifa = turno.tarifa || turno.habitacion.tarifa;
+
+      try {
+        const closingValues = this.turnoCalculator.calculateClosingValues(
+          turno as any,
+          { motel: motel as any, tarifa: tarifa as any },
+        );
+
+        total = closingValues.Total;
+        const totalPagado = (turno.pagos || []).reduce(
+          (sum: number, p: any) => sum + Number(p.Importe),
+          0,
+        );
+        saldoPendiente = Math.max(0, total - totalPagado);
+        pagoPendiente = sincronizarPagoPendiente(saldoPendiente);
+      } catch (err) {
+        // Fallback a valores persistidos si falla el cálculo
+      }
+    }
+
+    const estado = !turno.Salida ? 'ABIERTO' : saldoPendiente > 0 ? 'CERRADO' : 'COBRADO';
+
+    return {
+      ...turno,
+      Total: total,
+      SaldoPendiente: saldoPendiente,
+      PagoPendiente: pagoPendiente,
+      Estado: estado,
+    };
   }
 
   async obtenerTodos(options: any, extraWhere: any = {}) {
@@ -316,7 +381,7 @@ export class TurnosService extends BaseService<Turno> {
       where,
     ).then(result => ({
       ...result,
-      data: result.data.map(conEstado),
+      data: result.data.map(t => this.calcularTurnoConExcedente(t)),
     }));
   }
 
@@ -329,7 +394,12 @@ export class TurnosService extends BaseService<Turno> {
     const turno = await super.obtenerUno(
       id,
       {
-        habitacion: true,
+        habitacion: {
+          include: {
+            tarifa: true,
+            motel: true,
+          },
+        },
         cliente: true,
         tarifa: true,
         consumos: {
@@ -341,7 +411,7 @@ export class TurnosService extends BaseService<Turno> {
       extraWhere,
       scopedMotelId,
     );
-    return turno ? conEstado(turno as any) : null;
+    return turno ? this.calcularTurnoConExcedente(turno as any) : null;
   }
 
   async obtenerTurnosCompletados(params: {

@@ -77,6 +77,7 @@ export const TarifaList = () => {
                 <NumberField source="PrecioDiario" options={{ style: 'currency', currency: 'ARS' }} label="P. Diario" />
                 <NumberField source="PrecioHrDiaExcede" options={{ style: 'currency', currency: 'ARS' }} label="Exc. Día" />
                 <NumberField source="PrecioHrNocheExcede" options={{ style: 'currency', currency: 'ARS' }} label="Exc. Noche" />
+                <NumberField source="MinutosExtra" label="Min. Extra" />
                 <EditButton />
                 <CloneButton label="Copiar" />
             </Datagrid>
@@ -92,6 +93,9 @@ export const TarifaCreate = () => (
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={8}>
                         <TextInput source="Nombre" validate={required()} fullWidth />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <NumberInput source="MinutosExtra" label="Minutos Extra de Duración" min={0} step={5} fullWidth helperText="Minutos adicionales al turno (default: 0)" />
                     </Grid>
                 </Grid>
             </Paper>
@@ -120,6 +124,9 @@ export const TarifaEdit = () => (
                 <Grid container spacing={2}>
                     <Grid item xs={12} md={8}>
                         <TextInput source="Nombre" validate={required()} fullWidth />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                        <NumberInput source="MinutosExtra" label="Minutos Extra de Duración" min={0} step={5} fullWidth helperText="Minutos adicionales al turno (default: 0)" />
                     </Grid>
                 </Grid>
             </Paper>

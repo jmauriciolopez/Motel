@@ -406,19 +406,15 @@ const LimpiezaButton = ({ label }) => {
     );
 };
 
-const PagoButton = ({ label }) => {
-    const record = useRecordContext();
+const PagoButton = ({ label, overrideRecord, overrideSaldo }) => {
+    const recordContext = useRecordContext();
+    const record = overrideRecord || recordContext;
     const translate = useTranslate();
 
-    const saldo = Number(record?.SaldoPendiente ?? 0);
+    const saldo = overrideSaldo !== undefined ? overrideSaldo : Number(record?.SaldoPendiente ?? 0);
     const isCerrado = !!record?.Salida;
 
-    // CobroAlInicio: si el campo no está disponible en el record (include parcial),
-    // fallback conservador = false (solo cobrar tras cerrar)
-    const cobroAlInicio = record?.habitacion?.motel?.CobroAlInicio === true;
-    // Si el motel no se cargó en el include, permitir cobro si el turno está cerrado
-    const motelCargado = record?.habitacion?.motel != null;
-    const canPay = saldo > 0 && ((!motelCargado || cobroAlInicio) ? true : isCerrado);
+    const canPay = saldo > 0;
 
     return (
         <span onClick={e => e.stopPropagation()}>
@@ -438,7 +434,7 @@ const PagoButton = ({ label }) => {
                 startIcon={<PaymentIcon />}
                 component={Link}
                 to={{ pathname: '/pagos/create' }}
-                state={{ record: { turnoId: record.id, turno: record, Importe: saldo } }}
+                state={{ record: { turnoId: record.id, turno: { ...record, SaldoPendiente: saldo } } }}
             >
                 {label ? translate(label) : translate('pos.turnos.pago')}
                 {canPay && (
@@ -568,9 +564,61 @@ const TurnoCard = ({ record }) => {
     const translate = useTranslate();
     const isReserva = record.__type === 'reserva';
     const isCerrado = !isReserva && !!record.Salida;
-    const isPaid = !isReserva && record.PagoPendiente === false;
     const habitacionEstado = record.habitacion?.Estado?.toLowerCase() || '';
     const isDirty = !isReserva && habitacionEstado === 'limpieza';
+
+    const [now, setNow] = useState(new Date());
+
+    useEffect(() => {
+        if (!record || record.Salida || isReserva) return;
+        const interval = setInterval(() => setNow(new Date()), 10000);
+        return () => clearInterval(interval);
+    }, [record, isReserva]);
+
+    // Recalcular saldo y total dinámico si el backend no se ha refrescado aún
+    let dynamicSaldo = Number(record?.SaldoPendiente ?? 0);
+    let dynamicTotal = Number(record?.Total ?? 0);
+
+    if (!isReserva && !isCerrado && record?.Ingreso) {
+        const ingreso = new Date(record.Ingreso).getTime();
+        const minutos = record.Minutos || record.habitacion?.tarifa?.Duracion || 0;
+        const finEstimado = ingreso + (minutos * 60000);
+        const restante = finEstimado - now.getTime();
+        if (restante < 0) {
+            const demora = Math.floor(Math.abs(restante) / 60000);
+            const tolerancia = record.habitacion?.motel?.Tolerancia || 0;
+            if (demora > tolerancia) {
+                const configuredRate = Number(record.habitacion?.tarifa?.PrecioHrDiaExcede || record.tarifa?.PrecioHrDiaExcede || 0);
+                const basePrice = Number(record.habitacion?.tarifa?.PrecioTurno || record.tarifa?.PrecioTurno || record.Precio || 0);
+                let extraCalculado = 0;
+                if (configuredRate > 0) {
+                    const cantHorasExtra = Math.ceil(demora / 60);
+                    extraCalculado = cantHorasExtra * configuredRate;
+                } else {
+                    const baseDuration = minutos || 60;
+                    const cantTurnosExtra = Math.ceil(demora / baseDuration);
+                    extraCalculado = basePrice * cantTurnosExtra;
+                }
+                if (extraCalculado > 0) {
+                    const totalConsumos = (record.consumos || []).reduce((sum, c) => sum + Number(c.Importe || 0), 0);
+                    const grossTotal = basePrice + totalConsumos + extraCalculado;
+                    const totalPagado = (record.pagos || []).reduce((sum, p) => sum + Number(p.Importe || 0), 0);
+                    const dbTotal = Number(record.Total || 0);
+                    let expectedTotal = grossTotal;
+                    if (dbTotal > 0 && totalPagado > 0) {
+                        const descuentoPrevio = Math.max(0, grossTotal - (dbTotal + (totalPagado < dbTotal ? dbTotal - totalPagado : 0)));
+                        expectedTotal = Math.max(0, grossTotal - descuentoPrevio);
+                    }
+                    if (expectedTotal > dynamicTotal) {
+                        dynamicTotal = expectedTotal;
+                        dynamicSaldo = Math.max(0, dynamicTotal - totalPagado);
+                    }
+                }
+            }
+        }
+    }
+
+    const isPaid = !isReserva && record.PagoPendiente === false && dynamicSaldo <= 0;
 
     // Colores del sistema Azure Hospitality
     const deepBlue = '#213894';
@@ -590,7 +638,7 @@ const TurnoCard = ({ record }) => {
     const status = getStatusInfo();
 
     return (
-        <RecordContextProvider value={record}>
+        <RecordContextProvider value={{ ...record, Total: dynamicTotal, SaldoPendiente: dynamicSaldo }}>
             <Paper
                 elevation={2}
                 sx={{
@@ -707,11 +755,11 @@ const TurnoCard = ({ record }) => {
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, fontSize: '0.65rem', textTransform: 'uppercase' }}>{translate('pos.turnos.total_accumulated')}</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
                             <Typography variant="h5" sx={{ color: AZURE_BLUE, fontWeight: 900, mt: -0.5 }}>
-                                ${record.Total?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                ${dynamicTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                             </Typography>
-                            {Number(record.SaldoPendiente) > 0 && (
+                            {dynamicSaldo > 0 && (
                                 <Chip
-                                    label={`Saldo $${Number(record.SaldoPendiente).toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
+                                    label={`Saldo $${dynamicSaldo.toLocaleString(undefined, { minimumFractionDigits: 0 })}`}
                                     size="small"
                                     color="warning"
                                     variant="outlined"
@@ -788,7 +836,7 @@ const TurnoCard = ({ record }) => {
                         ) : (
                             isCerrado ? (
                                 <>
-                                    {!isPaid && <PagoButton label={false} />}
+                                    {!isPaid && <PagoButton label={false} overrideSaldo={dynamicSaldo} overrideRecord={{ ...record, Total: dynamicTotal, SaldoPendiente: dynamicSaldo }} />}
                                     {isDirty && <LimpiezaButton label={false} />}
                                     <DashboardButton showLabel={false} />
                                 </>
@@ -796,7 +844,7 @@ const TurnoCard = ({ record }) => {
                                 <>
                                     <DashboardButton showLabel={false} />
                                     <CreateConsumoButton showLabel={false} />
-                                    {Number(record.SaldoPendiente) > 0 && <PagoButton label={false} />}
+                                    {dynamicSaldo > 0 && <PagoButton label={false} overrideSaldo={dynamicSaldo} overrideRecord={{ ...record, Total: dynamicTotal, SaldoPendiente: dynamicSaldo }} />}
                                     <CerrarTurnoButton showLabel={false} />
                                 </>
                             )
@@ -1011,6 +1059,7 @@ export const TurnoList = props => {
 
     return (
         <List
+            queryOptions={{ refetchInterval: 10000 }}
             actions={<TurnoListActions viewMode={viewMode} setViewMode={setViewMode} />}
             filters={<TurnoFilter />}
             filterDefaultValues={{ mostrar_cerrados: false }}
@@ -1051,7 +1100,7 @@ const TurnoEdit = () => (
                 <Grid item xs={4}>
                     <DateTimeInput source="Ingreso" readOnly />
                     <DateTimeInput source="Salida" defaultValue={new Date()} readOnly />
-                    <NumberInput source="PrecioCalculo" readOnly />
+
                 </Grid>
                 <Grid item xs={4}>
                     <ReferenceInput source="habitacionId" reference="habitaciones">
