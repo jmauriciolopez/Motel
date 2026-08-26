@@ -44,6 +44,11 @@ export class PagosService extends BaseService<Pago> {
 
     if (!turno) throw new NotFoundException('Turno no encontrado');
 
+    const formaPago = await this.prisma.formaPago.findUnique({
+      where: { id: crearPagoDto.formaPagoId },
+      select: { Tipo: true },
+    });
+
     let totalCalculado = Number(turno.Total);
     let saldoCalculado = Number(turno.SaldoPendiente);
     let precioCalculado = turno.Precio;
@@ -137,12 +142,15 @@ export class PagosService extends BaseService<Pago> {
       concepto = `Cobro Hab.${hab} #${format(turno.Salida ?? turno.Ingreso)}`;
     }
 
-    await this.cajasService.crear({
-      Concepto: concepto,
-      Importe: Number(pago.Importe),
-      motelId: pago.motelId,
-      conceptoCaja: 'INGRESO',
-    } as any);
+    const esPagoEnEfectivo = formaPago?.Tipo?.toLowerCase().includes('efectivo');
+    if (esPagoEnEfectivo) {
+      await this.cajasService.crear({
+        Concepto: concepto,
+        Importe: Number(pago.Importe),
+        motelId: pago.motelId,
+        conceptoCaja: 'INGRESO',
+      } as any);
+    }
 
     return pago;
   }
