@@ -45,6 +45,7 @@ export interface InitialValues {
 
 interface Turno {
   Ingreso: Date | string;
+  Salida?: Date | string | null;
   Minutos?: number;
   Precio?: number;
   Total: number;
@@ -85,11 +86,17 @@ export class TurnoCalculator {
   /** Motel schedule fields are wall-clock values stored on a UTC anchor date. */
   private getHour(d: Date | string | null): number {
     if (!d) return 0;
+    if (typeof d === 'string' && /^\d{1,2}:\d{2}/.test(d)) {
+      return Number(d.slice(0, 2));
+    }
     return new Date(d).getUTCHours();
   }
 
   private getMin(d: Date | string | null): number {
     if (!d) return 0;
+    if (typeof d === 'string' && /^\d{1,2}:\d{2}/.test(d)) {
+      return Number(d.slice(3, 5));
+    }
     return new Date(d).getUTCMinutes();
   }
 
@@ -175,8 +182,6 @@ export class TurnoCalculator {
     let isDayTime: boolean;
     if (tipoEstancia === 'Pernocte') {
       isDayTime = false;
-    } else if (tipoEstancia === 'Standard') {
-      isDayTime = true;
     } else {
       if (motel.HorarioUnico) {
         isDayTime = true;
@@ -267,7 +272,13 @@ export class TurnoCalculator {
     const maxdemora = (motel.MaxHrAdicional || 0) * 60;
 
     let extra = 0;
-    const precioBase = this.toNumber(tarifa.PrecioTurno) || elturno.Precio || 0;
+    // Precio menor que la tarifa estándar identifica la promo diurna persistida.
+    // Un Precio mayor puede ser un recálculo con excedentes y no debe ser base.
+    const precioTarifa = this.toNumber(tarifa.PrecioTurno);
+    const precioPersistido = this.toNumber(elturno.Precio);
+    const precioBase = precioPersistido > 0 && precioPersistido < precioTarifa
+      ? precioPersistido
+      : precioTarifa || precioPersistido || 0;
     let newPrecioCalculo = precioBase;
 
     // Sumar consumos si existen

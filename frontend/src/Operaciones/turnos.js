@@ -659,48 +659,8 @@ const TurnoCard = ({ record }) => {
         return () => clearInterval(interval);
     }, [record, isReserva]);
 
-    // Recalcular saldo y total dinámico si el backend no se ha refrescado aún
-    let dynamicSaldo = Number(record?.SaldoPendiente ?? 0);
-    let dynamicTotal = Number(record?.Total ?? 0);
-
-    if (!isReserva && !isCerrado && record?.Ingreso) {
-        const ingreso = new Date(record.Ingreso).getTime();
-        const minutos = record.Minutos || record.habitacion?.tarifa?.Duracion || 0;
-        const finEstimado = ingreso + (minutos * 60000);
-        const restante = finEstimado - now.getTime();
-        if (restante < 0) {
-            const demora = Math.floor(Math.abs(restante) / 60000);
-            const tolerancia = record.habitacion?.motel?.Tolerancia || 0;
-            if (demora > tolerancia) {
-                const configuredRate = Number(record.habitacion?.tarifa?.PrecioHrDiaExcede || record.tarifa?.PrecioHrDiaExcede || 0);
-                const basePrice = Number(record.habitacion?.tarifa?.PrecioTurno || record.tarifa?.PrecioTurno || record.Precio || 0);
-                let extraCalculado = 0;
-                if (configuredRate > 0) {
-                    const cantHorasExtra = Math.ceil(demora / 60);
-                    extraCalculado = cantHorasExtra * configuredRate;
-                } else {
-                    const baseDuration = minutos || 60;
-                    const cantTurnosExtra = Math.ceil(demora / baseDuration);
-                    extraCalculado = basePrice * cantTurnosExtra;
-                }
-                if (extraCalculado > 0) {
-                    const totalConsumos = (record.consumos || []).reduce((sum, c) => sum + Number(c.Importe || 0), 0);
-                    const grossTotal = basePrice + totalConsumos + extraCalculado;
-                    const totalPagado = (record.pagos || []).reduce((sum, p) => sum + Number(p.Importe || 0), 0);
-                    const dbTotal = Number(record.Total || 0);
-                    let expectedTotal = grossTotal;
-                    if (dbTotal > 0 && totalPagado > 0) {
-                        const descuentoPrevio = Math.max(0, grossTotal - (dbTotal + (totalPagado < dbTotal ? dbTotal - totalPagado : 0)));
-                        expectedTotal = Math.max(0, grossTotal - descuentoPrevio);
-                    }
-                    if (expectedTotal > dynamicTotal) {
-                        dynamicTotal = expectedTotal;
-                        dynamicSaldo = Math.max(0, dynamicTotal - totalPagado);
-                    }
-                }
-            }
-        }
-    }
+    const dynamicSaldo = Number(record?.SaldoPendiente ?? 0);
+    const dynamicTotal = Number(record?.Total ?? 0);
 
     const isPaid = !isReserva && record.PagoPendiente === false && dynamicSaldo <= 0;
 

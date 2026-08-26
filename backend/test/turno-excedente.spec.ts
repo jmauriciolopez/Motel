@@ -53,6 +53,32 @@ async function runTests() {
   assert(res1.PrecioCalculo === 70000, `PrecioCalculo debe ser 70000 (40000 + 2*15000), obtenido: ${res1.PrecioCalculo}`);
   assert(res1.Total === 70000, `Total debe ser 70000, obtenido: ${res1.Total}`);
 
+  // --- PRUEBA 1a: La apertura Standard toma la franja horaria del ingreso ---
+  console.log('\n--- TEST 1a: Valor base de tarifa diurna al abrir ---');
+  const resAperturaDiurna = calculator.calculateInitialValues(
+    { motel: { ...mockMotel1, HorarioUnico: false } as any, tarifa: { ...mockTarifa1, PrecioTurnoPromocional: 35000 } as any },
+    '2026-08-26T13:00:00.000Z', // 10:00 en America/Argentina/Buenos_Aires
+    'Standard',
+  );
+  assert(resAperturaDiurna.Precio === 35000, `La apertura diurna debe usar el precio promocional (35000), obtenido: ${resAperturaDiurna.Precio}`);
+
+  // --- PRUEBA 1c: Recuperación conserva precio diurno promocional y consumos ---
+  console.log('\n--- TEST 1c: Saldo con precio promocional y consumo ---');
+  const ingresoRecuperacion = new Date(Date.now() - 30 * 60000);
+  const resRecuperacion = calculator.calculateClosingValues({
+    Ingreso: ingresoRecuperacion,
+    Minutos: 120,
+    Precio: 35000,
+    Total: 40000,
+    pagos: [{ Importe: 30000 }],
+    consumos: [{ Importe: 5000 }],
+  } as any, {
+    motel: { ...mockMotel1, HorarioUnico: false } as any,
+    tarifa: { ...mockTarifa1, PrecioTurnoPromocional: 35000 } as any,
+  });
+  assert(resRecuperacion.Total === 40000, `La recuperación debe conservar base diurna + consumo (40000), obtenido: ${resRecuperacion.Total}`);
+  assert(resRecuperacion.Total - 30000 === 10000, `Saldo recuperado debe ser 10000, obtenido: ${resRecuperacion.Total - 30000}`);
+
 
   // --- PRUEBA 2: Tarifa sin recargo por hora (0) -> Regla de Turno Entero Nuevo ---
   console.log('\n--- TEST 2: Excedente con PrecioHrDiaExcede = 0 (Turno Entero Nuevo) ---');
