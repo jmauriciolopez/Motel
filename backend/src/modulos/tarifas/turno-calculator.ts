@@ -80,20 +80,40 @@ export function extraerMontoDescuentoDeObservacion(obs?: string | null): number 
 
 @Injectable()
 export class TurnoCalculator {
-  /**
-   * Helper function to get hour from a datetime field
-   */
+  private readonly timeZone = process.env.MOTEL_TIMEZONE || 'America/Argentina/Buenos_Aires';
+
+  /** Motel schedule fields are wall-clock values stored on a UTC anchor date. */
   private getHour(d: Date | string | null): number {
     if (!d) return 0;
-    return new Date(d).getHours();
+    return new Date(d).getUTCHours();
   }
 
-  /**
-   * Helper function to get minutes from a datetime field
-   */
   private getMin(d: Date | string | null): number {
     if (!d) return 0;
-    return new Date(d).getMinutes();
+    return new Date(d).getUTCMinutes();
+  }
+
+  private getBusinessParts(date: Date): { hour: number; minute: number; day: number } {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: this.timeZone,
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+      weekday: 'short',
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return {
+      hour: Number(values.hour) % 24,
+      minute: Number(values.minute),
+      day: weekdays.indexOf(values.weekday),
+    };
+  }
+
+  private minutesUntil(date: Date, target: number): number {
+    const { hour, minute } = this.getBusinessParts(date);
+    const current = hour * 60 + minute;
+    return (target - current + 1440) % 1440 || 1440;
   }
 
   /**
@@ -124,15 +144,10 @@ export class TurnoCalculator {
       : [];
     if (diasEspeciales.length === 0 || (motel.HorasExtraEspeciales ?? 0) <= 0) return false;
 
-    const hours = date.getHours();
-    // const iniciodia = this.getHour(motel.InicioDia);
-    // const inicionoche = this.getHour(motel.InicioNoche);
-    const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
-    const iniciodia = inicioDiaDate?.getUTCHours() ?? 0;
-    const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
-    const inicionoche = inicionocheDate?.getUTCHours() ?? 0;
+    const { hour: hours, day: diaEfectivo } = this.getBusinessParts(date);
+    const iniciodia = this.getHour(motel.InicioDia);
+    const inicionoche = this.getHour(motel.InicioNoche);
     // Día "efectivo": la madrugada (antes de InicioDia) pertenece al día anterior
-    let diaEfectivo = date.getDay();
     if (!diasEspeciales.includes(diaEfectivo)) return false;
 
     if (hours >= iniciodia && hours < inicionoche - 1) {
@@ -152,11 +167,9 @@ export class TurnoCalculator {
   ): InitialValues {
     const { motel, tarifa } = habitacion;
     const date = customIngreso ? new Date(customIngreso) : new Date();
-    const hours = date.getHours();
-    const inicioDiaDate = motel.InicioDia ? new Date(motel.InicioDia) : null;
-    const iniciodia = inicioDiaDate?.getUTCHours() ?? 0;
-    const inicionocheDate = motel.InicioNoche ? new Date(motel.InicioNoche) : null;
-    const inicionoche = inicionocheDate?.getUTCHours() ?? 0;
+    const { hour: hours } = this.getBusinessParts(date);
+    const iniciodia = this.getHour(motel.InicioDia);
+    const inicionoche = this.getHour(motel.InicioNoche);
 
     // Determine if it's day or night time for duration
     let isDayTime: boolean;
@@ -183,15 +196,7 @@ export class TurnoCalculator {
     if (tipoEstancia === 'Pernocte') {
       const checkOutH = this.getHour(motel.CheckOutDia);
       const checkOutM = this.getMin(motel.CheckOutDia);
-
-      const limitDate = new Date(date);
-      limitDate.setHours(checkOutH, checkOutM, 0, 0);
-
-      if (limitDate < date) {
-        limitDate.setDate(limitDate.getDate() + 1);
-      }
-
-      totalMinutes = Math.floor((limitDate.getTime() - date.getTime()) / 60000);
+      totalMinutes = this.minutesUntil(date, checkOutH * 60 + checkOutM);
       basePrice = this.toNumber(tarifa.PrecioDiario) || this.toNumber(tarifa.PrecioTurno);
     } else {
       const baseDuration = isDayTime ? motel.DuracionDiaria : motel.DuracionNocturna;
@@ -215,16 +220,7 @@ export class TurnoCalculator {
         const checkOutH = this.getHour(motel.CheckOutDia);
         const checkOutM = this.getMin(motel.CheckOutDia);
 
-        const limitDate = new Date(date);
-        limitDate.setHours(checkOutH, checkOutM, 0, 0);
-
-        if (limitDate < date) {
-          limitDate.setDate(limitDate.getDate() + 1);
-        }
-
-        const minutesUntilLimit = Math.floor(
-          (limitDate.getTime() - date.getTime()) / 60000,
-        );
+        const minutesUntilLimit = this.minutesUntil(date, checkOutH * 60 + checkOutM);
 
         if (minutesUntilLimit < totalMinutes) {
           totalMinutes = minutesUntilLimit;
@@ -247,7 +243,7 @@ export class TurnoCalculator {
   calculateClosingValues(elturno: Turno, habitacion: Habitacion): ClosingValues {
     const { motel, tarifa } = habitacion;
     const salida = new Date();
-    const hours = salida.getHours();
+    const { hour: hours } = this.getBusinessParts(salida);
 
     const iniciodia = this.getHour(motel.InicioDia);
     const inicionoche = this.getHour(motel.InicioNoche);

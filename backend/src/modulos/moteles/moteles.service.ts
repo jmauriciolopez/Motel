@@ -31,6 +31,8 @@ export class MotelesService extends BaseService<Motel> {
         DiasEspeciales: rest.DiasEspeciales ?? [],
         HorasExtraEspeciales: rest.HorasExtraEspeciales ?? 0,
         CobroAlInicio: rest.CobroAlInicio ?? false,
+        AplicaCorteCheckout: rest.AplicaCorteCheckout ?? true,
+        DescuentoEfectivo: rest.DescuentoEfectivo ?? 0,
         propietarioId: rest.propietarioId,
         ...(userIds && userIds.length > 0 && {
           usuarios: {

@@ -33,7 +33,7 @@ const CuadroTarifario = () => {
             // Strapi 5 might return just "HH:mm:ss" or a full ISO string
             if (typeof isoString === 'string' && isoString.length <= 8) return isoString.substring(0, 5);
             const date = new Date(isoString);
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
         } catch (e) {
             return isoString;
         }

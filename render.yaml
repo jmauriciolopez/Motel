@@ -28,6 +28,8 @@ services:
         value: "1"
       - key: API_PREFIX
         value: "/api/v1"
+      - key: MOTEL_TIMEZONE
+        value: "America/Argentina/Buenos_Aires"
       - key: PORT
         value: 3000
       - key: FRONTEND_URL

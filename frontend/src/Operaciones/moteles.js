@@ -214,7 +214,7 @@ const HorariosField = ({ label }) => {
     const displayTime = (time) => {
         if (!time) return '-';
         if (time.includes('T')) {
-            return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return formatTime(time);
         }
         return time.substring(0, 5);
     };
