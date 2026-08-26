@@ -59,3 +59,8 @@ export class CrearTurnoDto {
   @IsString()
   Estado?: string;
 }
+
+export class ReasignarTurnoDto {
+  @IsString()
+  habitacionId: string;
+}

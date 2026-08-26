@@ -6,6 +6,7 @@ import { CajasService } from '../cajas/cajas.service';
 import { CrearPagoDto } from './dto/crear-pago.dto';
 
 import { TurnoCalculator } from '../tarifas/turno-calculator';
+import { agregarObservacion } from '../turnos/turnos-observaciones';
 
 /** Devuelve true si aún hay saldo por cobrar */
 function sincronizarPagoPendiente(saldo: number): boolean {
@@ -89,9 +90,7 @@ export class PagosService extends BaseService<Pago> {
       const descFormatted = descuento.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       const notaDescuento = `[Descuento Efectivo${pctTexto}] Total original: $${totalOrigFormatted} - Descuento: $${descFormatted}`;
 
-      nuevaObservacion = turno.Observacion
-        ? `${turno.Observacion.trim()} | ${notaDescuento}`
-        : notaDescuento;
+      nuevaObservacion = agregarObservacion(turno.Observacion, notaDescuento);
     }
 
     const pago = await this.prisma.$transaction(async (tx) => {

@@ -13,6 +13,7 @@ import { TurnosService } from './turnos.service';
 import { BaseController } from '../../compartido/bases/base.controller';
 import { Turno } from '@prisma/client';
 import { CrearTurnoDto } from './dto/crear-turno.dto';
+import { ReasignarTurnoDto } from './dto/crear-turno.dto';
 import { ActualizarTurnoDto } from './dto/actualizar-turno.dto';
 import { Roles } from '../../compartido/decorators/roles.decorator';
 import { Tenant } from '../../compartido/decorators/tenant.decorator';
@@ -71,5 +72,14 @@ export class TurnosController extends BaseController<
       );
     }
     return this.turnosService.cerrarTurno(id, usuarioCierreId, tenant);
+  }
+
+  @Post(':id/reasignar')
+  reasignar(
+    @Param('id') id: string,
+    @Body() dto: ReasignarTurnoDto,
+    @Tenant() tenant: TenantContext,
+  ) {
+    return this.turnosService.reasignarTurno(id, dto.habitacionId, tenant);
   }
 }

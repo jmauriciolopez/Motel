@@ -6,6 +6,7 @@ import { CrearTurnoDto } from './dto/crear-turno.dto';
 import { TenantContext } from '../../compartido/interfaces/tenant-context.interface';
 import { MotorTarifarioService } from '../tarifas/motor-tarifario.service';
 import { extraerMontoDescuentoDeObservacion, TurnoCalculator } from '../tarifas/turno-calculator';
+import { agregarObservacion, preservarObservacionAnterior } from './turnos-observaciones';
 
 function motelIdRequerido(tenant: TenantContext): string {
   if (!tenant?.motelId) {
@@ -56,6 +57,23 @@ export class TurnosService extends BaseService<Turno> {
     private turnoCalculator: TurnoCalculator,
   ) {
     super(prisma, 'turno', { hasMotelId: false });
+  }
+
+  override async actualizar(id: string, data: any, scopedMotelId?: string | null) {
+    if (Object.prototype.hasOwnProperty.call(data, 'Observacion')) {
+      const turnoActual = await this.prisma.turno.findUnique({
+        where: { id },
+        select: { Observacion: true },
+      });
+      data = {
+        ...data,
+        Observacion: preservarObservacionAnterior(
+          turnoActual?.Observacion,
+          data.Observacion,
+        ),
+      };
+    }
+    return super.actualizar(id, data, scopedMotelId);
   }
 
   async abrirTurno(crearTurnoDto: CrearTurnoDto, tenant: TenantContext) {
@@ -207,6 +225,88 @@ export class TurnosService extends BaseService<Turno> {
     },
     { timeout: 10000 },
   );
+  }
+
+  async reasignarTurno(
+    id: string,
+    habitacionId: string,
+    tenant: TenantContext,
+  ) {
+    const motelIdActivo = motelIdRequerido(tenant);
+
+    return this.prisma.$transaction(async (tx) => {
+      const turno = await tx.turno.findFirst({
+        where: {
+          id,
+          deletedAt: null,
+          habitacion: { motelId: motelIdActivo, deletedAt: null },
+        },
+        include: {
+          habitacion: { include: { tarifa: true } },
+        },
+      });
+
+      if (!turno) throw new NotFoundException('Turno no encontrado');
+      if (turno.Salida) {
+        throw new BadRequestException('Solo se puede cambiar la habitación de un turno activo');
+      }
+      if (turno.habitacionId === habitacionId) {
+        throw new BadRequestException('La habitación destino debe ser diferente');
+      }
+
+      const habitacionDestino = await tx.habitacion.findFirst({
+        where: {
+          id: habitacionId,
+          motelId: motelIdActivo,
+          deletedAt: null,
+          Estado: EstadoHabitacion.DISPONIBLE,
+        },
+        include: { tarifa: true },
+      });
+
+      if (!habitacionDestino) {
+        throw new BadRequestException('La habitación destino no está disponible');
+      }
+
+      // La condición de estado evita asignar la misma habitación a dos turnos concurrentes.
+      const ocupada = await tx.habitacion.updateMany({
+        where: {
+          id: habitacionId,
+          motelId: motelIdActivo,
+          deletedAt: null,
+          Estado: EstadoHabitacion.DISPONIBLE,
+        },
+        data: { Estado: EstadoHabitacion.OCUPADA },
+      });
+      if (ocupada.count !== 1) {
+        throw new BadRequestException('La habitación destino dejó de estar disponible');
+      }
+
+      const habitacionOrigen = turno.habitacion.Identificador;
+      const habitacionDestinoNombre = habitacionDestino.Identificador;
+      const tarifaOrigen = turno.habitacion.tarifa?.Nombre || 'Sin tarifa';
+      const tarifaDestino = habitacionDestino.tarifa?.Nombre || 'Sin tarifa';
+      const detalleTarifa = tarifaOrigen === tarifaDestino
+        ? `Tarifa sin cambios: ${tarifaDestino}`
+        : `Tarifa distinta: ${tarifaOrigen} -> ${tarifaDestino}`;
+      const comentarioCambio = `[Cambio de habitación] ${habitacionOrigen} -> ${habitacionDestinoNombre}. ${detalleTarifa}`;
+      const observacion = agregarObservacion(turno.Observacion, comentarioCambio);
+
+      await tx.turno.update({
+        where: { id },
+        data: { habitacionId, Observacion: observacion },
+      });
+
+      await tx.habitacion.update({
+        where: { id: turno.habitacionId },
+        data: { Estado: EstadoHabitacion.DISPONIBLE },
+      });
+
+      return tx.turno.findUnique({
+        where: { id },
+        include: { habitacion: { include: { tarifa: true, motel: true } } },
+      });
+    }, { timeout: 10000 });
   }
 
   /** Inyecta el estado calculado y ajusta dynamic Total/SaldoPendiente para turnos abiertos con excedente */

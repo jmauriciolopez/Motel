@@ -28,7 +28,7 @@ import {
     useCreate,
     useRefresh
 } from 'react-admin';
-import { Box, Chip, Stack, Grid, Typography, Paper, Tooltip, IconButton, Popover, TextField as MuiTextField, Autocomplete, CircularProgress, Divider } from '@mui/material';
+import { Box, Chip, Stack, Grid, Typography, Paper, Tooltip, IconButton, Popover, TextField as MuiTextField, Autocomplete, CircularProgress, Divider, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Link, useLocation } from 'react-router-dom';
 import {
     ShoppingCart as ShoppingCartIcon,
@@ -47,7 +47,8 @@ import {
     Schedule as ScheduleIcon,
     AttachMoney as MoneyIcon,
     Add as AddIcon,
-    Visibility as VisibilityIcon
+    Visibility as VisibilityIcon,
+    SwapHoriz as SwapHorizIcon
 } from '@mui/icons-material';
 import { Sparkles } from 'lucide-react';
 import { useMotel } from '../context/MotelContext';
@@ -516,6 +517,89 @@ const CerrarTurnoButton = ({ showLabel = true }) => {
     );
 };
 
+const ReasignarHabitacionButton = ({ showLabel = true }) => {
+    const translate = useTranslate();
+    const record = useRecordContext();
+    const notify = useNotify();
+    const refresh = useRefresh();
+    const [open, setOpen] = React.useState(false);
+    const [habitacion, setHabitacion] = React.useState(null);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const { data: habitaciones = [], isPending } = useGetList('habitaciones', {
+        pagination: { page: 1, perPage: 100 },
+        sort: { field: 'Identificador', order: 'ASC' },
+        filter: { Estado: 'DISPONIBLE' },
+        meta: { include: { tarifa: true } },
+    }, { enabled: open });
+
+    if (!record || record.Salida) return null;
+
+    const handleClose = () => {
+        if (isSaving) return;
+        setOpen(false);
+        setHabitacion(null);
+    };
+
+    const handleConfirm = async () => {
+        if (!habitacion?.id) return;
+        setIsSaving(true);
+        try {
+            await http.post(`/turnos/${record.id}/reasignar`, { habitacionId: habitacion.id });
+            notify('pos.turnos.reasignacion_success', { type: 'success' });
+            handleClose();
+            refresh();
+        } catch (error) {
+            notify(error?.message || 'pos.turnos.reasignacion_error', { type: 'warning' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <>
+            <Button
+                variant="text"
+                size="small"
+                startIcon={<SwapHorizIcon sx={{ mr: showLabel ? 0 : -0.5 }} />}
+                onClick={(event) => { event.stopPropagation(); setOpen(true); }}
+                sx={{
+                    padding: showLabel ? '6px 12px' : '6px',
+                    fontSize: '0.75rem', minWidth: 'auto', fontWeight: 700,
+                    borderRadius: '8px', color: '#1565C0',
+                    backgroundColor: 'rgba(21, 101, 192, 0.04)',
+                    '&:hover': { backgroundColor: 'rgba(21, 101, 192, 0.08)' },
+                    textTransform: 'none'
+                }}
+                title={translate('pos.turnos.reasignar_habitacion')}
+            >
+                {showLabel ? translate('pos.turnos.reasignar_habitacion') : null}
+            </Button>
+            <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs" onClick={event => event.stopPropagation()}>
+                <DialogTitle>{translate('pos.turnos.reasignar_habitacion')}</DialogTitle>
+                <DialogContent>
+                    <Autocomplete
+                        sx={{ mt: 1 }}
+                        options={habitaciones}
+                        value={habitacion}
+                        onChange={(event, value) => setHabitacion(value)}
+                        getOptionLabel={(option) => option ? `${option.Identificador} — ${option.tarifa?.Nombre || 'Sin tarifa'}` : ''}
+                        loading={isPending}
+                        renderInput={(params) => (
+                            <MuiTextField {...params} label={translate('pos.turnos.habitacion')} autoFocus />
+                        )}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClose} disabled={isSaving}>{translate('ra.action.cancel')}</Button>
+                    <Button onClick={handleConfirm} disabled={!habitacion || isSaving} variant="contained">
+                        {isSaving ? translate('pos.turnos.reasignando') : translate('ra.action.confirm')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
+    );
+};
+
 const StatusField = () => {
     const record = useRecordContext();
     const translate = useTranslate();
@@ -844,6 +928,7 @@ const TurnoCard = ({ record }) => {
                                 <>
                                     <DashboardButton showLabel={false} />
                                     <CreateConsumoButton showLabel={false} />
+                                    <ReasignarHabitacionButton showLabel={false} />
                                     {dynamicSaldo > 0 && <PagoButton label={false} overrideSaldo={dynamicSaldo} overrideRecord={{ ...record, Total: dynamicTotal, SaldoPendiente: dynamicSaldo }} />}
                                     <CerrarTurnoButton showLabel={false} />
                                 </>
@@ -988,6 +1073,7 @@ const TurnoListContent = ({ viewMode }) => {
             <Stack direction="row" spacing={1} label={translate('resources.turnos.fields.Acciones')}>
                 <DashboardButton />
                 <CreateConsumoButton />
+                <ReasignarHabitacionButton />
                 <CerrarTurnoButton />
                 <EditButton
                     label={false}
