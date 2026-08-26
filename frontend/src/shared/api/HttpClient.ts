@@ -8,14 +8,9 @@ export interface RequestOptions extends RequestInit {
 
 class HttpClient {
     private baseUrl: string;
-    private onUnauthorized?: () => void;
 
     constructor(baseUrl: string) {
         this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    }
-
-    setUnauthorizedCallback(callback: () => void) {
-        this.onUnauthorized = callback;
     }
 
     private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -62,13 +57,18 @@ class HttpClient {
 
         // 4. Response Interceptor
         if (response.status === 401) {
-            sessionStorage.removeItem('user');
-            sessionStorage.removeItem('motelId');
-            sessionStorage.removeItem('moteles');
-            if (this.onUnauthorized) {
-                this.onUnauthorized();
-            }
-            throw new Error('Sesión expirada');
+            const prefix = import.meta.env.VITE_API_PREFIX || '/api/v1';
+            const cleanPrefix = prefix.startsWith('/') ? prefix : `/${prefix}`;
+            try {
+                await fetch(`${this.baseUrl}${cleanPrefix}/autenticacion/logout`, {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+            } catch (_) {}
+
+            sessionStorage.clear();
+            window.location.href = '#/login';
+            return Promise.resolve() as unknown as T;
         }
 
         if (!response.ok) {
