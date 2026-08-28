@@ -23,7 +23,7 @@ import CustomToolbar from '../layout/CustomToolbar';
 const Requerido = [required()];
 
 // -- Helper Components --
-const DescuentoEfectivoSection = ({ formasPago, porcentajeDescuentoEfectivo, saldo }) => {
+const DescuentoEfectivoSection = ({ formasPago, porcentajeDescuentoEfectivo, saldo, saldoTarifa }) => {
     const { watch, setValue } = useFormContext();
     const selectedFormaPagoId = watch('formaPagoId');
     const actualFormaId = typeof selectedFormaPagoId === 'object' ? selectedFormaPagoId?.id : selectedFormaPagoId;
@@ -35,7 +35,7 @@ const DescuentoEfectivoSection = ({ formasPago, porcentajeDescuentoEfectivo, sal
     const [aplicarDescuento, setAplicarDescuento] = useState(true);
 
     const montoDescuento = tieneDescuento && aplicarDescuento
-        ? Math.round((saldo * porcentajeDescuentoEfectivo) / 100 * 100) / 100
+        ? Math.round((saldoTarifa * porcentajeDescuentoEfectivo) / 100 * 100) / 100
         : 0;
     const montoACobrar = Math.max(0, saldo - montoDescuento);
 
@@ -93,7 +93,7 @@ const DescuentoEfectivoSection = ({ formasPago, porcentajeDescuentoEfectivo, sal
             {aplicarDescuento && (
                 <Box sx={{ mt: 1, pl: 4, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     <Typography variant="caption" color="text.secondary">
-                        Total original: <strong>${saldo.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+                        Tarifa (base descuento): <strong>${saldoTarifa.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
                     </Typography>
                     <Typography variant="caption" color="success.main">
                         Descuento ({porcentajeDescuentoEfectivo}%): <strong>-${montoDescuento.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
@@ -290,8 +290,15 @@ const PagoCreate = () => {
     const totalTurno = Number(turnoData?.Total ?? 0);
     const totalPagado = Math.max(0, totalTurno - saldo);
 
+    // El descuento aplica solo sobre tarifa + excedente (no sobre consumos)
+    const totalConsumos = (turnoData?.consumos || []).reduce(
+        (sum, c) => sum + Math.max(0, Number(c.Importe || 0)),
+        0
+    );
+    const saldoTarifa = Math.max(0, saldo - totalConsumos);
+
     const descuentoInicial = (porcentajeDescuentoEfectivo > 0 && defaultFormaPago)
-        ? Math.round((saldo * porcentajeDescuentoEfectivo) / 100 * 100) / 100
+        ? Math.round((saldoTarifa * porcentajeDescuentoEfectivo) / 100 * 100) / 100
         : 0;
     const importeInicial = Math.max(0, saldo - descuentoInicial);
 
@@ -363,6 +370,7 @@ const PagoCreate = () => {
                     formasPago={formasPago}
                     porcentajeDescuentoEfectivo={porcentajeDescuentoEfectivo}
                     saldo={saldo}
+                    saldoTarifa={saldoTarifa}
                 />
 
                 <Paper elevation={0} sx={{ p: 4, backgroundColor: 'action.hover', borderRadius: 4, mb: 3 }}>

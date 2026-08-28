@@ -55,6 +55,10 @@ export interface ClosingValues {
   Salida: Date;
   PrecioCalculo: number;
   Total: number;
+  /** Subtotal de tarifa + excedente (sin consumos). Base sobre la que aplica el descuento por efectivo. */
+  SubtotalTarifa: number;
+  /** Subtotal de consumos del turno. Excluido del descuento por efectivo. */
+  SubtotalConsumos: number;
 }
 
 /**
@@ -329,6 +333,8 @@ export class TurnoCalculator {
       Salida: salida,
       PrecioCalculo: newPrecioCalculo,
       Total: newTotal,
+      SubtotalTarifa: precioBase + extra,
+      SubtotalConsumos: totalConsumos,
     };
   }
 }

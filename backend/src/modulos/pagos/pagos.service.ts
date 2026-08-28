@@ -35,6 +35,7 @@ export class PagosService extends BaseService<Pago> {
       where: { id: crearPagoDto.turnoId },
       include: {
         pagos: true,
+        consumos: true,
         tarifa: true,
         habitacion: {
           include: { motel: true, tarifa: true },
@@ -53,7 +54,13 @@ export class PagosService extends BaseService<Pago> {
     let saldoCalculado = Number(turno.SaldoPendiente);
     let precioCalculado = turno.Precio;
 
-    // Si el turno está abierto, calcular posible excedente acumulado en tiempo real
+    // Consumos del turno: excluidos del descuento por efectivo
+    const totalConsumos = ((turno as any).consumos || []).reduce(
+      (sum: number, c: any) => sum + Number(c.Importe || 0),
+      0,
+    );
+
+    // Si el turno está abierto, recalcular total y saldo en tiempo real
     if (!turno.Salida && (turno.habitacion?.motel) && (turno.tarifa || turno.habitacion?.tarifa)) {
       const motel = turno.habitacion.motel;
       const tarifa = turno.tarifa || turno.habitacion.tarifa;
@@ -72,27 +79,35 @@ export class PagosService extends BaseService<Pago> {
       } catch (e) { /* ignore */ }
     }
 
+    // Base sobre la que aplica el descuento: tarifa + excedente (sin consumos)
+    // Se deriva siempre del total calculado, sin importar si el turno está abierto o cerrado
+    const subtotalTarifa = Math.max(0, totalCalculado - totalConsumos);
+
     if (!sincronizarPagoPendiente(saldoCalculado)) {
       throw new BadRequestException('El turno no tiene saldo pendiente.');
     }
 
-    if (crearPagoDto.Importe + descuento > saldoCalculado + 0.001) {
+    // El descuento por efectivo aplica solo sobre tarifa + excedente, nunca sobre consumos
+    const descuentoAplicable = Math.min(descuento, subtotalTarifa);
+
+    if (crearPagoDto.Importe + descuentoAplicable > saldoCalculado + 0.001) {
       throw new BadRequestException(
-        `El importe ($${crearPagoDto.Importe.toFixed(2)}) más el descuento ($${descuento.toFixed(2)}) supera el saldo pendiente ($${saldoCalculado.toFixed(2)}).`,
+        `El importe ($${crearPagoDto.Importe.toFixed(2)}) más el descuento ($${descuentoAplicable.toFixed(2)}) supera el saldo pendiente ($${saldoCalculado.toFixed(2)}).`,
       );
     }
 
-    const nuevoSaldo = Math.max(0, saldoCalculado - crearPagoDto.Importe - descuento);
+    const nuevoSaldo = Math.max(0, saldoCalculado - crearPagoDto.Importe - descuentoAplicable);
     const quedaSaldo = sincronizarPagoPendiente(nuevoSaldo);
 
     let nuevoTotal = totalCalculado;
     let nuevaObservacion = turno.Observacion;
 
-    if (descuento > 0) {
-      nuevoTotal = Math.max(0, totalCalculado - descuento);
+    if (descuentoAplicable > 0) {
+      // El descuento solo afecta la tarifa; los consumos se preservan intactos
+      nuevoTotal = Math.max(0, subtotalTarifa - descuentoAplicable) + totalConsumos;
       const pctTexto = porcentajeDescuento ? ` ${porcentajeDescuento}%` : '';
       const totalOrigFormatted = totalCalculado.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-      const descFormatted = descuento.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const descFormatted = descuentoAplicable.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       const notaDescuento = `[Descuento Efectivo${pctTexto}] Total original: $${totalOrigFormatted} - Descuento: $${descFormatted}`;
 
       nuevaObservacion = agregarObservacion(turno.Observacion, notaDescuento);
@@ -110,7 +125,7 @@ export class PagosService extends BaseService<Pago> {
         PagoPendiente: quedaSaldo,
       };
 
-      if (descuento > 0) {
+      if (descuentoAplicable > 0) {
         updateDataTurno.Observacion = nuevaObservacion;
       }
 

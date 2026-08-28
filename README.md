@@ -255,3 +255,160 @@ Todos los recursos siguen el patrón `BaseController` / `BaseService`:
 - **`HttpClient`**: Centraliza peticiones con `credentials: 'include'` para enviar la cookie automáticamente.
 - **`MotelContext`**: Gestiona el motel activo; persiste en `sessionStorage` (se limpia al cerrar el tab).
 - **`authProvider`**: `checkAuth` valida contra el backend (llama a `/autenticacion/refresh`), no depende de datos locales.
+
+
+
+
+# Sistema de Gestión para Moteles
+
+Software integral para la administración diaria de moteles. Cubre desde la atención al huésped hasta el control de inventario, finanzas y reportes, todo desde una sola plataforma.
+
+---
+
+## ¿Qué permite gestionar?
+
+### Operación diaria
+
+**Turnos y estadías**
+- Apertura y cierre de turnos con cálculo automático del total según tarifa y tiempo transcurrido
+- Soporte para estadías estándar (por horas) y pernocte
+- Reasignación de huéspedes a otra habitación sin perder el historial
+- Seguimiento del estado de cada turno: abierto, cerrado o cobrado
+- Registro de quién abrió y quién cerró cada turno
+
+**Habitaciones**
+- Vista en tiempo real del estado de cada habitación: disponible, ocupada, en limpieza, en mantenimiento o bloqueada
+- Asignación de tarifa predeterminada por habitación
+
+**Clientes y vehículos**
+- Registro de clientes por patente, marca y color del vehículo
+- Alta rápida de cliente desde la pantalla de apertura de turno
+
+**Ventas al huésped (consumos)**
+- Registro de productos vendidos durante el turno (bar, mini-bar, amenities)
+- El importe se suma automáticamente al total del turno
+- El stock se descuenta al momento de la venta
+
+**Cobros y pagos**
+- Cobro total o parcial (anticipos) con cualquier forma de pago
+- Descuento por pago en efectivo: configurable globalmente o aplicable al momento del cobro
+- Cada cobro en efectivo impacta automáticamente en la caja
+
+**Limpiezas**
+- Registro del estado de limpieza habitación por habitación
+- Al registrar la limpieza, la habitación vuelve al estado disponible automáticamente
+
+**Mantenimientos**
+- Registro de trabajos de mantenimiento con asignación a proveedor y estado de finalización
+
+**Reservas**
+- Registro anticipado de reservas asociadas a cliente y habitación
+
+---
+
+### Inventario y stock
+
+**Productos y catálogo**
+- Administración del catálogo de productos del motel con precio de venta, costo y stock mínimo
+- Categorización por rubros (bebidas, amenities, limpieza, etc.)
+- Importación del catálogo general de la plataforma para dar de alta productos rápidamente
+- Ajuste de precios masivo por categoría
+
+**Depósitos**
+- Gestión de múltiples depósitos por motel (depósito principal y depósito de recepción como mínimo)
+
+**Compras a proveedores**
+- Registro de compras con detalle de ítems, cantidades y precios
+- El stock del depósito principal se actualiza automáticamente al confirmar la compra
+
+**Transferencias entre depósitos**
+- Movimiento de productos entre depósitos con validación de stock disponible
+
+**Insumos internos**
+- Registro del consumo interno de productos (entrega de amenities a habitaciones, por ejemplo)
+
+**Proveedores**
+- Alta y mantenimiento de proveedores con categorización por rubro
+
+---
+
+### Finanzas
+
+**Caja**
+- Libro de movimientos con saldo corriente
+- Los cobros en efectivo y los gastos se registran automáticamente sin intervención manual
+
+**Gastos**
+- Registro de egresos operativos con impacto automático en caja
+
+**Formas de pago**
+- Configuración libre de los medios de cobro disponibles (efectivo, tarjeta, transferencia, billeteras virtuales, etc.)
+
+---
+
+### Configuración del motel
+
+- Datos generales: nombre, dirección, teléfono
+- Horarios operativos: inicio de turno diurno y nocturno, hora de checkout, tolerancia sin cargo adicional
+- Duración estándar del turno (horas de día y de noche) y máximo de horas adicionales permitidas
+- Hora de cierre contable (define el "día" para los reportes)
+- Días especiales (fines de semana u otros) con tiempo extendido automático
+- Porcentaje de descuento por pago en efectivo
+- Activar cobro anticipado al abrir el turno
+
+**Tarifas**
+- Múltiples tarifas por motel: precio de turno, precio diario, precio promocional, precio por hora excedente (día y noche) y minutos extra incluidos
+
+---
+
+### Reportes
+
+**Ingresos del día**
+Total facturado, cantidad de turnos, ticket promedio, distribución de cobros por forma de pago, ventas de bar por producto y ocupación por habitación.
+
+**Rendimiento (por período)**
+Ingresos por hora del día, por día de la semana, ranking de habitaciones y distribución entre tarifas regulares, promocionales y pernoctes.
+
+**Analítico interactivo**
+Gráfico con múltiples métricas combinables (turnos, limpiezas, facturado, consumos) con zoom, rangos predefinidos y granularidad configurable (hora, día, semana, mes).
+
+**Turnos completados**
+Listado detallado de todos los turnos cerrados en un período, con pagos y consumos de cada uno.
+
+**Stock actual**
+Vista del inventario en tiempo real por producto y depósito.
+
+**Auditoría de stock**
+Movimientos de stock en un período: compras, transferencias, consumos, faltantes y diferencias en pesos.
+
+**Discrepancias**
+Detecta turnos donde la suma de pagos no coincide con el total, para control y auditoría de caja.
+
+**Cuadro tarifario**
+Comparativa de todas las tarifas activas del motel.
+
+**Historial de clientes**
+Visitas y consumos por cliente.
+
+**Lista de compras y estimación de costos**
+Compras realizadas en un período y proyección de costos operativos.
+
+---
+
+### Gestión de usuarios
+
+- Alta, edición y desactivación de usuarios
+- Cuatro niveles de acceso: Recepcionista, Supervisor, Administrador y Super Administrador
+- Un usuario puede tener acceso a varios moteles del mismo propietario
+
+---
+
+### Soporte multi-sucursal
+
+Un propietario puede administrar varios moteles desde una sola cuenta. Cada motel opera de forma completamente independiente en cuanto a datos, stock, caja y configuración. El usuario puede cambiar de sucursal activa desde la interfaz en cualquier momento.
+
+---
+
+### Configuración inicial asistida
+
+Al dar de alta un motel nuevo, un asistente paso a paso guía la configuración completa: datos del propietario, configuración horaria, creación de personal, primera tarifa, habitaciones y carga del catálogo de productos.
