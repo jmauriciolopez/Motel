@@ -209,7 +209,7 @@ export const HabitacionList = () => {
     const { currentMotelId: motelId } = useMotel();
     const filter = motelId ? { motelId: motelId } : {};
 
-    console.log('[DEBUG habitaciones.js] HabitacionList render -> permissions:', permissions, 'isPending:', isPending, 'motelId:', motelId, 'filter:', filter);
+    //  console.log('[DEBUG habitaciones.js] HabitacionList render -> permissions:', permissions, 'isPending:', isPending, 'motelId:', motelId, 'filter:', filter);
 
     return (
         <List filters={postFilters} filter={filter} sx={{ '& .RaList-main': { marginTop: 2 } }}

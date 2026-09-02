@@ -1249,7 +1249,7 @@ const TurnoCreate = () => {
                         </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion} sort={{ field: 'Identificador', order: 'ASC' }}>
+                        <ReferenceInput source="habitacionId" reference="habitaciones" filter={filterHabitacion} sort={{ field: 'Identificador', order: 'ASC' }} perPage={100}>
                             <AutocompleteInput label={translate('pos.turnos.habitacion')} optionText={(record) => record ? `${record.Identificador} — ${record.tarifa?.Nombre || 'Sin tarifa'}` : ''} validate={Requerido} fullWidth />
                         </ReferenceInput>
                         <FormDataConsumer>
