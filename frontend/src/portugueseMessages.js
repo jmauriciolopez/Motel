@@ -529,6 +529,7 @@ const portugueseMessages = {
     reportes: { name: 'Relatórios' },
     configuracion: { name: 'Configuração' },
     'reporte-turnos': { name: 'Estadias Realizadas' },
+    'reporte-duracion-turnos': { name: 'Duração das Estadias' },
     'reporte-ingresos': { name: 'Relatório de Receita' },
     'reporte-rendimiento': { name: 'Desempenho' },
     'reporte-costos': { name: 'Est. de Custos' },

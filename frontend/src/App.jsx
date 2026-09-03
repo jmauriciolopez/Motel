@@ -58,6 +58,7 @@ const CuadroTarifario = lazy(() => import('./Reportes/CuadroTarifario.js'));
 const ReporteDiscrepancias = lazy(() => import('./Reportes/ReporteDiscrepancias.js'));
 const ReporteAnalitico = lazy(() => import('./Reportes/ReporteAnalitico.js'));
 const AuditoriaStock = lazy(() => import('./Reportes/AuditoriaStock.js'));
+const ReporteDuracionTurnos = lazy(() => import('./Reportes/ReporteDuracionTurnos.js'));
 
 function App() {
     return (
@@ -141,6 +142,7 @@ function App() {
 
                                 <CustomRoutes>
                                     {isSupervisor && <Route path="/ReporteTurnosCompletados" element={<ReporteTurnosCompletados />} />}
+                                    {isSupervisor && <Route path="/ReporteDuracionTurnos" element={<ReporteDuracionTurnos />} />}
                                     {isAdmin && <Route path="/GestorUsuarios" element={<GestorUsuarios />} />}
                                     {isSupervisor && <Route path="/ReporteIngresos" element={<ReporteIngresos />} />}
                                     {isSupervisor && <Route path="/ReporteRendimiento" element={<ReporteRendimiento />} />}

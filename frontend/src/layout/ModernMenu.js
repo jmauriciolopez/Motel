@@ -157,6 +157,7 @@ const ModernMenu = (props) => {
                     icon={<BarChart2 size={20} />}
                 >
                     <MenuItemLink to="/ReporteTurnosCompletados" primaryText={translate('resources.reporte-turnos.name', { defaultValue: 'Turnos Completados' })} leftIcon={<Activity size={20} />} />
+                    <MenuItemLink to="/ReporteDuracionTurnos" primaryText={translate('resources.reporte-duracion-turnos.name', { defaultValue: 'Duración de Turnos' })} leftIcon={<Activity size={20} />} />
                     <MenuItemLink to="/ReporteIngresos" primaryText={translate('resources.reporte-ingresos.name', { defaultValue: 'Reporte Ingresos' })} leftIcon={<Activity size={20} />} />
                     <MenuItemLink to="/ReporteRendimiento" primaryText={translate('resources.reporte-rendimiento.name', { defaultValue: 'Rendimiento' })} leftIcon={<TrendingUp size={20} />} />
                     <MenuItemLink to="/ReporteEstimacion" primaryText={translate('resources.reporte-costos.name', { defaultValue: 'Est. de Costos' })} leftIcon={<Calculator size={20} />} />
