@@ -10,7 +10,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    Chip,
     Alert
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
@@ -36,6 +35,15 @@ const formatTime = (value) => {
 };
 
 const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const dayColumns = [
+    { value: 0, label: 'Dom' },
+    { value: 1, label: 'Lun' },
+    { value: 2, label: 'Mar' },
+    { value: 3, label: 'Mié' },
+    { value: 4, label: 'Jue' },
+    { value: 5, label: 'Vie' },
+    { value: 6, label: 'Sáb' }
+];
 
 const ReporteDuracionTurnos = () => {
     const translate = useTranslate();
@@ -52,12 +60,24 @@ const ReporteDuracionTurnos = () => {
         if (!motel) return [];
         const duracionDia = Number(motel.DuracionDiaria) || 0;
         const duracionNoche = Number(motel.DuracionNocturna) || 0;
+        const diasEspeciales = Array.isArray(motel.DiasEspeciales)
+            ? motel.DiasEspeciales.map(Number)
+            : [];
 
         return tarifas.map((tarifa) => ({
             ...tarifa,
-            dia: duracionDia * 60 + (Number(tarifa.MinutosExtra) || 0),
-            noche: duracionNoche * 60 + (Number(tarifa.MinutosExtra) || 0),
-            especialDia: (duracionDia + horasEspeciales) * 60 + (Number(tarifa.MinutosExtra) || 0)
+            duracionesPorDia: dayColumns.reduce((duraciones, day) => {
+                const especial = diasEspeciales.includes(day.value);
+                const siguienteDiaEspecial = diasEspeciales.includes((day.value + 1) % 7);
+                duraciones[day.value] = {
+                    dia: (duracionDia + (especial ? horasEspeciales : 0)) * 60 + (Number(tarifa.MinutosExtra) || 0),
+                    noche: motel.HorarioUnico
+                        ? null
+                        : (duracionNoche + (especial && siguienteDiaEspecial ? horasEspeciales : 0)) * 60 + (Number(tarifa.MinutosExtra) || 0),
+                    especial
+                };
+                return duraciones;
+            }, {})
         }));
     }, [motel, tarifas]);
 
@@ -73,7 +93,9 @@ const ReporteDuracionTurnos = () => {
         : 'No configurados';
     const rangoEspecial = motel?.HorarioUnico
         ? 'Todo el día'
-        : `${formatTime(motel?.InicioDia)} a ${formatTime(motel?.InicioNoche)}`;
+        : `Día: ${formatTime(motel?.InicioDia)} a ${formatTime(motel?.InicioNoche)}; noche: solo entre días especiales contiguos`;
+    const inicioDia = formatTime(motel?.InicioDia);
+    const inicioNoche = formatTime(motel?.InicioNoche);
 
     return (
         <Box p={3}>
@@ -89,28 +111,32 @@ const ReporteDuracionTurnos = () => {
 
             <Paper elevation={0} sx={{ border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden' }}>
                 <TableContainer>
-                    <Table sx={{ minWidth: 850 }}>
+                    <Table sx={{ minWidth: 1450 }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: '#f8fafc' }}>
                                 <TableCell sx={{ fontWeight: 800 }}>Tarifa</TableCell>
-                                <TableCell sx={{ fontWeight: 800 }}>Turno diurno</TableCell>
-                                <TableCell sx={{ fontWeight: 800 }}>Turno nocturno</TableCell>
-                                <TableCell sx={{ fontWeight: 800 }}>Día especial</TableCell>
-                                <TableCell sx={{ fontWeight: 800 }}>Pernocte</TableCell>
-                                <TableCell sx={{ fontWeight: 800 }}>Extra tarifa</TableCell>
+                                {dayColumns.map((day) => (
+                                    <TableCell key={day.value} align="center" sx={{ fontWeight: 800, minWidth: 120 }}>
+                                        {day.label}
+                                    </TableCell>
+                                ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {filas.map((fila) => (
                                 <TableRow key={fila.id} hover>
                                     <TableCell><Typography fontWeight={700}>{fila.Nombre}</Typography></TableCell>
-                                    <TableCell>{minutesLabel(fila.dia)}</TableCell>
-                                    <TableCell>{minutesLabel(fila.noche)}</TableCell>
-                                    <TableCell>{horasEspeciales > 0 ? minutesLabel(fila.especialDia) : '-'}</TableCell>
-                                    <TableCell>Hasta {formatTime(motel.CheckOutDia)}</TableCell>
-                                    <TableCell>
-                                        <Chip size="small" label={minutesLabel(fila.MinutosExtra)} variant="outlined" />
-                                    </TableCell>
+                                    {dayColumns.map((day) => {
+                                        const duracion = fila.duracionesPorDia[day.value];
+                                        return (
+                                            <TableCell key={day.value} align="center" sx={{ bgcolor: duracion.especial ? '#fff7ed' : undefined }}>
+                                                <Typography variant="body2" fontWeight={700}>{minutesLabel(duracion.dia)}</Typography>
+                                                {!motel.HorarioUnico && (
+                                                    <Typography variant="caption" color="text.secondary">N: {minutesLabel(duracion.noche)}</Typography>
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })}
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -125,11 +151,11 @@ const ReporteDuracionTurnos = () => {
                 <Box display="grid" gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }} gap={2}>
                     <Box>
                         <Typography variant="caption" color="text.secondary" display="block">Inicio tarifa diurna</Typography>
-                        <Typography fontWeight={700}>{formatTime(motel?.InicioDia)} hs</Typography>
+                        <Typography fontWeight={700}>{inicioDia} hs</Typography>
                     </Box>
                     <Box>
                         <Typography variant="caption" color="text.secondary" display="block">Inicio tarifa nocturna</Typography>
-                        <Typography fontWeight={700}>{formatTime(motel?.InicioNoche)} hs</Typography>
+                        <Typography fontWeight={700}>{inicioNoche} hs</Typography>
                     </Box>
                     <Box>
                         <Typography variant="caption" color="text.secondary" display="block">Días configurados</Typography>
@@ -143,12 +169,16 @@ const ReporteDuracionTurnos = () => {
                         <Typography variant="caption" color="text.secondary" display="block">Horas adicionales</Typography>
                         <Typography fontWeight={700}>{horasEspeciales ? `${horasEspeciales} h` : 'Sin horas adicionales'}</Typography>
                     </Box>
+                    <Box gridColumn={{ xs: 'auto', md: '1 / -1' }}>
+                        <Typography variant="caption" color="text.secondary" display="block">Referencia de la tabla</Typography>
+                        <Typography variant="body2">Cada día muestra D = diurno y N = nocturno. D suma horas extra si el día es especial; N las suma solo cuando el día actual y el siguiente son especiales.</Typography>
+                    </Box>
                 </Box>
             </Paper>
 
             <Alert severity="info" sx={{ mt: 2, borderRadius: '12px' }}>
                 Configuración del motel: día {motel.DuracionDiaria} h, noche {motel.DuracionNocturna} h,
-                tolerancia {motel.Tolerancia} min. El pernocte se calcula desde el ingreso hasta el checkout.
+                tolerancia {motel.Tolerancia} min. El pernocte se calcula desde el ingreso hasta el checkout ({formatTime(motel.CheckOutDia)}), por eso no tiene una duración fija.
                 {aplicaCorte ? ' El turno diurno puede limitarse al checkout.' : ''}
             </Alert>
         </Box>

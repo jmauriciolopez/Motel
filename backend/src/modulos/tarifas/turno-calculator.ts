@@ -146,8 +146,9 @@ export class TurnoCalculator {
    *
    * Reglas:
    * - Si HorarioUnico: aplica todo el día calendario marcado como especial.
-   * - Si tiene franjas día/noche: el período especial es la franja nocturna
-   *   (desde InicioNoche hasta InicioDia). La madrugada se asigna al día anterior.
+    * - Si tiene franjas día/noche: la franja diurna de un día especial recibe
+    *   la hora extra. La franja nocturna solo la recibe cuando conecta dos días
+    *   especiales contiguos.
    */
   private isInPeriodoEspecial(date: Date, motel: Motel): boolean {
     const diasEspeciales = Array.isArray(motel.DiasEspeciales)
@@ -155,17 +156,22 @@ export class TurnoCalculator {
       : [];
     if (diasEspeciales.length === 0 || (motel.HorasExtraEspeciales ?? 0) <= 0) return false;
 
-    const { hour: hours, day: diaEfectivo } = this.getBusinessParts(date);
+    const { hour: hours, minute, day } = this.getBusinessParts(date);
+    if (motel.HorarioUnico) return diasEspeciales.includes(day);
+
     const iniciodia = this.getHour(motel.InicioDia);
     const inicionoche = this.getHour(motel.InicioNoche);
-    // Día "efectivo": la madrugada (antes de InicioDia) pertenece al día anterior
-    if (!diasEspeciales.includes(diaEfectivo)) return false;
+    const inicioDiaMinutos = iniciodia * 60 + this.getMin(motel.InicioDia);
+    const inicioNocheMinutos = inicionoche * 60 + this.getMin(motel.InicioNoche);
+    const horaActual = hours * 60 + minute;
 
-    if (hours >= iniciodia && hours < inicionoche - 1) {
-      return true;
-    }
+    const esFranjaDiurna = horaActual >= inicioDiaMinutos && horaActual < inicioNocheMinutos;
+    if (esFranjaDiurna) return diasEspeciales.includes(day);
 
-    return false;
+    // La hora extra nocturna solo aplica cuando la noche une dos días especiales.
+    const diaEspecial = horaActual >= inicioNocheMinutos ? day : (day + 6) % 7;
+    const diaSiguiente = (diaEspecial + 1) % 7;
+    return diasEspeciales.includes(diaEspecial) && diasEspeciales.includes(diaSiguiente);
   }
 
   /**

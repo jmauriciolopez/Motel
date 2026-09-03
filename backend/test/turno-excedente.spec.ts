@@ -62,6 +62,44 @@ async function runTests() {
   );
   assert(resAperturaDiurna.Precio === 35000, `La apertura diurna debe usar el precio promocional (35000), obtenido: ${resAperturaDiurna.Precio}`);
 
+  // --- PRUEBA 1b: Días especiales contiguos aplican la hora extra en cada día ---
+  console.log('\n--- TEST 1b: Días especiales contiguos ---');
+  const motelDiasContiguos = {
+    ...mockMotel1,
+    InicioDia: '09:00',
+    InicioNoche: '22:00',
+    HorarioUnico: false,
+    DiasEspeciales: [4, 5], // jueves y viernes
+    HorasExtraEspeciales: 1,
+  };
+  const tarifaDiasContiguos = { ...mockTarifa1, MinutosExtra: 0 };
+  const juevesDiurno = calculator.calculateInitialValues(
+    { motel: motelDiasContiguos as any, tarifa: tarifaDiasContiguos as any },
+    '2026-08-27T13:00:00.000Z', // jueves, 10:00 en America/Argentina/Buenos_Aires
+    'Standard',
+  );
+  const viernesDiurno = calculator.calculateInitialValues(
+    { motel: motelDiasContiguos as any, tarifa: tarifaDiasContiguos as any },
+    '2026-08-28T13:00:00.000Z', // viernes, 10:00 en America/Argentina/Buenos_Aires
+    'Standard',
+  );
+  const juevesNocturnoContiguo = calculator.calculateInitialValues(
+    { motel: motelDiasContiguos as any, tarifa: tarifaDiasContiguos as any },
+    '2026-08-28T02:00:00.000Z', // jueves, 23:00 en America/Argentina/Buenos_Aires
+    'Standard',
+  );
+  assert(juevesDiurno.Minutos === 180, `Jueves diurno especial debe durar 180 minutos, obtenido: ${juevesDiurno.Minutos}`);
+  assert(viernesDiurno.Minutos === 180, `Viernes diurno especial debe durar 180 minutos, obtenido: ${viernesDiurno.Minutos}`);
+  assert(juevesNocturnoContiguo.Minutos === 180, `Jueves nocturno entre días especiales debe durar 180 minutos, obtenido: ${juevesNocturnoContiguo.Minutos}`);
+
+  const motelDiaNoContiguo = { ...motelDiasContiguos, DiasEspeciales: [4] };
+  const juevesNocturnoNoContiguo = calculator.calculateInitialValues(
+    { motel: motelDiaNoContiguo as any, tarifa: tarifaDiasContiguos as any },
+    '2026-08-28T02:00:00.000Z', // jueves, 23:00 en America/Argentina/Buenos_Aires
+    'Standard',
+  );
+  assert(juevesNocturnoNoContiguo.Minutos === 120, `Jueves nocturno sin viernes especial debe durar 120 minutos, obtenido: ${juevesNocturnoNoContiguo.Minutos}`);
+
   // --- PRUEBA 1c: Recuperación conserva precio diurno promocional y consumos ---
   console.log('\n--- TEST 1c: Saldo con precio promocional y consumo ---');
   const ingresoRecuperacion = new Date(Date.now() - 30 * 60000);
