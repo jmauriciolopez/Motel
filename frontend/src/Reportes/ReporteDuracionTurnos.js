@@ -68,12 +68,12 @@ const ReporteDuracionTurnos = () => {
             ...tarifa,
             duracionesPorDia: dayColumns.reduce((duraciones, day) => {
                 const especial = diasEspeciales.includes(day.value);
-                const siguienteDiaEspecial = diasEspeciales.includes((day.value + 1) % 7);
+                const minutosExtra = Number(tarifa.MinutosExtra ?? tarifa.minutosExtra) || 0;
                 duraciones[day.value] = {
-                    dia: (duracionDia + (especial ? horasEspeciales : 0)) * 60 + (Number(tarifa.MinutosExtra) || 0),
+                    dia: (duracionDia + (especial ? horasEspeciales : 0)) * 60 + minutosExtra,
                     noche: motel.HorarioUnico
                         ? null
-                        : (duracionNoche + (especial && siguienteDiaEspecial ? horasEspeciales : 0)) * 60 + (Number(tarifa.MinutosExtra) || 0),
+                        : (duracionNoche + (especial ? horasEspeciales : 0)) * 60 + minutosExtra,
                     especial
                 };
                 return duraciones;

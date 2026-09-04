@@ -13,6 +13,12 @@ function assert(condition: boolean, message: string) {
   }
 }
 
+function minutesLabelForTest(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return `${hours}h ${remainingMinutes}min`;
+}
+
 async function runTests() {
   console.log('\n==================================================');
   console.log('🧪 SUITE DE PRUEBAS: TURNOS CON EXCEDENTE Y PAGO');
@@ -98,7 +104,42 @@ async function runTests() {
     '2026-08-28T02:00:00.000Z', // jueves, 23:00 en America/Argentina/Buenos_Aires
     'Standard',
   );
-  assert(juevesNocturnoNoContiguo.Minutos === 120, `Jueves nocturno sin viernes especial debe durar 120 minutos, obtenido: ${juevesNocturnoNoContiguo.Minutos}`);
+  assert(juevesNocturnoNoContiguo.Minutos === 180, `Jueves nocturno de día especial debe durar 180 minutos aunque viernes no sea especial, obtenido: ${juevesNocturnoNoContiguo.Minutos}`);
+
+  console.log('\n--- TEST 1d: Escenarios solicitados para jueves especial y viernes normal ---');
+  const escenariosEspeciales = [
+    { nombre: 'Jueves 21:00', ingreso: '2026-08-28T00:00:00.000Z' }, // 21:00 jueves local
+    { nombre: 'Jueves 23:00', ingreso: '2026-08-28T02:00:00.000Z' }, // 23:00 jueves local
+    { nombre: 'Viernes 02:00', ingreso: '2026-08-28T05:00:00.000Z' }, // 02:00 viernes local
+    { nombre: 'Viernes 07:00', ingreso: '2026-08-28T10:00:00.000Z' }, // 07:00 viernes local
+    { nombre: 'Viernes 23:00', ingreso: '2026-08-29T02:00:00.000Z' }, // 23:00 viernes local
+  ];
+
+  const resultadosEscenarios = escenariosEspeciales.map((escenario) => ({
+    ...escenario,
+    minutos: calculator.calculateInitialValues(
+      { motel: motelDiaNoContiguo as any, tarifa: tarifaDiasContiguos as any },
+      escenario.ingreso,
+      'Standard',
+    ).Minutos,
+  }));
+
+  resultadosEscenarios.forEach((resultado) => {
+    console.log(`${resultado.nombre}: ${resultado.minutos} minutos (${minutesLabelForTest(resultado.minutos)})`);
+  });
+
+  assert(resultadosEscenarios[0].minutos === 180, `Jueves 21:00 debe durar 180 minutos, obtenido: ${resultadosEscenarios[0].minutos}`);
+  assert(resultadosEscenarios[1].minutos === 180, `Jueves 23:00 debe durar 180 minutos, obtenido: ${resultadosEscenarios[1].minutos}`);
+  assert(resultadosEscenarios[2].minutos === 180, `Viernes 02:00 debe durar 180 minutos, obtenido: ${resultadosEscenarios[2].minutos}`);
+  assert(resultadosEscenarios[3].minutos === 180, `Viernes 07:00 debe durar 180 minutos, obtenido: ${resultadosEscenarios[3].minutos}`);
+  assert(resultadosEscenarios[4].minutos === 120, `Viernes 23:00 debe durar 120 minutos, obtenido: ${resultadosEscenarios[4].minutos}`);
+
+  const suiteTematica = calculator.calculateInitialValues(
+    { motel: motelDiaNoContiguo as any, tarifa: { ...tarifaDiasContiguos, MinutosExtra: 60 } as any },
+    '2026-08-28T00:00:00.000Z', // jueves 21:00 local
+    'Standard',
+  );
+  assert(suiteTematica.Minutos === 240, `Suite temática debe conservar 60 minutos extra además de la hora especial, obtenido: ${suiteTematica.Minutos}`);
 
   // --- PRUEBA 1c: Recuperación conserva precio diurno promocional y consumos ---
   console.log('\n--- TEST 1c: Saldo con precio promocional y consumo ---');

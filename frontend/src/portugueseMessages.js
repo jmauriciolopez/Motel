@@ -245,6 +245,9 @@ const portugueseMessages = {
     reports: {
       date_from: 'Data Inicial',
       date_to: 'Data Final',
+      cash_closure: 'Fechamento de caixa',
+      all_day: 'Todo o dia',
+      unknown_operator: 'Operador desconhecido',
       room: 'Quarto',
       revenue: 'Receita',
       turns: 'Estadias',

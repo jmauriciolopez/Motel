@@ -245,6 +245,9 @@ const spanishMessages = {
     reports: {
       date_from: 'Fecha Desde',
       date_to: 'Fecha Hasta',
+      cash_closure: 'Cierre de caja',
+      all_day: 'Todo el día',
+      unknown_operator: 'Operador desconocido',
       room: 'Habitación',
       revenue: 'Ingresos',
       turns: 'Turnos',

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useGetList, Title, Loading, Error, useTranslate } from 'react-admin';
 import { 
     Card, 
@@ -7,6 +7,10 @@ import {
     Grid, 
     Box, 
     TextField, 
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
     Table, 
     TableBody, 
     TableCell, 
@@ -54,13 +58,55 @@ const ReporteIngresos = () => {
 
     const { availableMoteles, currentMotelId } = useMotel();
     const horaCierre = availableMoteles?.[0]?.HoraCierreCaja || '06:00';
+    const [selectedClosureId, setSelectedClosureId] = useState('');
+
+    const cierresFilter = useMemo(() => ({
+        createdAt: {
+            $gte: `${filterDate}T00:00:00.000Z`,
+            $lt: `${filterDate}T23:59:59.999Z`
+        },
+        motelId: currentMotelId,
+    }), [filterDate, currentMotelId]);
+
+    const { data: cajasDelDia = [], isLoading: isLoadingCierres } = useGetList('cajas', {
+        pagination: { page: 1, perPage: 1000 },
+        sort: { field: 'createdAt', order: 'ASC' },
+        filter: cierresFilter,
+        meta: { include: { usuario: true } },
+    });
+
+    const cierres = useMemo(() => {
+        const inicioDelDia = new Date(`${filterDate}T00:00:00.000Z`).getTime();
+        const finDelDia = new Date(`${filterDate}T23:59:59.999Z`).getTime();
+
+        return cajasDelDia
+            .filter((caja) => {
+                const creadoEn = new Date(caja.createdAt).getTime();
+                return creadoEn >= inicioDelDia &&
+                    creadoEn <= finDelDia &&
+                    /cerrar|fechar/i.test(caja.Concepto || '');
+            })
+            .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    }, [cajasDelDia, filterDate]);
+
+    useEffect(() => {
+        if (!cierres.some((cierre) => cierre.id === selectedClosureId)) {
+            setSelectedClosureId('');
+        }
+    }, [cierres, selectedClosureId]);
+
+    const selectedClosureIndex = cierres.findIndex((cierre) => cierre.id === selectedClosureId);
+    const selectedClosure = selectedClosureIndex >= 0 ? cierres[selectedClosureIndex] : null;
+    const previousClosure = selectedClosureIndex > 0 ? cierres[selectedClosureIndex - 1] : null;
 
     const turnosFilter = useMemo(() => ({
         fechaDesde: filterDate,
         fechaHasta: filterDate,
         horaCierre: horaCierre,
         motelId: currentMotelId,
-    }), [filterDate, horaCierre, currentMotelId]);
+        desde: previousClosure?.createdAt || `${filterDate}T00:00:00.000Z`,
+        hasta: selectedClosure?.createdAt || `${filterDate}T23:59:59.999Z`,
+    }), [filterDate, horaCierre, currentMotelId, selectedClosure, previousClosure]);
 
     const { data, isLoading, error } = useGetList('turnos/reporte-completados', {
         pagination: { page: 1, perPage: 1000 },
@@ -208,7 +254,7 @@ const ReporteIngresos = () => {
         );
     };
 
-    if (isLoading || isLoadingInsumos) return <Loading />;
+    if (isLoading || isLoadingInsumos || isLoadingCierres) return <Loading />;
     if (error) return <Error />;
 
     return (
@@ -229,6 +275,22 @@ const ReporteIngresos = () => {
                     size="small"
                     sx={{ backgroundColor: 'white', borderRadius: '8px', minWidth: '200px' }}
                 />
+                <FormControl size="small" sx={{ minWidth: '280px', backgroundColor: 'white' }}>
+                    <InputLabel>{translate('pos.reports.cash_closure')}</InputLabel>
+                    <Select
+                        value={selectedClosureId}
+                        label={translate('pos.reports.cash_closure')}
+                        onChange={(event) => setSelectedClosureId(event.target.value)}
+                    >
+                        <MenuItem value="">{translate('pos.reports.all_day')}</MenuItem>
+                        {cierres.map((cierre) => (
+                            <MenuItem key={cierre.id} value={cierre.id}>
+                                {new Date(cierre.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {' - '}{cierre.usuario?.Username || translate('pos.reports.unknown_operator')}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
             </Box>
 
             <Grid container spacing={3} mb={4}>

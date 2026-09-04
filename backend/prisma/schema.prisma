@@ -73,6 +73,7 @@ model Usuario {
   mantenimientos Mantenimiento[]
   turnosAbiertos Turno[] @relation("TurnosAbiertos")
   turnosCerrados Turno[] @relation("TurnosCerrados")
+  cajas         Caja[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,6 +158,8 @@ model Caja {
 
   motelId String
   motel   Motel  @relation(fields: [motelId], references: [id])
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

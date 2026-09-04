@@ -518,17 +518,38 @@ export class TurnosService extends BaseService<Turno> {
     fechaDesde: string;
     fechaHasta: string;
     horaCierre: string;
+    desde?: string;
+    hasta?: string;
     page: number;
     limit: number;
     motelId?: string | null;
   }) {
-    const { fechaDesde, fechaHasta, horaCierre, page, limit, motelId } = params;
+    const {
+      fechaDesde,
+      fechaHasta,
+      horaCierre,
+      desde,
+      hasta,
+      page,
+      limit,
+      motelId,
+    } = params;
 
-    // Construir fechas con hora de cierre contable
-    // Formato: "2026-04-11" + "T" + "06:00" + ":00.000Z"
-    const salidaDesde = new Date(`${fechaDesde}T${horaCierre}:00.000Z`);
-    const salidaHasta = new Date(`${fechaHasta}T${horaCierre}:00.000Z`);
-    salidaHasta.setDate(salidaHasta.getDate() + 1);
+    const salidaDesde = desde
+      ? new Date(desde)
+      : new Date(`${fechaDesde}T${horaCierre}:00.000Z`);
+    const salidaHasta = hasta
+      ? new Date(hasta)
+      : new Date(`${fechaHasta}T${horaCierre}:00.000Z`);
+    if (!hasta) salidaHasta.setDate(salidaHasta.getDate() + 1);
+
+    if (
+      Number.isNaN(salidaDesde.getTime()) ||
+      Number.isNaN(salidaHasta.getTime()) ||
+      salidaDesde >= salidaHasta
+    ) {
+      throw new BadRequestException('Rango de fechas inválido');
+    }
 
     const where: any = {
       Salida: {

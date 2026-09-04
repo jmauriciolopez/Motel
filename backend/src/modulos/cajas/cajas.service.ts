@@ -10,7 +10,7 @@ export class CajasService extends BaseService<Caja> {
     super(prisma, 'caja', { hasMotelId: true });
   }
 
-  async crear(data: CrearCajaDto): Promise<Caja> {
+  async crear(data: CrearCajaDto, usuarioId?: string): Promise<Caja> {
   //  console.log('[CajasService.crear] data recibido:', JSON.stringify(data));
     const { motelId, Importe, Concepto, createdAt } = data;
 
@@ -30,6 +30,7 @@ export class CajasService extends BaseService<Caja> {
         Importe,
         Saldo: nuevoSaldo,
         motelId,          // narrowed to string after the guard above
+        ...(usuarioId ? { usuarioId } : {}),
         createdAt: createdAt || new Date(),
       },
     });

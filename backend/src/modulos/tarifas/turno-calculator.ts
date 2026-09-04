@@ -147,8 +147,7 @@ export class TurnoCalculator {
    * Reglas:
    * - Si HorarioUnico: aplica todo el día calendario marcado como especial.
     * - Si tiene franjas día/noche: la franja diurna de un día especial recibe
-    *   la hora extra. La franja nocturna solo la recibe cuando conecta dos días
-    *   especiales contiguos.
+    *   la hora extra. La franja nocturna pertenece al día en que comienza.
    */
   private isInPeriodoEspecial(date: Date, motel: Motel): boolean {
     const diasEspeciales = Array.isArray(motel.DiasEspeciales)
@@ -168,10 +167,10 @@ export class TurnoCalculator {
     const esFranjaDiurna = horaActual >= inicioDiaMinutos && horaActual < inicioNocheMinutos;
     if (esFranjaDiurna) return diasEspeciales.includes(day);
 
-    // La hora extra nocturna solo aplica cuando la noche une dos días especiales.
+    // La franja nocturna pertenece al día en que comienza. Por eso conserva
+    // la hora extra si ese día es especial, aunque el siguiente no lo sea.
     const diaEspecial = horaActual >= inicioNocheMinutos ? day : (day + 6) % 7;
-    const diaSiguiente = (diaEspecial + 1) % 7;
-    return diasEspeciales.includes(diaEspecial) && diasEspeciales.includes(diaSiguiente);
+    return diasEspeciales.includes(diaEspecial);
   }
 
   /**
@@ -227,8 +226,11 @@ export class TurnoCalculator {
       }
 
       // Minutos extra asignados directamente a la tarifa
-      if ((tarifa as any).MinutosExtra && Number((tarifa as any).MinutosExtra) > 0) {
-        totalMinutes += Number((tarifa as any).MinutosExtra);
+      const minutosExtra = Number(
+        (tarifa as any).MinutosExtra ?? (tarifa as any).minutosExtra,
+      );
+      if (minutosExtra > 0) {
+        totalMinutes += minutosExtra;
       }
 
       if (isDayTime && motel.AplicaCorteCheckout) {
